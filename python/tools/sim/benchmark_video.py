@@ -14,6 +14,11 @@ solve slowed down by its ``playback_factor``. The viewer's translucent overlays 
 reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already show the
 distance to the reference.
 
+Text: the titles, labels and captions are in Linux Biolinum, the paper figures' sans serif, drawn with Pillow onto
+each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes from
+``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
+Without it, a warning, and imgui's default font draws them in the window.
+
 Polyscope has no headless backend on Windows: the recorder opens a window and drives it itself, so leave it open
 and unminimized until it finishes. Frames go straight from the window to ffmpeg's stdin (no image files). ffmpeg
 is found from ``--ffmpeg``, then the ``FFMPEG`` environment variable, then the ``imageio-ffmpeg`` package's
@@ -22,7 +27,7 @@ binary, then ``PATH``.
 Usage:
     python -m python.tools.sim.benchmark_video path/to/results.h5 -o out/videos/trampolines \
         [--dataset path/to/trampolines.h5] [--benchmarks static ...] [--cases Y1e6 ...] [--samples 0 4 ...] \
-        [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--error-fraction 0.03]         [--hold-seconds 1]
+        [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--error-fraction 0.03]         [--hold-seconds 1] [--font-dir path/to/fonts]
 
 Writes ``<prefix>_<benchmark>.mp4`` per benchmark.
 
@@ -35,16 +40,30 @@ import os
 import shutil
 import subprocess
 import time
+import warnings
 
 import numpy as np
 
-from .benchmark_plot import benchmark_title
+from .benchmark_plot import benchmark_title, register_paper_fonts
 from .benchmark_viewer import (COLOR_MODES, ERROR_FRACTION, ERROR_FRACTION_RANGE, Viewer, _rgb, display_name,
                                slowdown_text, solver_color)
 
-TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080p video
+TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080p video (without the paper font)
+TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
 TEXT_COLOR = (0.1, 0.1, 0.1, 1.0)
 HOLD_SECONDS = 1.0  # each clip's start state, held before the solve
+
+
+def paper_font_file(font_dir: str | None = None) -> str | None:
+    """Linux Biolinum's file (``benchmark_plot.register_paper_fonts``), or None with a warning."""
+    from matplotlib import font_manager
+
+    sans = register_paper_fonts(font_dir)[0]
+    if sans is None:
+        warnings.warn("Linux Biolinum not found (--font-dir, PBAT_FONT_DIR or an installed font): the video text "
+                      "uses imgui's default font")
+        return None
+    return font_manager.findfont(font_manager.FontProperties(family=sans), fallback_to_default=False)
 
 
 def find_ffmpeg(path: str | None) -> str:
@@ -64,12 +83,34 @@ def find_ffmpeg(path: str | None) -> str:
 
 
 class Recorder:
-    """Drives a :class:`Viewer` frame by frame and draws the labels and titles a video needs, without the panel."""
+    """Drives a :class:`Viewer` frame by frame and draws the labels and titles a video needs, without the panel:
+    composited onto each captured frame in the font of ``font_file`` (Pillow), or without one, drawn by imgui."""
 
-    def __init__(self, viewer: Viewer, hold_seconds: float = HOLD_SECONDS):
+    def __init__(self, viewer: Viewer, hold_seconds: float = HOLD_SECONDS, font_file: str | None = None):
         self.viewer = viewer
         self.hold_seconds = hold_seconds
+        self.font_file = font_file
+        self.fonts = {}  # Pillow fonts by pixel size
+        self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.initial = False  # the hold: the start state, captioned "Initial"
+
+    def font(self, height: int):
+        """The Pillow font for a video ``height`` pixels tall."""
+        from PIL import ImageFont
+
+        size = max(round(TEXT_PIXELS * height / 1080), 1)
+        if size not in self.fonts:
+            self.fonts[size] = ImageFont.truetype(self.font_file, size)
+        return self.fonts[size]
+
+    def line_height(self) -> float:
+        """The titles' and labels' line spacing in window coordinates."""
+        import polyscope as ps
+        import polyscope.imgui as imgui
+
+        if self.font_file is None:
+            return imgui.GetFontSize() * 1.25
+        return 1.25 * TEXT_PIXELS * ps.get_window_size()[1] / 1080
 
     def hold_frames(self) -> int:
         """The hold's video frames at the selected sample's frame rate."""
@@ -79,8 +120,35 @@ class Recorder:
     def draw_text(self, draw, x: float, y: float, text: str, color=TEXT_COLOR, center: bool = False):
         import polyscope.imgui as imgui
 
+        if self.font_file is not None:  # composited after the capture
+            self.texts.append((x, y, text, color, center))
+            return
         width = imgui.CalcTextSize(text)[0]  # imgui's global font scale is TEXT_SCALE (the callback sets it)
         draw.AddText((x - width / 2 if center else x, y), imgui.GetColorU32(color), text)
+
+    def composite(self, image: np.ndarray) -> np.ndarray:
+        """The captured RGB ``image`` with this frame's texts drawn on it in the paper font."""
+        import polyscope as ps
+        from PIL import Image, ImageDraw
+
+        picture = Image.fromarray(image)
+        draw = ImageDraw.Draw(picture)
+        font = self.font(picture.height)
+        scale = picture.width / ps.get_window_size()[0]  # window to framebuffer pixels
+        for x, y, text, color, center in self.texts:
+            x, y = x * scale, y * scale
+            if center:
+                x -= font.getlength(text) / 2
+            draw.text((x, y), text, font=font, fill=tuple(round(255 * c) for c in color[:3]))
+        self.texts = []
+        return np.asarray(picture)
+
+    def capture(self) -> np.ndarray:
+        """The window's RGB image after a frame tick, with the texts in the paper font."""
+        import polyscope as ps
+
+        image = np.ascontiguousarray(ps.screenshot_to_buffer(transparent_bg=False, include_UI=True)[..., :3])
+        return image if self.font_file is None else self.composite(image)
 
     def callback(self):
         """Per frame: the meshes, then the titles and each copy's label (name and e/e0) on the background."""
@@ -92,7 +160,8 @@ class Recorder:
         v.update_meshes()
         imgui.GetIO().FontGlobalScale = TEXT_SCALE
         draw = imgui.GetForegroundDrawList()
-        line = imgui.GetFontSize() * 1.25
+        self.texts = []
+        line = self.line_height()
         self.draw_text(draw, 24, 20, f"{benchmark_title(s.benchmark)}: {s.label}, sample {s.sample}")
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
@@ -135,15 +204,14 @@ class Recorder:
             v.frame, v.t = 0, s.frame_time(0)
             self.initial = True
             ps.frame_tick()
-            image = np.ascontiguousarray(ps.screenshot_to_buffer(transparent_bg=False, include_UI=True)[..., :3])
+            image = self.capture()
             self.initial = False
             for _ in range(hold):
                 yield image
         for k in range(s.n_frames + 1):
             v.frame, v.t = k, s.frame_time(k)
             ps.frame_tick()  # runs the callback (meshes, text) and draws
-            image = ps.screenshot_to_buffer(transparent_bg=False, include_UI=True)
-            yield np.ascontiguousarray(image[..., :3])
+            yield self.capture()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -167,6 +235,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--hold-seconds", type=float, default=HOLD_SECONDS, dest="hold_seconds", metavar="S",
                         help="Seconds of video each clip holds the start state, captioned \"Initial\", before the "
                         "solve; 0: no hold (default: %(default)g).")
+    parser.add_argument("--font-dir", default=None, dest="font_dir",
+                        help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
+                        "installed fonts; without them, imgui's default font).")
     args = parser.parse_args(argv)
     if args.hold_seconds < 0:
         parser.error(f"--hold-seconds must be at least 0, got {args.hold_seconds:g}")
@@ -179,6 +250,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main():
     args = parse_args()
     ffmpeg = find_ffmpeg(args.ffmpeg)
+    font_file = paper_font_file(args.font_dir)
 
     import polyscope as ps
 
@@ -196,7 +268,7 @@ def main():
     viewer.load(args.results)
     if viewer.error:
         raise SystemExit(viewer.error)
-    recorder = Recorder(viewer, args.hold_seconds)
+    recorder = Recorder(viewer, args.hold_seconds, font_file)
     ps.set_user_callback(recorder.callback)
 
     cases = [(i, b, c, samples) for i, (b, c, _, samples) in enumerate(viewer.cases)
@@ -283,6 +355,40 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertAlmostEqual(viewer.vmax, 0.05 * viewer.initial_error(), places=6)
         caption = f"Color: {COLOR_MODES[0]}, 0 to {viewer.vmax:.4g} m (5% of the initial error)"
         self.assertIn(caption, texts)
+
+    def test_paper_font(self):
+        """With a font file, the texts are composited onto the captured frames (none drawn by imgui); the paper
+        font's file, when found, is Linux Biolinum."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import matplotlib
+
+        from .benchmark_viewer import TestBenchmarkViewer
+
+        found = paper_font_file()
+        if found is not None:
+            self.assertIn("biolinum", os.path.basename(found).lower())
+        font_file = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans.ttf")  # any TrueType font
+        ps, imgui, texts = self.stubs()
+        ps.get_window_size.return_value = (640, 360)
+        ps.screenshot_to_buffer.side_effect = lambda **k: np.full((360, 640, 4), 255, dtype=np.uint8)
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, _ = TestBenchmarkViewer.write_files(root)
+            viewer = Viewer(dataset)
+            viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
+            recorder = Recorder(viewer, hold_seconds=0.0, font_file=font_file)
+            ps.frame_tick.side_effect = lambda: recorder.callback()
+            texts.clear()
+            images = list(recorder.frames(0, 0))
+        self.assertEqual(texts, [])  # nothing drawn by imgui
+        self.assertEqual(recorder.texts, [])
+        for image in images:
+            self.assertEqual(image.shape, (360, 640, 3))
+            self.assertTrue((image[:60, :300] < 128).any())  # the dark titles, top left
+        self.assertEqual(recorder.font(360).size, round(TEXT_PIXELS * 360 / 1080))
 
     def test_hold(self):
         """The hold: round(S x fps) copies of one captured start state, captioned "Initial" at t = 0, then the

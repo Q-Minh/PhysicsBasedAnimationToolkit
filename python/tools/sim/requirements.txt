@@ -16,3 +16,4 @@ gpytoolbox==0.3.7
 tomli-w==1.2.0
 matplotlib==3.11.2
 imageio-ffmpeg==0.6.0
+pillow==12.3.0
