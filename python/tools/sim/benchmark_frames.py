@@ -5,7 +5,8 @@ ones), rendered with Polyscope in the style of the profiling snapshots (``profil
 no ground plane, smooth shading without edges, SSAA 4 (Polyscope's highest), one camera, every image cropped to one
 box and reduced by an integer factor with block means to at most ``--max-width`` pixels (more anti-aliasing; the
 default window and width give about 900 px per frame, some 750 dpi at the bar figures' frame width). The camera looks
-at the center of the box around every rendered shape, from ``--elev`` above the front, far enough that the box's
+at the center of the box around every rendered shape, from ``--elev`` above the front, turned ``--azim`` about the
+up axis (counter-clockwise seen from above), far enough that the box's
 bounding sphere fits the view (``--zoom`` scales that), so strongly deformed problems (e.g. a dataset sampled at a
 higher energy) don't clip; a render that still touches the window's border is an error. The crop is the union of
 every render's content, so it covers the most deformed one.
@@ -36,7 +37,7 @@ time).
 Colorbars: Polyscope's (matcap) materials change the colormap's shades, so a plain colormap wouldn't match the
 frames. Each pair carries the rendered shades instead: a flat horizontal strip through the camera's target, colored
 by a ramp over the pair's range and rendered from the frames' camera, shaded as the body's undeformed top face, read
-back along its length. Its points are at one depth (the camera looks along the y-z plane), so screen x is linear in
+back along its length. It runs across the view direction, so its points are at one depth and screen x is linear in
 the value.
 
 Writes per benchmark ``<prefix>_<benchmark>_{error,material}_{initial,reference}.png`` and ``<prefix>_<benchmark>.json``
@@ -55,7 +56,7 @@ worktree):
     python -m python.tools.sim.benchmark_frames path/to/results.h5 -o out/figures/trampolines_frames \
         [--dataset path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5] [--benchmarks static ...] \
         [--error-case static=Y1e5 --error-case Y1e7] [--material-case het] [--sample static=0 --sample auto] \
-        [--material clay] [--elev 55] [--zoom 1] [--size 2400 1400] [--max-width 1000]
+        [--material clay] [--elev 55] [--azim 0] [--zoom 1] [--size 2400 1400] [--max-width 1000]
 
 The window must fit the screen (Polyscope's window, hence its screenshots, is clamped to it).
 
@@ -192,6 +193,8 @@ def main():
                         help="[BENCHMARK=]INDEX or auto, the problem of each case's set, repeatable (default: 0 for "
                         "static, else auto; see the module docstring).")
     parser.add_argument("--elev", type=float, default=55.0, help="Camera elevation above the body's plane (degrees).")
+    parser.add_argument("--azim", type=float, default=0.0,
+                        help="Camera azimuth from the front, counter-clockwise seen from above (degrees).")
     parser.add_argument("--material", default="clay",
                         help="Polyscope material (default: clay, the profiling snapshots' Polyscope default).")
     parser.add_argument("--zoom", type=float, default=1.0,
@@ -252,9 +255,9 @@ def main():
     lo = np.min([x.min(axis=0) for x in shapes], axis=0)
     hi = np.max([x.max(axis=0) for x in shapes], axis=0)
     center = (lo + hi) / 2
-    el = np.radians(args.elev)
+    el, az = np.radians(args.elev), np.radians(args.azim)
     distance = camera_distance(lo, hi, args.size[0] / args.size[1], zoom=args.zoom)
-    ps.look_at(center + distance * np.array([0.0, -np.cos(el), np.sin(el)]), center)
+    ps.look_at(center + distance * np.array([np.sin(az) * np.cos(el), -np.cos(az) * np.cos(el), np.sin(el)]), center)
     first = problems[benchmarks[0]][0]
     body = ps.register_surface_mesh("body", first["x0"], first["faces"], smooth_shade=True, edge_width=0.0,
                                     material=args.material)
@@ -301,13 +304,13 @@ def main():
             for pair in specs[b].values():
                 pair["arrow_seconds"] = arrows[b][1]
     ps.remove_point_cloud("arrows", error_if_absent=False)
-    # Colorbar shades: a flat horizontal strip along x through the camera's target (so at one depth), facing up
-    # as the body's undeformed top face
+    # Colorbar shades: a flat horizontal strip through the camera's target, across the view direction (so at one
+    # depth), facing up as the body's undeformed top face
     body.set_enabled(False)
     width = float(hi[0] - lo[0])
-    u = np.linspace(-0.45 * width, 0.45 * width, RAMP_SAMPLES)
-    strip_x = np.concatenate([np.stack([center[0] + u, np.full_like(u, center[1] + s * 0.02 * width),
-                                        np.full_like(u, center[2])], axis=1) for s in (-1, 1)])
+    across, along = np.array([np.cos(az), np.sin(az), 0.0]), np.array([-np.sin(az), np.cos(az), 0.0])
+    u = np.linspace(-0.45 * width, 0.45 * width, RAMP_SAMPLES)[:, None]
+    strip_x = np.concatenate([center + u * across + side * 0.02 * width * along for side in (-1, 1)])
     n = RAMP_SAMPLES
     quads = np.array([[i, i + 1, n + i + 1, n + i] for i in range(n - 1)])
     strip = ps.register_surface_mesh("strip", strip_x, quads, smooth_shade=True, edge_width=0.0,
