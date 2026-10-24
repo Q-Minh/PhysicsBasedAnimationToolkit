@@ -308,3 +308,47 @@ No variant had line-search failures. With one outer iteration per step, F3 is th
 normal contact force". Every alternative that tracks the normal force within a step, from the multiplier or from
 re-estimates, under-estimates it while sliding, through the multiplier's lag or a dip between outer iterations. Too
 little friction lets bodies slide that should stop. Too much, at an impact, mostly shortens a slide.
+
+## 7. More outer iterations raise the residual on pillar-pillar contact: the penetration flips every outer iteration
+
+**Setup.** The DragonImpact scene draft (`data/scenarios/ArmadilloSpaghetti.DragonImpact.h5`, not yet a `SCENES`
+entry): four stacked spaghetti pillars, the armadillo and two dragons, with `configs/scenes/ArmadilloSpaghetti.Fall.toml`
+at 10 substeps. One traced step of AAAVBD (Inverse vertex solve) from the production run's states at 6.0 s and 6.8 s,
+at outer iterations x sweeps per substep of the same total, early exit off (rstol and astol at 1e-6 x the defaults,
+so the ratios below are the logged ones x 1e-6, i.e. at the default tolerances). The ratio is the outer test's
+gradient ratio at each substep's end; substep 0 at 6.0 s is left out (its resumed checkpoint carries a converted AL
+state). 2026-10-24, scratch diagnostic.
+
+| Outer x sweeps per substep | Finalizes per step | Ratio at 6.0 s, median / max | Ratio at 6.8 s, median / max | End penetration ratio, max (6.0 / 6.8 s) |
+|---|---|---|---|---|
+| 1 x 100 (production) | 10 | 689 / 1614 | 1251 / 1261 | 0.55 / 0.53 |
+| 1 x 1000 | 10 | 679 / 1573 | 1199 / 1208 | not recorded |
+| 2 x 50 | 20 | 704 / 888 | 1390 / 1462 | 0.66 / 0.66 |
+| 4 x 25 | 40 | 715 / 759 | 1435 / 1499 | 0.64 / 0.73 |
+| 5 x 20 | 50 | 800 / 1034 | 1487 / 1499 | 0.61 / 0.49 |
+| 2 x 500 | 20 | 720 / 869 | 1370 / 1411 | 0.66 / 0.63 |
+| 10 x 100 | 100 | 704 / 786 | 1451 / 1515 | 0.69 / 0.54 |
+
+Against one outer iteration with the same sweeps per substep (1 x 100 for the 100-sweep splits, 1 x 1000 for 2 x
+500 and 10 x 100), every split into more outer iterations raises the median ratio: by 2-16% at 6.0 s and 11-21% at
+6.8 s. The one-outer budgets' larger maxima at 6.0 s are a single substep (1614 and 1573). More sweeps in one outer
+iteration help a little (1 x 1000 vs 1 x 100: -1.5% at 6.0 s, -4% at 6.8 s).
+
+**Per outer iteration** (6.8 s, 10 x 100, substep 0; start, then after each outer iteration's finalization and
+multiplier update):
+- ratio 2091, 1264, 1313, 1322, 1344, 1365, 1377, 1359, 1384, 1394, 1402;
+- penetration ratio 0.74, 0.47, 0.37, 0.46, 0.37, 0.48, 0.36, 0.45, 0.36, 0.56, 0.36.
+
+The first outer iteration reaches the plateau. The next nine raise the ratio from 1264 to 1402 (one dip), while
+the penetration alternates between two levels (~0.36 and ~0.45-0.56) from one outer iteration to the next. The same pattern
+appears at 6.0 s (substep 1: penetration 0.49, 0.66, 0.44, 0.66, 0.35, 0.62, ...). The multipliers were not
+recorded, so the cycle is seen in the penetration, not in lambda itself. It is consistent with the contact-set
+flip-flop of entries 2 and 5, here on pillar-on-pillar contact.
+
+**Where.** At each traced step's end, 87-96% of Σ |gᵢ|²/mᵢ is on pillar nodes within 1.5 cm of another pillar, in
+every configuration. The median |M⁻¹g| there is 3.7-5.1 mm with one outer iteration per substep and 8-22 mm with
+2-10.
+
+**For the paper.** On this scene the residual plateau is not the AL penalty force that more multiplier updates
+would remove: extra outer iterations cost a finalization each (dual update and re-detection) and leave the step
+further from stationarity. The production budget stays at 1 outer iteration x 100 sweeps per substep.
