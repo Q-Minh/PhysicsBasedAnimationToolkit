@@ -438,10 +438,10 @@ def plot_at_width(width: float | None, *args, **kwargs) -> tuple:
     scaled and its fonts aren't, so the labels print at their nominal size where the paper places the chart at
     that width. The region doesn't scale exactly with the figure (fonts and paddings), so a few redraws converge."""
     scale = 1.0
-    for _ in range(6):
+    for attempt in range(6):
         fig, region = plot_benchmark(*args, **kwargs, scale=scale)
-        if width is None or abs(region.width - width) <= 0.01:
-            break
+        if width is None or abs(region.width - width) <= 0.01 or attempt == 5:
+            break  # the last redraw is kept even if not within 0.01 in: the returned figure must stay open
         plt.close(fig)
         scale *= width / region.width
     return fig, region
