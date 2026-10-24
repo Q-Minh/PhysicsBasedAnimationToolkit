@@ -4,7 +4,7 @@ problem's initial iterate x(0) and reference solution x* (the rest shape X for s
 ones), rendered with Polyscope in the style of the profiling snapshots (``profiling/snapshots.py``): white background,
 no ground plane, smooth shading without edges, SSAA 4 (Polyscope's highest), one camera, every image cropped to one
 box and reduced by an integer factor with block means to at most ``--max-width`` pixels (more anti-aliasing; the
-default window and width give about 1000 px per frame, 800 dpi at the bar figures' 1.25 in). The camera looks
+default window and width give about 900 px per frame, some 750 dpi at the bar figures' frame width). The camera looks
 at the center of the box around every rendered shape, from ``--elev`` above the front, far enough that the box's
 bounding sphere fits the view (``--zoom`` scales that), so strongly deformed problems (e.g. a dataset sampled at a
 higher energy) don't clip; a render that still touches the window's border is an error. The crop is the union of
