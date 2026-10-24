@@ -70,6 +70,7 @@ import h5py
 import numpy as np
 
 from . import benchmark_results as results
+from .benchmark_results import per_benchmark
 from .benchmark_viewer import FEM_GROUP, MESH_GROUP, boundary_triangles, problem_fem_group
 from .profiling.snapshots import crop_box
 from ..vbd.ui import material
@@ -130,16 +131,6 @@ def downsample(image: np.ndarray, max_width: int) -> np.ndarray:
     k = max(1, -(-image.shape[1] // max_width))
     h, w = image.shape[0] // k * k, image.shape[1] // k * k
     return image[:h, :w].reshape(h // k, k, w // k, k, -1).mean(axis=(1, 3))
-
-
-def per_benchmark(values: list[str], benchmark: str) -> str:
-    """A repeatable ``[BENCHMARK=]VALUE`` option's value for ``benchmark``: its last own entry, else the last entry
-    without a benchmark."""
-    own = [v.partition("=")[2] for v in values if v.partition("=")[0] == benchmark and "=" in v]
-    default = [v for v in values if "=" not in v]
-    if not own and not default:
-        raise SystemExit(f"No value for {benchmark} in {values}")
-    return (own or default)[-1]
 
 
 def pick_sample(m: np.ndarray, v: np.ndarray) -> int:

@@ -123,6 +123,16 @@ def levels_for(table: dict, benchmark: str) -> tuple[float, ...]:
     return table.get(benchmark, table.get(None, default_levels(benchmark)))
 
 
+def per_benchmark(values: list[str], benchmark: str) -> str:
+    """A repeatable ``[BENCHMARK=]VALUE`` option's value for ``benchmark``: its last own entry, else the last entry
+    without a benchmark."""
+    own = [v.partition("=")[2] for v in values if v.partition("=")[0] == benchmark and "=" in v]
+    default = [v for v in values if "=" not in v]
+    if not own and not default:
+        raise SystemExit(f"No value for {benchmark} in {values}")
+    return (own or default)[-1]
+
+
 def benchmark_levels(f: h5py.File, benchmark: str) -> np.ndarray:
     """The levels of a benchmark in a results file: its group's ``levels`` (else the file's)."""
     b = f[benchmark]
