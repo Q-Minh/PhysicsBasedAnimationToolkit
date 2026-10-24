@@ -2,7 +2,11 @@
 Frames of benchmark problems for the paper's bar figures (``benchmark_plot.py --frames``): per benchmark, an example
 problem's initial iterate x(0) and reference solution x* (the rest shape X for static problems, ``x_ref`` for dynamic
 ones), rendered with Polyscope in the style of the profiling snapshots (``profiling/snapshots.py``): white background,
-no ground plane, smooth shading without edges, SSAA 4, one camera, every image cropped to one box.
+no ground plane, smooth shading without edges, SSAA 4, one camera, every image cropped to one box. The camera looks
+at the center of the box around every rendered shape, from ``--elev`` above the front, far enough that the box's
+bounding sphere fits the view (``--zoom`` scales that), so strongly deformed problems (e.g. a dataset sampled at a
+higher energy) don't clip; a render that still touches the window's border is an error. The crop is the union of
+every render's content, so it covers the most deformed one.
 
 Two pairs of frames per benchmark, from the same sample (default 0) of two cases:
 
@@ -20,14 +24,20 @@ the value.
 
 Writes per benchmark ``<prefix>_<benchmark>_{error,material}_{initial,reference}.png`` and ``<prefix>_<benchmark>.json``
 (the cases, sample, color ranges, colorbar shades and image names), which ``benchmark_plot.py --frames`` reads.
+Nothing here is specific to the trampolines: cases, sizes and ranges come from the results file and the dataset.
 Polyscope has no headless backend on Windows: rendering opens a window briefly.
+
+After a benchmark re-run (e.g. a dataset sampled at another energy), regenerate the frames from the new results file,
+then the bar figures with ``--frames`` (``benchmark_plot.py``): the color ranges, colorbar ticks, camera and crop follow
+the new data.
 
 Usage (from the repo root; ``--dataset`` when the results file's ``dataset`` attribute doesn't resolve, e.g. from a
 worktree):
 
     python -m python.tools.sim.benchmark_frames path/to/results.h5 -o out/figures/trampolines_frames \
         [--dataset path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5] [--benchmarks static ...] \
-        [--error-case Y1e7] [--material-case het] [--sample 0] [--material clay] [--elev 40] [--distance 1.4]         [--size 1600 1200] [--max-width 900]
+        [--error-case Y1e7] [--material-case het] [--sample 0] [--material clay] [--elev 55] [--zoom 1] \
+        [--size 1600 1200] [--max-width 900]
 
 Tests: ``python -m unittest python.tools.sim.benchmark_frames``.
 """
@@ -77,6 +87,20 @@ def strip_shades(image: np.ndarray, n: int = RAMP_SAMPLES, trim: int = EDGE_TRIM
     return np.stack([np.interp(np.linspace(0.0, 1.0, n), t, shades[:, k]) for k in range(3)], axis=1)
 
 
+def camera_distance(lo: np.ndarray, hi: np.ndarray, aspect: float, fov: float = 45.0, zoom: float = 1.0) -> float:
+    """The distance from the box lo..hi's center at which its bounding sphere fits a perspective view of vertical
+    field of view ``fov`` (degrees, Polyscope's default) and width / height ``aspect``, divided by ``zoom``."""
+    half = np.radians(fov) / 2
+    half = min(half, np.arctan(np.tan(half) * aspect))
+    return float(0.5 * np.linalg.norm(np.asarray(hi) - np.asarray(lo)) / np.sin(half) / zoom)
+
+
+def touches_border(image: np.ndarray, background: float = 1.0) -> bool:
+    """Whether a render has content on its outermost pixels (the shape may be clipped)."""
+    content = np.any(np.abs(image[..., :3] - background) > 1e-3, axis=2)
+    return bool(content[0].any() or content[-1].any() or content[:, 0].any() or content[:, -1].any())
+
+
 def downsample(image: np.ndarray, max_width: int) -> np.ndarray:
     """``image`` reduced by the smallest integer factor that makes it at most ``max_width`` wide (block means)."""
     k = max(1, -(-image.shape[1] // max_width))
@@ -110,11 +134,11 @@ def main():
     parser.add_argument("--material-case", default="het", dest="material_case",
                         help="Case colored by Lame lambda (default: het).")
     parser.add_argument("--sample", type=int, default=0, help="Problem index in each case's set (default: 0).")
-    parser.add_argument("--elev", type=float, default=40.0, help="Camera elevation above the body's plane (degrees).")
+    parser.add_argument("--elev", type=float, default=55.0, help="Camera elevation above the body's plane (degrees).")
     parser.add_argument("--material", default="clay",
                         help="Polyscope material (default: clay, the profiling snapshots' Polyscope default).")
-    parser.add_argument("--distance", type=float, default=1.4,
-                        help="Camera distance in body widths along x (default: 1.05).")
+    parser.add_argument("--zoom", type=float, default=1.0,
+                        help="Camera zoom: 1 fits the bounding sphere of every rendered shape (default: 1).")
     parser.add_argument("--size", type=int, nargs=2, default=(1600, 1200), metavar=("W", "H"),
                         help="Window size in pixels before cropping.")
     parser.add_argument("--max-width", type=int, default=900, dest="max_width",
@@ -142,65 +166,70 @@ def main():
     ps.set_window_size(*args.size)
     ps.set_build_default_gui_panels(False)
 
-    def shot() -> np.ndarray:
+    def shot(check: bool = True) -> np.ndarray:
         ps.frame_tick()
-        return ps.screenshot_to_buffer(transparent_bg=False, include_UI=False).astype(np.float64) / 255
+        image = ps.screenshot_to_buffer(transparent_bg=False, include_UI=False).astype(np.float64) / 255
+        if check and touches_border(image):
+            raise SystemExit("A frame touches the window's border (clipped): lower --zoom")
+        return image
 
     renders, specs = {}, {}
-    body = None
     with h5py.File(dataset, "r") as d:
+        problems = {b: (load_problem(d, sets[b, args.error_case], args.sample),
+                        load_problem(d, sets[b, args.material_case], args.sample)) for b in benchmarks}
+    # One camera for every frame: at the center of the box around every rendered shape, its bounding sphere in view
+    shapes = [p[k] for pair in problems.values() for p in pair for k in ("x0", "reference")]
+    lo = np.min([x.min(axis=0) for x in shapes], axis=0)
+    hi = np.max([x.max(axis=0) for x in shapes], axis=0)
+    center = (lo + hi) / 2
+    el = np.radians(args.elev)
+    distance = camera_distance(lo, hi, args.size[0] / args.size[1], zoom=args.zoom)
+    ps.look_at(center + distance * np.array([0.0, -np.cos(el), np.sin(el)]), center)
+    first = problems[benchmarks[0]][0]
+    body = ps.register_surface_mesh("body", first["x0"], first["faces"], smooth_shade=True, edge_width=0.0,
+                                    material=args.material)
+    body.set_back_face_policy("identical")
+    for b in benchmarks:
+        error, het = problems[b]
+        vmax = max(float(np.linalg.norm(error["x0"] - error["reference"], axis=1).max()), 1e-12)
+        for state in ("initial", "reference"):
+            x = error["x0"] if state == "initial" else error["reference"]
+            body.update_vertex_positions(x)
+            body.add_scalar_quantity("color", np.linalg.norm(x - error["reference"], axis=1), vminmax=(0.0, vmax),
+                                     cmap=ERROR_CMAP, enabled=True)
+            renders[b, "error", state] = shot()
+        shown, options = material.display(material.LAME_LAMBDA, het["lam"])
+        vminmax = material_range(shown)
+        for state in ("initial", "reference"):
+            body.update_vertex_positions(het["x0"] if state == "initial" else het["reference"])
+            body.add_scalar_quantity("color", shown, defined_on="faces", vminmax=vminmax, cmap=options["cmap"],
+                                     enabled=True)
+            renders[b, "material", state] = shot()
+        specs[b] = {
+            "error": dict(case=args.error_case, sample=args.sample, quantity="error", vmin=0.0, vmax=vmax,
+                          cmap=ERROR_CMAP),
+            "material": dict(case=args.material_case, sample=args.sample, quantity="lambda", scale="log10(x + 1)",
+                             vmin=vminmax[0], vmax=vminmax[1], cmap=options["cmap"],
+                             values=sorted({float(f"{v:.4g}") for v in het["lam"]})),
+        }
+    # Colorbar shades: a flat horizontal strip along x through the camera's target (so at one depth), facing up
+    # as the body's undeformed top face
+    body.set_enabled(False)
+    width = float(hi[0] - lo[0])
+    u = np.linspace(-0.45 * width, 0.45 * width, RAMP_SAMPLES)
+    strip_x = np.concatenate([np.stack([center[0] + u, np.full_like(u, center[1] + s * 0.02 * width),
+                                        np.full_like(u, center[2])], axis=1) for s in (-1, 1)])
+    n = RAMP_SAMPLES
+    quads = np.array([[i, i + 1, n + i + 1, n + i] for i in range(n - 1)])
+    strip = ps.register_surface_mesh("strip", strip_x, quads, smooth_shade=True, edge_width=0.0,
+                                     material=args.material)
+    strip.set_back_face_policy("identical")
+    ramp = np.concatenate([np.linspace(0.0, 1.0, n)] * 2)
+    for kind, cmap in (("error", ERROR_CMAP), ("material", material.lame_parameters_cmap())):
+        strip.add_scalar_quantity("ramp", ramp, vminmax=(0.0, 1.0), cmap=cmap, enabled=True)
+        shades = strip_shades(shot(check=False))
         for b in benchmarks:
-            error = load_problem(d, sets[b, args.error_case], args.sample)
-            het = load_problem(d, sets[b, args.material_case], args.sample)
-            if body is None:
-                body = ps.register_surface_mesh("body", error["x0"], error["faces"], smooth_shade=True, edge_width=0.0,
-                                                material=args.material)
-                body.set_back_face_policy("identical")
-                X = error["X"]
-                lo, hi = X.min(axis=0), X.max(axis=0)
-                center = (lo + hi) / 2
-                top = float(hi[2])
-                el = np.radians(args.elev)
-                distance = args.distance * float(hi[0] - lo[0])
-                ps.look_at(center + distance * np.array([0.0, -np.cos(el), np.sin(el)]), center)
-            vmax = max(float(np.linalg.norm(error["x0"] - error["reference"], axis=1).max()), 1e-12)
-            for state in ("initial", "reference"):
-                x = error["x0"] if state == "initial" else error["reference"]
-                body.update_vertex_positions(x)
-                body.add_scalar_quantity("color", np.linalg.norm(x - error["reference"], axis=1), vminmax=(0.0, vmax),
-                                         cmap=ERROR_CMAP, enabled=True)
-                renders[b, "error", state] = shot()
-            shown, options = material.display(material.LAME_LAMBDA, het["lam"])
-            vminmax = material_range(shown)
-            for state in ("initial", "reference"):
-                body.update_vertex_positions(het["x0"] if state == "initial" else het["reference"])
-                body.add_scalar_quantity("color", shown, defined_on="faces", vminmax=vminmax, cmap=options["cmap"],
-                                         enabled=True)
-                renders[b, "material", state] = shot()
-            specs[b] = {
-                "error": dict(case=args.error_case, sample=args.sample, quantity="error", vmin=0.0, vmax=vmax,
-                              cmap=ERROR_CMAP),
-                "material": dict(case=args.material_case, sample=args.sample, quantity="lambda", scale="log10(x + 1)",
-                                 vmin=vminmax[0], vmax=vminmax[1], cmap=options["cmap"],
-                                 values=sorted({float(f"{v:.4g}") for v in het["lam"]})),
-            }
-        # Colorbar shades: a flat strip along x through the camera's target, at the body's top face
-        body.set_enabled(False)
-        width = float(hi[0] - lo[0])
-        u = np.linspace(-0.45 * width, 0.45 * width, RAMP_SAMPLES)
-        strip_x = np.concatenate([np.stack([center[0] + u, np.full_like(u, center[1] + s * 0.02 * width),
-                                            np.full_like(u, top)], axis=1) for s in (-1, 1)])
-        n = RAMP_SAMPLES
-        quads = np.array([[i, i + 1, n + i + 1, n + i] for i in range(n - 1)])
-        strip = ps.register_surface_mesh("strip", strip_x, quads, smooth_shade=True, edge_width=0.0,
-                                         material=args.material)
-        strip.set_back_face_policy("identical")
-        ramp = np.concatenate([np.linspace(0.0, 1.0, n)] * 2)
-        for kind, cmap in (("error", ERROR_CMAP), ("material", material.lame_parameters_cmap())):
-            strip.add_scalar_quantity("ramp", ramp, vminmax=(0.0, 1.0), cmap=cmap, enabled=True)
-            shades = strip_shades(shot())
-            for b in benchmarks:
-                specs[b][kind]["shades"] = np.round(shades, 4).tolist()
+            specs[b][kind]["shades"] = np.round(shades, 4).tolist()
     r0, r1, c0, c1 = crop_box(list(renders.values()))
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     import matplotlib.pyplot as plt
@@ -237,6 +266,19 @@ class TestBenchmarkFrames(unittest.TestCase):
         np.testing.assert_allclose(shades[:, 1:], 0.0)
         with self.assertRaises(ValueError):
             strip_shades(np.ones((5, 5, 3)))
+
+    def test_camera(self):
+        lo, hi = np.array([-2.0, -2.0, -0.05]), np.array([2.0, 2.0, 0.05])
+        d = camera_distance(lo, hi, aspect=2.0)
+        radius = 0.5 * np.linalg.norm(hi - lo)
+        self.assertAlmostEqual(d, radius / np.sin(np.radians(22.5)))  # the vertical field of view is the narrower
+        self.assertGreater(camera_distance(lo, hi, aspect=0.5), d)  # a tall window: the horizontal one
+        self.assertAlmostEqual(camera_distance(2 * lo, 2 * hi, aspect=2.0), 2 * d)  # larger shapes, farther
+        image = np.ones((6, 8, 3))
+        image[2:4, 3:5] = 0.2
+        self.assertFalse(touches_border(image))
+        image[0, 4] = 0.2
+        self.assertTrue(touches_border(image))
 
     def test_downsample(self):
         image = np.arange(4 * 6 * 3, dtype=float).reshape(4, 6, 3)
