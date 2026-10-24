@@ -36,7 +36,12 @@ back; the legend lists them in the same order, back to front. ``--solver-order``
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
-        [--budget-factor 1] [--width 5.5] [--no-legend] [--title] [--elev 28] [--azim -62] [--dpi 200]
+        [--budget-factor 1] [--width 5.5] [--no-legend] [--frames PREFIX] [--title] [--elev 28] [--azim -62] [--dpi 200]
+
+``--frames PREFIX`` adds ``benchmark_frames.py``'s example problem beside each chart (:func:`add_frames`): its
+initial iterate above its reference solution, a homogeneous case colored by the error on the left and the
+heterogeneous case colored by Lame lambda on the right, each pair with its colorbar, in two 0.75 in columns (with
+``--width 5.5``, 7 in in all, ACM TOG's text width). The chart keeps its size.
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark, and with ``--no-legend`` the legend alone as
 ``<prefix>_legend.pdf``. ``--width`` renders each chart at the width the paper prints it, so its 8 pt labels
@@ -53,6 +58,7 @@ Matplotlib's default font. No grid lines (maintainer).
 import argparse
 import functools
 import glob
+import json
 import os
 import re
 import warnings
@@ -458,6 +464,85 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
 
 
+# Frames columns (--frames): with the paper's 5.5 in charts, two 0.75 in columns fill ACM TOG's 7 in text width
+FRAMES_WIDTH = 0.75  # inches per column, including its margin to the chart
+FRAMES_MARGIN = 0.05  # inches between a column's content and the chart's region
+FRAMES_LABELS = {"initial": "Initial iterate", "reference": "Reference"}  # short enough for a column
+
+
+def load_frames(prefix: str, benchmark: str) -> dict:
+    """``benchmark_frames.py``'s frames of a benchmark (``<prefix>_<benchmark>.json``), with each pair's images
+    loaded as arrays."""
+    with open(f"{prefix}_{benchmark}.json", encoding="utf-8") as f:
+        spec = json.load(f)
+    directory = os.path.dirname(os.path.abspath(prefix))
+    for pair in spec.values():
+        for state in FRAMES_LABELS:
+            pair[f"{state}_image"] = plt.imread(os.path.join(directory, pair[state]))
+    return spec
+
+
+def _length_text(meters: float) -> str:
+    """A length in m, or in mm below 1 cm: ``0.218 m``, ``1.43 mm``."""
+    return f"{meters:.3g} m" if meters >= 0.01 else f"{1e3 * meters:.3g} mm"
+
+
+def _frames_colorbar(cax, pair: dict):
+    """A pair's colorbar from its rendered shades, with its quantity's ticks and label."""
+    from matplotlib.ticker import FixedLocator, NullFormatter
+
+    shades = np.asarray(pair["shades"])
+    cax.imshow(shades[None], aspect="auto", extent=(pair["vmin"], pair["vmax"], 0, 1), interpolation="bilinear")
+    cax.set_yticks([])
+    for side in ("top", "right", "left"):
+        cax.spines[side].set_visible(False)
+    cax.spines["bottom"].set_linewidth(0.5)
+    cax.tick_params(axis="x", labelsize=7, length=2, width=0.5, pad=1)
+    if pair["quantity"] == "lambda":
+        # log10(lambda + 1) axis: decade ticks, the outer decades labeled
+        decades = [k for k in range(int(np.ceil(pair["vmin"])), int(np.floor(pair["vmax"])) + 1)]
+        at = [np.log10(10.0**k + 1) for k in decades]
+        cax.xaxis.set_major_locator(FixedLocator([at[0], at[-1]] if len(at) > 1 else at))
+        cax.set_xticklabels([f"$10^{{{decades[0]}}}$", f"$10^{{{decades[-1]}}}$"] if len(at) > 1
+                            else [f"$10^{{{decades[0]}}}$"])
+        cax.xaxis.set_minor_locator(FixedLocator(at))
+        cax.xaxis.set_minor_formatter(NullFormatter())
+        cax.tick_params(axis="x", which="minor", length=1.2, width=0.4)
+        cax.set_xlabel(r"$\lambda$ (Pa)", fontsize=7, labelpad=1)
+    else:
+        cax.set_xticks([pair["vmin"], pair["vmax"]], ["0", _length_text(pair["vmax"])])
+        labels = cax.get_xticklabels()
+        labels[0].set_ha("left")
+        labels[-1].set_ha("right")
+        cax.set_xlabel(r"$|x - x^*|$", fontsize=7, labelpad=1)
+    cax.set_xlim(pair["vmin"], pair["vmax"])
+
+
+def add_frames(fig, region: Bbox, frames: dict, width: float = FRAMES_WIDTH, margin: float = FRAMES_MARGIN) -> Bbox:
+    """Two columns of :func:`load_frames` beside a chart's saved ``region`` (inches): the ``error`` pair to its left,
+    the ``material`` pair to its right, each its initial iterate above its reference solution, labeled, with its
+    colorbar below, centered on the region's height. The chart isn't touched (the columns may lie outside the
+    figure's canvas; the saved region includes them). Returns the region to save, ``2 x width`` wider."""
+    fig_w, fig_h = fig.get_size_inches()
+    content = width - margin
+    label_h, gap, bar_h, bar_label_h = 10 / 72, 2 / 72, 0.055, 0.24  # inches
+    for pair, x0 in ((frames["error"], region.x0 - width), (frames["material"], region.x1 + margin)):
+        heights = [content * pair[f"{s}_image"].shape[0] / pair[f"{s}_image"].shape[1] for s in FRAMES_LABELS]
+        total = sum(heights) + 2 * (label_h + gap) + gap + bar_h + bar_label_h
+        y = (region.y0 + region.y1) / 2 + total / 2  # top of the column
+        for state, h in zip(FRAMES_LABELS, heights):
+            fig.text((x0 + content / 2) / fig_w, (y - label_h / 2) / fig_h, FRAMES_LABELS[state], fontsize=7,
+                     ha="center", va="center")
+            y -= label_h + gap
+            ax = fig.add_axes(((x0) / fig_w, (y - h) / fig_h, content / fig_w, h / fig_h))
+            ax.imshow(pair[f"{state}_image"], interpolation="lanczos")
+            ax.set_axis_off()
+            y -= h + gap
+        cax = fig.add_axes(((x0 + 0.06 * content) / fig_w, (y - bar_h) / fig_h, 0.88 * content / fig_w, bar_h / fig_h))
+        _frames_colorbar(cax, pair)
+    return Bbox.from_extents(region.x0 - width, region.y0, region.x1 + width, region.y1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="3D grouped bar charts of a convergence benchmark results file.")
     parser.add_argument("results", help="Results file (.h5) from python -m python.tools.sim.benchmark.")
@@ -484,6 +569,9 @@ def main():
     parser.add_argument("--no-legend", action="store_false", dest="legend",
                         help="Draw the charts without their solver legend, and write the legend alone to "
                         "<prefix>_legend.pdf, for a figure that stacks several charts under one legend.")
+    parser.add_argument("--frames", default=None,
+                        help="Prefix of benchmark_frames.py's output: adds its example problem's frames beside each "
+                        "chart, the error pair to the left and the material pair to the right (see add_frames).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -505,6 +593,8 @@ def main():
             order = args.solver_order.split(",") if args.solver_order else None
             fig, region = plot_at_width(args.width, f, benchmark, solvers, args.elev, args.azim, order, factor,
                                         args.counts, args.title, args.legend)
+            if args.frames:
+                region = add_frames(fig, region, load_frames(args.frames, benchmark))
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
@@ -518,6 +608,40 @@ def main():
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
                 print(f"Wrote {path}")
             plt.close(fig)
+
+
+import unittest
+
+
+class TestFrames(unittest.TestCase):
+
+    def test_add_frames(self):
+        import tempfile
+
+        self.assertEqual((_length_text(0.257), _length_text(0.00143)), ("0.257 m", "1.43 mm"))
+        with tempfile.TemporaryDirectory() as d:
+            prefix = os.path.join(d, "frames")
+            spec = {"error": dict(quantity="error", vmin=0.0, vmax=0.25),
+                    "material": dict(quantity="lambda", vmin=4.5, vmax=8.5)}
+            for kind, pair in spec.items():
+                pair["shades"] = np.linspace(0.0, 1.0, 12)[:, None].repeat(3, axis=1).tolist()
+                for state in FRAMES_LABELS:
+                    pair[state] = f"{kind}_{state}.png"
+                    plt.imsave(os.path.join(d, pair[state]), np.full((30, 40, 3), 0.5))
+            with open(f"{prefix}_static.json", "w", encoding="utf-8") as f:
+                json.dump(spec, f)
+            frames = load_frames(prefix, "static")
+            self.assertEqual(frames["error"]["initial_image"].shape[:2], (30, 40))
+            fig = plt.figure(figsize=(6.0, 3.0))
+            region = add_frames(fig, Bbox.from_extents(0.25, 0.1, 5.75, 2.9), frames)
+            self.assertAlmostEqual(region.width, 5.5 + 2 * FRAMES_WIDTH)
+            self.assertEqual(len(fig.axes), 6)  # 2 x (2 frames + colorbar)
+            lam = fig.axes[5]
+            self.assertEqual([t.get_text() for t in lam.get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
+            path = os.path.join(d, "out.pdf")
+            fig.savefig(path, bbox_inches=region)
+            plt.close(fig)
+            self.assertGreater(os.path.getsize(path), 1000)
 
 
 if __name__ == "__main__":
