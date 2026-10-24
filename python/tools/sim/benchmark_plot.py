@@ -36,7 +36,20 @@ back; the legend lists them in the same order, back to front. ``--solver-order``
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
-        [--budget-factor 1] [--width 5.5] [--no-legend] [--title] [--elev 28] [--azim -62] [--dpi 200]
+        [--budget-factor 1] [--width 5.5] [--no-legend] [--frames PREFIX] [--dataset DATASET] \
+        [--title] [--elev 28] [--azim -62] [--dpi 200]
+
+``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a 2 x 2 grid
+(:func:`add_frames`): a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in
+columns headed by the cases' labels, their initial iterates above their reference solutions, a colorbar under each
+column. The grid sits left of the chart, its headers in line with the chart's top (the legend's entries, else the 3D
+box's top edge) and its colorbar titles on the baseline of the last material label: the chart is exactly as without
+``--frames``, and the figure gets wider (the paper scales it). After a benchmark re-run, regenerate the frames first
+(``benchmark_frames.py``). The grid's headers are the cases' labels, as on the chart's material axis.
+
+``--dataset`` gives the dataset when the results file's ``dataset`` attribute doesn't resolve (it is relative to the
+main checkout's root, so e.g. from a worktree), for the case labels' moduli: without it, the heterogeneous case is
+labeled "Heterogeneous" instead of its set of Young's moduli, as in the other benchmark figures.
 
 Writes ``<prefix>_<benchmark>.pdf`` and ``.png`` per benchmark, and with ``--no-legend`` the legend alone as
 ``<prefix>_legend.pdf``. ``--width`` renders each chart at the width the paper prints it, so its 8 pt labels
@@ -53,6 +66,7 @@ Matplotlib's default font. No grid lines (maintainer).
 import argparse
 import functools
 import glob
+import json
 import os
 import re
 import warnings
@@ -193,9 +207,11 @@ def scene_moduli(dataset: str, scene: str) -> tuple[float, ...] | None:
     return tuple(sorted({float(f"{v:.3g}") for v in E}))
 
 
-def case_label(group: h5py.Group, case: str) -> str:
+def case_label(group: h5py.Group, case: str, dataset: str | None = None) -> str:
+    """A case's label for the paper (:func:`material_label`), its moduli from ``dataset`` (default: the results file's
+    ``dataset`` attribute, e.g. a path relative to the main checkout's root)."""
     scene = str(group.attrs.get("scene", case))
-    dataset = group.file.attrs.get("dataset")
+    dataset = dataset or group.file.attrs.get("dataset")
     moduli = scene_moduli(str(dataset), scene) if dataset is not None else None
     label = material_label(str(group.attrs.get("label", scene)), moduli)
     if case != group.attrs.get("scene", case):  # one case per energy level of the scene
@@ -284,12 +300,14 @@ def budget_factor(f: h5py.File, factor: float | None) -> float:
 def plot_benchmark(
     f: h5py.File, benchmark: str, solvers: list[str], elev: float, azim: float, solver_order: list[str] | None = None,
     factor: float | None = None, counts: bool = False, title: bool = False, legend: bool = True, scale: float = 1.0,
+    dataset: str | None = None,
 ):
     """One figure: cases x levels x solvers bars of mean normalized increment, with min/max boxes.
     ``solver_order`` (back to front) overrides :func:`depth_order`. ``factor``: the budget factor the bars
     score at (:func:`budget_factor`); below the run's, the T_N cases are re-scored from their logs. ``counts``
     labels the bars with n/N (see the module docstring). ``title`` draws the benchmark's title above the legend,
     ``legend`` the solver legend. ``scale`` multiplies the figure's size but not its fonts (:func:`plot_at_width`).
+    ``dataset``: the dataset file for the case labels (:func:`case_label`).
     Returns the figure and the region to save (:func:`frame`)."""
     levels = results.benchmark_levels(f, benchmark)
     factor = budget_factor(f, factor)
@@ -377,7 +395,7 @@ def plot_benchmark(
                 zorder=len(bars) + order)
 
     ax.set_xticks(range(len(cases)))
-    ax.set_xticklabels([case_label(g, c) for c, g in cases], fontsize=8)
+    ax.set_xticklabels([case_label(g, c, dataset) for c, g in cases], fontsize=8)
     ax.set_yticks(range(n_l))
     ax.set_yticklabels([f"{100 * v:g}" for v in levels], fontsize=8, ha="left", va="center")
     ax.set_xlim(*x_range)
@@ -421,10 +439,10 @@ def plot_at_width(width: float | None, *args, **kwargs) -> tuple:
     scaled and its fonts aren't, so the labels print at their nominal size where the paper places the chart at
     that width. The region doesn't scale exactly with the figure (fonts and paddings), so a few redraws converge."""
     scale = 1.0
-    for _ in range(6):
+    for attempt in range(6):
         fig, region = plot_benchmark(*args, **kwargs, scale=scale)
-        if width is None or abs(region.width - width) <= 0.01:
-            break
+        if width is None or abs(region.width - width) <= 0.01 or attempt == 5:
+            break  # the last redraw is kept even if not within 0.01 in: the returned figure must stay open
         plt.close(fig)
         scale *= width / region.width
     return fig, region
@@ -458,6 +476,161 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
 
 
+# Frames (--frames): a 2 x 2 grid of example problems left of the chart, as tall as its saved region
+FRAMES_ROWS = {"initial": "Initial iterate", "reference": "Reference"}
+FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
+FRAMES_TEXT_SIZE = 7  # pt
+FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
+FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
+FRAMES_MARGIN = 0.08  # inches between the grid and the chart's region
+FRAMES_BAR_HEIGHT = 0.055  # inches
+
+
+def load_frames(prefix: str, benchmark: str) -> dict:
+    """``benchmark_frames.py``'s frames of a benchmark (``<prefix>_<benchmark>.json``), with each pair's images
+    loaded as arrays."""
+    with open(f"{prefix}_{benchmark}.json", encoding="utf-8") as f:
+        spec = json.load(f)
+    directory = os.path.dirname(os.path.abspath(prefix))
+    for pair in spec.values():
+        for state in FRAMES_ROWS:
+            pair[f"{state}_image"] = plt.imread(os.path.join(directory, pair[state]))
+    return spec
+
+
+def _length_text(meters: float) -> str:
+    """A length in m, or in mm below 1 cm: ``0.218 m``, ``1.43 mm``."""
+    return f"{meters:.3g} m" if meters >= 0.01 else f"{1e3 * meters:.3g} mm"
+
+
+def _frames_colorbar(cax, pair: dict) -> str:
+    """A pair's colorbar from its rendered shades, with its quantity's ticks. Returns its title (the caller places
+    it)."""
+    from matplotlib.ticker import FixedLocator, NullFormatter
+
+    shades = np.asarray(pair["shades"])
+    cax.imshow(shades[None], aspect="auto", extent=(pair["vmin"], pair["vmax"], 0, 1), interpolation="bilinear")
+    cax.set_yticks([])
+    for side in ("top", "right", "left"):
+        cax.spines[side].set_visible(False)
+    cax.spines["bottom"].set_linewidth(0.5)
+    cax.tick_params(axis="x", labelsize=7, length=2, width=0.5, pad=1)
+    if pair["quantity"] == "lambda":
+        # log10(lambda + 1) axis: decade ticks, the outer decades labeled
+        decades = [k for k in range(int(np.ceil(pair["vmin"])), int(np.floor(pair["vmax"])) + 1)]
+        at = [np.log10(10.0**k + 1) for k in decades]
+        cax.xaxis.set_major_locator(FixedLocator([at[0], at[-1]] if len(at) > 1 else at))
+        cax.set_xticklabels([f"$10^{{{decades[0]}}}$", f"$10^{{{decades[-1]}}}$"] if len(at) > 1
+                            else [f"$10^{{{decades[0]}}}$"])
+        cax.xaxis.set_minor_locator(FixedLocator(at))
+        cax.xaxis.set_minor_formatter(NullFormatter())
+        cax.tick_params(axis="x", which="minor", length=1.2, width=0.4)
+        title = r"$\lambda$ (Pa)"
+    else:
+        cax.set_xticks([pair["vmin"], pair["vmax"]], ["0", _length_text(pair["vmax"])])
+        labels = cax.get_xticklabels()
+        labels[0].set_ha("left")
+        labels[-1].set_ha("right")
+        title = r"$|x - x^*|$"
+    cax.set_xlim(pair["vmin"], pair["vmax"])
+    return title
+
+
+def _text_size(fig, text: str, rotation: float = 0.0) -> tuple[float, float]:
+    """A text's extent (inches) at :data:`FRAMES_TEXT_SIZE`, as :func:`add_frames` draws it."""
+    t = fig.text(0, 0, text, fontsize=FRAMES_TEXT_SIZE, rotation=rotation, ha="center", va="center",
+                 multialignment="center")
+    box = t.get_window_extent(fig.canvas.get_renderer())
+    t.remove()
+    return box.width / fig.dpi, box.height / fig.dpi
+
+
+def _wrapped(text: str) -> str:
+    """``text`` on two lines, broken at its middle space (unchanged without one)."""
+    spaces = [i for i, ch in enumerate(text) if ch == " "]
+    if not spaces:
+        return text
+    i = min(spaces, key=lambda k: abs(k - len(text) / 2))
+    return text[:i] + "\n" + text[i + 1:]
+
+
+def _baseline(text, renderer) -> float:
+    """A drawn horizontal text's baseline (display pixels)."""
+    return text.get_window_extent(renderer).y0 - text._get_layout(renderer)[0].y0
+
+
+def _frames_anchors(fig, region: Bbox) -> tuple[str, float, float]:
+    """The grid's vertical anchors (inches, figure coordinates) from the drawn chart: the column headers' (alignment,
+    y), on the legend entries' baseline, or without a legend with their tops at the plot's top (``region`` less
+    :data:`FRAME_PAD`: the 3D box's top edge); and the colorbar titles' baseline, the chart's last x tick label's (the
+    material axis' last case), or without one the plot's bottom."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    if fig.legends:
+        header = ("baseline", float(np.mean([_baseline(t, renderer) for t in fig.legends[0].get_texts()])) / fig.dpi)
+    else:
+        header = ("top", region.y1 - FRAME_PAD)
+    ticks = [t for t in fig.axes[0].get_xticklabels() if t.get_visible() and t.get_text()]
+    bottom = _baseline(ticks[-1], renderer) / fig.dpi if ticks else region.y0 + FRAME_PAD
+    return header[0], header[1], bottom
+
+
+def add_frames(fig, region: Bbox, frames: dict, headers: dict) -> Bbox:
+    """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches), as tall as it: columns
+    :data:`FRAMES_COLUMNS` under ``headers`` (e.g. the cases' labels), rows the initial iterate and the reference
+    solution, labeled at the left (rotated, on two lines if longer than the row), and each column's colorbar at the
+    bottom. The headers line up with the chart's top and the colorbars' titles with its last material label
+    (:func:`_frames_anchors`, the chart being ``fig.axes[0]``); the rows share the height between them, the frames as
+    tall as their rows, their width following from their aspect. The chart isn't touched. Returns the region to save,
+    widened to the grid."""
+    fig_w, fig_h = fig.get_size_inches()
+    renderer = fig.canvas.get_renderer()
+    align, header_y, title_y = _frames_anchors(fig, region)
+    inches = lambda artist: artist.get_window_extent(renderer).transformed(fig.dpi_scale_trans.inverted())  # noqa: E731
+    # The texts and colorbars at their heights first (their extents set the rows'), placed along x once the frames'
+    # width is known
+    header_texts = {c: fig.text(0, header_y / fig_h, headers[c], fontsize=FRAMES_TEXT_SIZE, ha="center", va=align,
+                                multialignment="center") for c in FRAMES_COLUMNS}
+    bars, title_texts = {}, {}
+    for c in FRAMES_COLUMNS:
+        bars[c] = fig.add_axes((0, 0, 1 / fig_w, FRAMES_BAR_HEIGHT / fig_h))
+        title_texts[c] = fig.text(0, title_y / fig_h, _frames_colorbar(bars[c], frames[c]), fontsize=FRAMES_TEXT_SIZE,
+                                  ha="center", va="baseline")
+    fig.canvas.draw()
+    title_top = max(inches(t).y1 for t in title_texts.values())
+    labels_bottom = min(inches(t).y0 for c in FRAMES_COLUMNS for t in bars[c].get_xticklabels() if t.get_text())
+    bar_y = FRAMES_GAP + title_top - labels_bottom  # moves the colorbars up until their tick labels clear the titles
+    rows_top = min(inches(t).y0 for t in header_texts.values()) - FRAMES_GAP
+    rows_bottom = bar_y + FRAMES_BAR_HEIGHT + FRAMES_GAP
+    row_h = (rows_top - rows_bottom - (len(FRAMES_ROWS) - 1) * FRAMES_GAP) / len(FRAMES_ROWS)
+    width = min(row_h * frames[c][f"{r}_image"].shape[1] / frames[c][f"{r}_image"].shape[0]
+                for c in FRAMES_COLUMNS for r in FRAMES_ROWS)
+    sizes = {t: _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
+    rows = {r: text if sizes[text][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
+    label_w = max(sizes[text][0] for text in rows.values())
+    # Column pitch: the frames' width, or more if the headers would run into each other
+    pitch = max(width, sum(inches(t).width for t in header_texts.values()) / 2) + FRAMES_COLUMN_GAP
+    x_frames = region.x0 - FRAMES_MARGIN - pitch - width  # the first column's left edge
+    for j, c in enumerate(FRAMES_COLUMNS):
+        x = x_frames + j * pitch
+        header_texts[c].set_x((x + width / 2) / fig_w)
+        title_texts[c].set_x((x + width / 2) / fig_w)
+        bars[c].set_position(((x + 0.06 * width) / fig_w, bar_y / fig_h, 0.88 * width / fig_w, FRAMES_BAR_HEIGHT / fig_h))
+    top = rows_top
+    for r, text in rows.items():
+        fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (top - row_h / 2) / fig_h, text,
+                 fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center", multialignment="center")
+        for j, c in enumerate(FRAMES_COLUMNS):
+            image = np.asarray(frames[c][f"{r}_image"], dtype=np.float64)[..., :3]
+            h = width * image.shape[0] / image.shape[1]
+            alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
+            ax = fig.add_axes(((x_frames + j * pitch) / fig_w, (top - (row_h + h) / 2) / fig_h, width / fig_w, h / fig_h))
+            ax.imshow(np.dstack([image, alpha]), interpolation="lanczos")
+            ax.set_axis_off()
+        top -= row_h + FRAMES_GAP
+    return Bbox.from_extents(x_frames - FRAMES_GAP - label_w, region.y0, region.x1, region.y1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="3D grouped bar charts of a convergence benchmark results file.")
     parser.add_argument("results", help="Results file (.h5) from python -m python.tools.sim.benchmark.")
@@ -484,6 +657,12 @@ def main():
     parser.add_argument("--no-legend", action="store_false", dest="legend",
                         help="Draw the charts without their solver legend, and write the legend alone to "
                         "<prefix>_legend.pdf, for a figure that stacks several charts under one legend.")
+    parser.add_argument("--frames", default=None,
+                        help="Prefix of benchmark_frames.py's output: adds its example problems' frames as a 2 x 2 grid "
+                        "left of each chart (see add_frames).")
+    parser.add_argument("--dataset", default=None,
+                        help="The dataset file the results were run on, for the case labels' moduli (default: the "
+                        "results file's dataset attribute, relative to the main checkout's root).")
     parser.add_argument("--elev", type=float, default=28.0, help="Camera elevation (degrees).")
     parser.add_argument("--azim", type=float, default=-62.0, help="Camera azimuth (degrees).")
     parser.add_argument("--dpi", type=int, default=200, help="PNG resolution.")
@@ -504,7 +683,12 @@ def main():
         for benchmark in benchmarks:
             order = args.solver_order.split(",") if args.solver_order else None
             fig, region = plot_at_width(args.width, f, benchmark, solvers, args.elev, args.azim, order, factor,
-                                        args.counts, args.title, args.legend)
+                                        args.counts, args.title, args.legend, dataset=args.dataset)
+            if args.frames:
+                frames = load_frames(args.frames, benchmark)
+                headers = {c: case_label(f[benchmark][frames[c]["case"]], frames[c]["case"], args.dataset)
+                           for c in FRAMES_COLUMNS}
+                region = add_frames(fig, region, frames, headers)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
@@ -518,6 +702,63 @@ def main():
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
                 print(f"Wrote {path}")
             plt.close(fig)
+
+
+import unittest
+
+
+class TestFrames(unittest.TestCase):
+
+    def test_add_frames(self):
+        import tempfile
+
+        self.assertEqual((_length_text(0.257), _length_text(0.00143)), ("0.257 m", "1.43 mm"))
+        self.assertEqual((_wrapped("Initial iterate"), _wrapped("Reference")), ("Initial\niterate", "Reference"))
+        with tempfile.TemporaryDirectory() as d:
+            prefix = os.path.join(d, "frames")
+            spec = {"error": dict(case="Y1e7", quantity="error", vmin=0.0, vmax=0.25),
+                    "material": dict(case="het", quantity="lambda", vmin=4.5, vmax=8.5)}
+            for kind, pair in spec.items():
+                pair["shades"] = np.linspace(0.0, 1.0, 12)[:, None].repeat(3, axis=1).tolist()
+                for state in FRAMES_ROWS:
+                    pair[state] = f"{kind}_{state}.png"
+                    plt.imsave(os.path.join(d, pair[state]), np.full((30, 40, 3), 0.5))
+            with open(f"{prefix}_static.json", "w", encoding="utf-8") as f:
+                json.dump(spec, f)
+            frames = load_frames(prefix, "static")
+            self.assertEqual(frames["error"]["initial_image"].shape[:2], (30, 40))
+            # A chart with x tick labels and a legend on top: the grid goes left of it, its headers on the legend's
+            # baseline, its colorbar titles on the last tick label's
+            fig = plt.figure(figsize=(6.0, 3.0))
+            chart = fig.add_axes((0.1, 0.2, 0.85, 0.6))
+            chart.bar([0, 1], [1, 2], label="bars")
+            chart.set_xticks([0, 1], ["A", "$E \\in \\{1\\}$ Pa"])
+            fig.legend(loc="upper center")
+            region = Bbox.from_extents(0.0, 0.0, 6.0, 3.0)
+            headers = {"error": "$E = 10^{7}$ Pa", "material": "$E \\in \\{10^{6}, 10^{8}\\}$ Pa"}
+            texts_before = len(fig.texts)
+            saved = add_frames(fig, region, frames, headers)
+            self.assertEqual((saved.x1, saved.y0, saved.y1), (6.0, 0.0, 3.0))
+            self.assertLess(saved.x0, -1.0)
+            self.assertEqual(len(fig.axes), 1 + 2 + 4)  # the chart, 2 colorbars, 4 frames
+            bars, frame_axes = fig.axes[1:3], fig.axes[3:]
+            for ax in fig.axes[1:]:
+                self.assertLessEqual(ax.get_position().x1 * 6.0, -FRAMES_MARGIN + 1e-6)  # left of the chart
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            header, title = fig.texts[texts_before], fig.texts[texts_before + 2]  # the first header and title
+            self.assertAlmostEqual(_baseline(header, renderer), _baseline(fig.legends[0].get_texts()[0], renderer),
+                                   delta=1.0)
+            self.assertAlmostEqual(_baseline(title, renderer), _baseline(chart.get_xticklabels()[-1], renderer),
+                                   delta=1.0)
+            # Two rows sharing the height between: each frame a good part of it, the colorbars below them
+            self.assertGreater(min(ax.get_position().height * 3.0 for ax in frame_axes), 0.6)
+            self.assertLess(max(ax.get_position().y1 for ax in bars), min(ax.get_position().y0 for ax in frame_axes))
+            self.assertEqual([t.get_text() for t in bars[1].get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
+            path = os.path.join(d, "out.pdf")
+            fig.savefig(path, bbox_inches=saved)
+            plt.close(fig)
+            self.assertGreater(os.path.getsize(path), 1000)
 
 
 if __name__ == "__main__":
