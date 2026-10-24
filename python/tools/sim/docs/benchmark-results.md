@@ -240,6 +240,7 @@ the viewers need the full results and the dataset.
 | `benchmark_iterations.py` | tables of iterations to each level, median [25th–75th percentile] VBD sweeps, or Newton steps and CG iterations, with n/N, as Markdown and LaTeX | `python -m python.tools.sim.benchmark_iterations RESULTS.h5 -o TABLES/iterations [--budget-factor 2]` |
 | `benchmark_thin.py` | the thin copy of a results file (2.6), checked against the full one | `python -m python.tools.sim.benchmark_thin RESULTS.h5 -o RESULTS-thin.h5 [--max-entries 1000]` |
 | `benchmark_viewer.py` | interactive Polyscope viewer of the trajectories: the solvers side by side, in sync, with the reference, inertial target and start-state overlays, error colors and per-level jumps | `python -m python.tools.sim.benchmark_viewer RESULTS.h5 [--dataset path/to/trampolines.h5]` |
+| `benchmark_video.py` | MP4s of the viewer's side-by-side comparisons, one per benchmark: every trajectory sample, each opening on its start state for a second ("Initial"), titled and labeled in Linux Biolinum (6.1) | `python -m python.tools.sim.benchmark_video RESULTS.h5 -o VIDEOS/trampolines [--benchmarks static] [--cases Y1e5] [--samples 0] [--error-fraction ...]` |
 | `python/examples/benchmark_browser.py` | interactive Polyscope browser of the dataset: each problem's start state, velocities, inertial target and reference, with energies and sampler diagnostics | `cd python/examples && python benchmark_browser.py -d path/to/trampolines.h5` |
 
 - **Plotting dependencies:** the plotting and table scripts need `h5py`, `numpy` and `matplotlib`. The viewers also
@@ -247,3 +248,43 @@ the viewers need the full results and the dataset.
 - **Moved files:** the viewer finds the dataset through the results file's `dataset` attribute, a path relative to
   the repository root. When the files are elsewhere, pass `--dataset`.
 - **Module docstrings:** each script's docstring has the full options and the exact definitions.
+
+### 6.1 Videos
+
+The viewer and the videos color each vertex by its error |x − x\*| from 0 to the problem's initial error. A
+solver that stalls at e/e0 ~ 0.1 then looks almost as converged as one at 1e-5, so for the problems where a solver
+stays unconverged the color scale ends at a fraction of the initial error instead (`--error-fraction
+[BENCHMARK/]CASE[:SAMPLE]=F`, repeatable, the most specific entry winning; values above it saturate). The 30 kJ
+videos use:
+
+```bash
+python -m python.tools.sim.benchmark_video data/benchmarks/results/trampolines.30kJ.h5 \
+    -o data/benchmarks/results/videos/trampolines.30kJ \
+    --error-fraction static/Y1e5=0.2 --error-fraction static/Y1e6=0.2 \
+    --error-fraction static/Y1e7=0.5 --error-fraction static/Y1e7:0=0.2 \
+    --error-fraction static/het=0.5 --error-fraction static/het:9=0.3 \
+    --error-fraction dynamic_h0.01/Y1e8=0.05 --error-fraction dynamic_h0.01/Y1e8:13=0.03 \
+    --error-fraction dynamic_h0.01/het=0.05 --error-fraction dynamic_h0.01/het:22=0.03 \
+    --error-fraction dynamic_h0.01/het:27=0.03
+```
+
+How they were chosen, from each trajectory sample's last frame (2 x T_N): a problem is clamped only if some solver
+ends unconverged (e/e0 > 1e-2); the fraction is the largest of 1, 0.5, 0.3, 0.2, 0.1, 0.05, 0.03 that puts that
+solver's largest vertex error between 0.3 and 1 of the scale (visible, not saturated), while the converged solvers
+stay dark. A case takes the value most of its samples agree on, and a sample outside that band gets its own.
+
+| Problems | Fraction | Why |
+|---|---|---|
+| static/Y1e5 | 0.2 | Anderson ends at e/e0 0.09–0.17 (its largest vertex error 7–12% of the initial error), VBD at 0.03–0.14: 0.36–0.61 of the scale |
+| static/Y1e6 | 0.2 | Anderson 0.09–0.29, VBD 0.06–0.24 (largest vertex errors 7–18%): 0.34–0.89 of the scale |
+| static/Y1e7 | 0.5 | Anderson 0.11–0.31 (largest vertex errors 15–29%): 0.31–0.58 of the scale |
+| static/Y1e7, sample 0 | 0.2 | its largest vertex error is only 7.5%: 0.15 of the scale at 0.5 |
+| static/Y1e8 | 1 | Anderson 0.43–0.60 (largest vertex errors 33–72%) already shows at the full scale |
+| static/het | 0.5 | Anderson 0.26–0.61 (largest vertex errors 13–41%): 0.46–0.82 of the scale |
+| static/het, sample 9 | 0.3 | its largest vertex error is 13%: 0.26 of the scale at 0.5 |
+| dynamic_h0.0001/* | 1 | every solver converges (e/e0 at most 8e-4) |
+| dynamic_h0.01/Y1e5, Y1e6, Y1e7 | 1 | every solver converges (e/e0 at most 6e-4) |
+| dynamic_h0.01/Y1e8 | 0.05 | Anderson ends at e/e0 0.011–0.042 and VBD up to 0.036 (largest vertex errors 1–5%), AAAVBD and Newton at ~1e-4 |
+| dynamic_h0.01/Y1e8, sample 13 | 0.03 | its largest vertex error is 1.3%: 0.25 of the scale at 0.05 |
+| dynamic_h0.01/het | 0.05 | VBD ends at 0.021–0.064 and Anderson at 0.011–0.028 (largest vertex errors 1.2–4.8%), AAAVBD and Newton at ~1e-4 |
+| dynamic_h0.01/het, samples 22, 27 | 0.03 | their largest vertex errors are 1.2–1.3%: 0.25–0.27 of the scale at 0.05 |

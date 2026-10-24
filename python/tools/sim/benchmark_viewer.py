@@ -24,8 +24,13 @@ overlays alone, which are then drawn more opaque (opaque when only one is shown)
 - **Colors:** the per-vertex error |x_i - x*_i| or the displacement from the start |x_i - x_i(0)|, on one
   color scale shared by the shown solvers: by default from 0 to the problem's initial error max_i |x_i(0) - x*_i|
   (the start is the same for every solver), so the range is fixed for the sample and each solver's colors decay
-  smoothly as it converges, whatever the others do (maintainer); or the largest value among them at the current
-  time, which shows where each solver's error concentrates while e/e0 gives its size; or a fixed max. Also each
+  smoothly as it converges, whatever the others do (maintainer). A fraction of it instead (0.001 to 1), per
+  problem: values above the max saturate to the top color, so a solve that stalls well below the initial error
+  still shows its residual error. ``--error-fraction [BENCHMARK/]CASE[:SAMPLE]=F`` (repeatable; a bare ``F`` for
+  every problem) sets it, the most specific entry winning (a sample's over its case's, and naming the benchmark
+  over not); the panel's slider sets the shown problem's for the session and shows its entry to copy. Or the
+  largest value among them at the current time, which shows where each solver's error concentrates while e/e0
+  gives its size; or a fixed max. Also each
   solver's color, or
   a material parameter (the dataset FEM's Lame mu, lambda or Young's modulus, per boundary face from its
   tetrahedron) or the lumped mass per node, named and colored as in the CPU editor, by default in
@@ -41,7 +46,7 @@ Warp.
 Usage (without a results file, open one with Load):
     python -m python.tools.sim.benchmark_viewer [path/to/results.h5] \
         [--dataset path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines-test.h5] \
-        [--benchmark static] [--case Y1e6] [--sample 0]
+        [--benchmark static] [--case Y1e6] [--sample 0] [--error-fraction static/Y1e5=0.2 ...]
 
 Tests: ``python -m unittest python.tools.sim.benchmark_viewer``.
 """
@@ -62,6 +67,9 @@ from ..vbd.ui import material
 FEM_GROUP = "pbat.sim.dynamics.FemElastoDynamics"  # the dataset's stored FemElastoDynamics (pbat Archive)
 MESH_GROUP = "pbat.fem.Mesh"
 ERROR_FLOOR = 1e-12  # e/e0 below this plots at the floor (log scale)
+ERROR_FRACTION = 1.0  # the "Initial error" scale's max, as a fraction of the initial error
+ERROR_FRACTION_RANGE = (1e-3, 1.0)  # the panel slider's range (log), and --error-fraction's
+ERROR_FRACTION_SPEC = "[BENCHMARK/]CASE[:SAMPLE]=F"
 
 
 def boundary_triangles(X: np.ndarray, T: np.ndarray, return_elements: bool = False):
@@ -129,6 +137,75 @@ def list_cases(path: str) -> list[tuple[str, str, list[str], list[int]]]:
             if samples:
                 out.append((benchmark, case, solvers, samples))
     return out
+
+
+def parse_error_fraction(spec: str) -> tuple[tuple[str | None, str | None, int | None], float]:
+    """An ``--error-fraction`` entry, ``[BENCHMARK/]CASE[:SAMPLE]=F`` or a bare ``F``: its key (benchmark, case,
+    sample; None where not given) and fraction. Raises ValueError for a malformed entry or a fraction outside
+    ``ERROR_FRACTION_RANGE``."""
+    key_text, sep, value_text = spec.rpartition("=")
+    benchmark = case = sample = None
+    if sep:
+        benchmark, slash, rest = key_text.rpartition("/")
+        if not slash:
+            benchmark = None
+        case, colon, sample_text = rest.partition(":")
+        if (slash and not benchmark) or not case or (colon and not sample_text.isdigit()):
+            raise ValueError(f"--error-fraction {spec!r}: expected {ERROR_FRACTION_SPEC} or F")
+        sample = int(sample_text) if colon else None
+    try:
+        value = float(value_text)
+    except ValueError:
+        raise ValueError(f"--error-fraction {spec!r}: {value_text!r} isn't a number") from None
+    lo, hi = ERROR_FRACTION_RANGE
+    if not lo <= value <= hi:
+        raise ValueError(f"--error-fraction {spec!r}: the fraction must be in [{lo:g}, {hi:g}]")
+    return (benchmark, case, sample), value
+
+
+class ErrorFractions:
+    """Per-problem fractions of the initial error for the "Initial error" color scale, from ``--error-fraction``
+    entries (:func:`parse_error_fraction`). A problem takes its most specific matching entry: one naming its sample
+    beats one naming only its case, and with the same, naming the benchmark beats not; a bare F matches every
+    problem, and without any match, ``ERROR_FRACTION``."""
+
+    def __init__(self, specs: list[str] | tuple[str, ...] = ()):
+        self.entries: dict[tuple[str | None, str | None, int | None], float] = {}
+        for spec in specs:
+            key, value = parse_error_fraction(spec)
+            if key in self.entries:
+                raise ValueError(f"--error-fraction {spec!r}: its problems already have an entry")
+            self.entries[key] = value
+
+    @staticmethod
+    def _rank(key: tuple[str | None, str | None, int | None]) -> int:
+        benchmark, case, sample = key
+        return 4 * (sample is not None) + 2 * (case is not None) + (benchmark is not None)
+
+    @staticmethod
+    def _matches(key, benchmark: str, case: str, sample: int) -> bool:
+        return all(k is None or k == v for k, v in zip(key, (benchmark, case, sample)))
+
+    def __call__(self, benchmark: str, case: str, sample: int) -> float:
+        """The problem's fraction."""
+        keys = [key for key in self.entries if self._matches(key, benchmark, case, sample)]
+        return self.entries[max(keys, key=self._rank)] if keys else ERROR_FRACTION
+
+    def set(self, benchmark: str, case: str, sample: int, value: float):
+        """Sets one problem's fraction (an entry naming it fully)."""
+        self.entries[benchmark, case, sample] = value
+
+    @staticmethod
+    def spec(benchmark: str, case: str, sample: int, value: float) -> str:
+        """The entry giving one problem ``value``, e.g. ``static/Y1e5:0=0.2``."""
+        return f"{benchmark}/{case}:{sample}={value:.3g}"
+
+    def unmatched(self, cases: list[tuple[str, str, list, list[int]]]) -> list[str]:
+        """The entries (as specs) that match no problem of ``cases`` (:func:`list_cases`), e.g. typos."""
+        problems = [(b, c, sample) for b, c, _, samples in cases for sample in samples]
+        return [f"{'' if b is None else b + '/'}{c}{'' if s is None else f':{s}'}={v:g}"
+                for (b, c, s), v in self.entries.items() if c is not None
+                and not any(self._matches((b, c, s), *p) for p in problems)]
 
 
 def _time_tolerance(t: float) -> float:
@@ -385,7 +462,7 @@ def slowdown_text(playback_factor: float) -> str:
 class Viewer:
     """The Polyscope GUI: the meshes, the panel and the playback state."""
 
-    def __init__(self, dataset: str | None):
+    def __init__(self, dataset: str | None, error_fractions: ErrorFractions | None = None):
         self.path: str | None = None
         self.dataset = dataset
         self.cases: list = []
@@ -397,6 +474,7 @@ class Viewer:
         self.autoplay, self.screenshot = False, False
         self.clock_time, self.clock_lag = time.time(), 0.0
         self.color_mode, self.scale_mode, self.fixed_max, self.vmax = 0, 0, 1.0, 0.0
+        self.error_fractions = error_fractions or ErrorFractions()  # the "Initial error" scale's, per problem
         self.spacing = 1.15
         self.show_solvers = True  # every solver mesh, above the per-solver checkboxes
         self.log_material = True  # material colors in log10(value + 1), as the CPU editor (masses: log10(m))
@@ -522,6 +600,33 @@ class Viewer:
         x0 = self.selection.trajectories[0].x[0][self.vertices].astype(np.float64)
         return float(np.linalg.norm(x0 - self.selection.reference[self.vertices], axis=1).max())
 
+    @property
+    def error_fraction(self) -> float:
+        """The shown problem's fraction of the initial error for the "Initial error" scale."""
+        s = self.selection
+        return self.error_fractions(s.benchmark, s.case, s.sample)
+
+    @error_fraction.setter
+    def error_fraction(self, value: float):
+        s = self.selection
+        self.error_fractions.set(s.benchmark, s.case, s.sample, value)
+
+    def color_scale_max(self, values: dict[str, np.ndarray]) -> float:
+        """The error or displacement colors' max for the scale mode: ``error_fraction`` x the initial error, the
+        largest of the shown solvers' ``values``, or the fixed max."""
+        if self.scale_mode == 0:
+            vmax = self.error_fraction * self.initial_error()
+        elif self.scale_mode == 1:
+            vmax = max(float(v.max()) for v in values.values())
+        else:
+            vmax = self.fixed_max
+        return max(vmax, 1e-12)
+
+    def scale_text(self) -> str:
+        """The color scale's range, e.g. "0 to 0.1254 m (10% of the initial error)"."""
+        text = f"0 to {self.vmax:.4g} m"
+        return text + (f" ({100 * self.error_fraction:.3g}% of the initial error)" if self.scale_mode == 0 else "")
+
     def overlay_opacity(self) -> float:
         """Translucent over the solver meshes; without them, more opaque, and opaque if it is the only one."""
         if self.show_solvers:
@@ -565,13 +670,7 @@ class Viewer:
                 self.meshes[tr.solver].remove_all_quantities()
         if self.color_mode < 2 and shown:
             values = {tr.solver: self.vertex_values(tr, frames[tr.solver]) for tr in shown}
-            if self.scale_mode == 0:
-                vmax = self.initial_error()
-            elif self.scale_mode == 1:
-                vmax = max(float(v.max()) for v in values.values())
-            else:
-                vmax = self.fixed_max
-            self.vmax = max(vmax, 1e-12)
+            self.vmax = self.color_scale_max(values)
             for solver, v in values.items():
                 self.meshes[solver].add_scalar_quantity(COLOR_MODES[self.color_mode], v, vminmax=(0.0, self.vmax),
                                                         cmap="viridis", enabled=True)
@@ -798,11 +897,27 @@ class Viewer:
             imgui.SetNextItemWidth(width * 0.5)
             changed, self.scale_mode = imgui.Combo("Scale", self.scale_mode, list(SCALE_MODES))
             self.dirty |= changed
-            if self.scale_mode == 2:
+            if self.scale_mode == 0:
+                imgui.SetNextItemWidth(width * 0.3)
+                lo, hi = (math.log10(f) for f in ERROR_FRACTION_RANGE)
+                changed, exponent = imgui.SliderFloat("Fraction", math.log10(self.error_fraction), lo, hi,
+                                                      format="10^%.2f")
+                if changed:
+                    self.error_fraction = 10.0 ** min(max(exponent, lo), hi)
+                    self.dirty = True
+                if imgui.IsItemHovered():
+                    imgui.SetTooltip("The max as a fraction of the initial error: values above it saturate, so a "
+                                     "stalled solve's residual error shows. Sets this problem's for the session")
+                entry = "--error-fraction " + ErrorFractions.spec(s.benchmark, s.case, s.sample, self.error_fraction)
+                imgui.TextDisabled(entry)
+                imgui.SameLine()
+                if imgui.SmallButton("Copy##error_fraction"):
+                    imgui.SetClipboardText(entry)
+            elif self.scale_mode == 2:
                 imgui.SetNextItemWidth(width * 0.3)
                 changed, self.fixed_max = imgui.InputFloat("Max (m)", self.fixed_max, format="%.4g")
                 self.dirty |= changed
-            imgui.TextDisabled(f"Color scale 0 to {self.vmax:.4g} m")
+            imgui.TextDisabled(f"Color scale {self.scale_text()}")
         elif self.color_mode >= 3:
             changed, self.log_material = imgui.Checkbox("Log10 scale", self.log_material)
             self.dirty |= changed
@@ -826,7 +941,7 @@ class Viewer:
         self.draw_labels()
 
 
-def main():
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="Benchmark trajectory viewer",
                                      description="Polyscope viewer of benchmark.py --snapshots trajectories.")
     parser.add_argument("results", nargs="?", default=None,
@@ -836,7 +951,35 @@ def main():
     parser.add_argument("--benchmark", default=None, help="Benchmark to open first, e.g. static or dynamic_h0.01.")
     parser.add_argument("--case", default=None, help="Case (scene) to open first, e.g. Y1e6.")
     parser.add_argument("--sample", type=int, default=None, help="Sample to open first.")
-    args = parser.parse_args()
+    add_error_fraction_argument(parser)
+    args = parser.parse_args(argv)
+    try:
+        args.error_fractions = ErrorFractions(args.error_fractions)
+    except ValueError as e:
+        parser.error(str(e))
+    return args
+
+
+def add_error_fraction_argument(parser: argparse.ArgumentParser):
+    """``--error-fraction``, repeatable, into ``error_fractions`` (the specs; :class:`ErrorFractions` reads them)."""
+    lo, hi = ERROR_FRACTION_RANGE
+    parser.add_argument("--error-fraction", action="append", default=[], dest="error_fractions",
+                        metavar=ERROR_FRACTION_SPEC,
+                        help="The \"Initial error\" color scale's max as a fraction F of the problem's initial error, "
+                        f"{lo:g} to {hi:g}: values above it saturate, so small residual errors show. Repeatable, per "
+                        "problem (e.g. static/Y1e5=0.2, dynamic_h0.01/Y1e7:10=0.3), the most specific entry winning; "
+                        f"a bare F for every problem (default: {ERROR_FRACTION:g}).")
+
+
+def check_error_fractions(fractions: ErrorFractions, cases: list):
+    """Exits naming the ``--error-fraction`` entries that match no problem with trajectories."""
+    unmatched = fractions.unmatched(cases)
+    if unmatched:
+        raise SystemExit(f"--error-fraction: no problem with trajectories matches {', '.join(unmatched)}")
+
+
+def main():
+    args = parse_args()
 
     import polyscope as ps
 
@@ -847,9 +990,11 @@ def main():
     ps.set_ground_plane_mode("none")
     ps.set_SSAA_factor(4)
     ps.init()
-    viewer = Viewer(args.dataset)
+    viewer = Viewer(args.dataset, args.error_fractions)
     if args.results is not None:
         viewer.load(args.results, args.benchmark, args.case, args.sample)
+        if viewer.cases:
+            check_error_fractions(args.error_fractions, viewer.cases)
     ps.set_user_callback(viewer.callback)
     ps.show()
 
@@ -903,50 +1048,62 @@ class TestBenchmarkViewer(unittest.TestCase):
         np.testing.assert_allclose(y[:5], [0.0, -1.0, -2.0, math.log10(ERROR_FLOOR), 0.0])
         self.assertTrue(math.isnan(y[5]))  # after the solve's end
 
+    SAMPLE = 1  # the files' trajectory sample: not the first, so the sample (not its position) must select it
+    MASSES = np.linspace(0.1, 0.8, 8)  # lumped mass per node
+
+    @classmethod
+    def write_files(cls, root: str) -> tuple[str, str, dict[str, np.ndarray]]:
+        """A dataset and a results file of one cube scene, with trajectories of VBD and Newton for one sample of
+        a static and a dynamic set; returns their paths and the dynamic set's shapes by key."""
+        X, T = cls.cube()
+        rng = np.random.default_rng(0)
+        shapes = {key: rng.standard_normal((2, 8, 3)).astype(np.float32) for key in ("x", "xtilde", "x_ref")}
+        masses = cls.MASSES
+        levels = (0.5,)
+        sample = cls.SAMPLE
+        dataset, path = os.path.join(root, "dataset.h5"), os.path.join(root, "results.h5")
+        with h5py.File(dataset, "w") as d:
+            mesh = d.create_group(f"S/fem/{FEM_GROUP}/{MESH_GROUP}")
+            mesh.create_dataset("X", data=X.T.astype(np.float32))
+            mesh.create_dataset("E", data=T.T)
+            # Two materials: the first three tetrahedra 100x stiffer (mu, lambda per quadrature point)
+            lame = np.array([[1e7] * 3 + [1e5] * 3, [4e7] * 3 + [4e5] * 3], dtype=np.float32)
+            d[f"S/fem/{FEM_GROUP}"].create_dataset("lamegU", data=lame)
+            d[f"S/fem/{FEM_GROUP}"].create_dataset("egU", data=np.arange(6)[:, None])
+            d[f"S/fem/{FEM_GROUP}"].create_dataset("m", data=masses[:, None])
+            for name in ("S/static/E1", "S/dynamic_h0.01/E1"):
+                d.create_group(name).attrs["scene"] = "S"
+            for key, value in shapes.items():
+                d.create_dataset(f"S/dynamic_h0.01/E1/samples/{key}", data=value)
+        with h5py.File(path, "w") as f:
+            f.attrs.update(format=results.FORMAT, version=results.VERSION, dataset=dataset,
+                           solvers=["VBD", "Newton"])
+            for benchmark, problem in (("static", "static"), ("dynamic_h0.01", "dynamic")):
+                case = results.require_case(f, benchmark, "S", {"set": f"S/{benchmark}/E1", "problem": problem},
+                                            levels=levels)
+                for solver in ("VBD", "Newton"):
+                    c = results.level_crossings(np.array([1.0, 0.4]), np.array([0.0, 1.0]), levels)
+                    summary = dict(sample=sample, e0=1.0, iterations=1, sweeps=1, solver_time=1.0,
+                                   final_relative_error=0.4, termination="target", deformation_energy=0.0,
+                                   crossings=c, budget=1.0, normalization=1.0)
+                    trajectory = dict(iteration=np.array([0, 1]), t=np.array([0.0, 1.0]),
+                                      t_target=np.array([0.0, 1.0]), level_frames=np.array([1]),
+                                      level_exact=np.array([True]), x=np.stack([X, X]), requested_frames=1,
+                                      ring_slots=2, stride=1, device_bytes=0, video_seconds=2.0,
+                                      playback_factor=2.0)
+                    log = (np.array([1.0, 0.4]), np.array([0.0, 1.0]), np.array([0, 1]))
+                    results.write_solver(case, solver, levels, [summary], [log], [trajectory])
+        return dataset, path, shapes
+
     def test_overlays(self):
         """A dataset and a results file of one cube scene: each problem's overlays load from its set and sit
         at every solver's copy, as the solvers' frames."""
         import tempfile
 
         X, T = self.cube()
-        rng = np.random.default_rng(0)
-        shapes = {key: rng.standard_normal((2, 8, 3)).astype(np.float32) for key in ("x", "xtilde", "x_ref")}
-        masses = np.linspace(0.1, 0.8, 8)  # lumped mass per node
-        levels = (0.5,)
-        sample = 1  # not the first, so the sample (not its position) must select the shapes
+        masses, sample = self.MASSES, self.SAMPLE
         with tempfile.TemporaryDirectory() as root:
-            dataset, path = os.path.join(root, "dataset.h5"), os.path.join(root, "results.h5")
-            with h5py.File(dataset, "w") as d:
-                mesh = d.create_group(f"S/fem/{FEM_GROUP}/{MESH_GROUP}")
-                mesh.create_dataset("X", data=X.T.astype(np.float32))
-                mesh.create_dataset("E", data=T.T)
-                # Two materials: the first three tetrahedra 100x stiffer (mu, lambda per quadrature point)
-                lame = np.array([[1e7] * 3 + [1e5] * 3, [4e7] * 3 + [4e5] * 3], dtype=np.float32)
-                d[f"S/fem/{FEM_GROUP}"].create_dataset("lamegU", data=lame)
-                d[f"S/fem/{FEM_GROUP}"].create_dataset("egU", data=np.arange(6)[:, None])
-                d[f"S/fem/{FEM_GROUP}"].create_dataset("m", data=masses[:, None])
-                for name in ("S/static/E1", "S/dynamic_h0.01/E1"):
-                    d.create_group(name).attrs["scene"] = "S"
-                for key, value in shapes.items():
-                    d.create_dataset(f"S/dynamic_h0.01/E1/samples/{key}", data=value)
-            with h5py.File(path, "w") as f:
-                f.attrs.update(format=results.FORMAT, version=results.VERSION, dataset=dataset,
-                               solvers=["VBD", "Newton"])
-                for benchmark, problem in (("static", "static"), ("dynamic_h0.01", "dynamic")):
-                    case = results.require_case(f, benchmark, "S", {"set": f"S/{benchmark}/E1", "problem": problem},
-                                                levels=levels)
-                    for solver in ("VBD", "Newton"):
-                        c = results.level_crossings(np.array([1.0, 0.4]), np.array([0.0, 1.0]), levels)
-                        summary = dict(sample=sample, e0=1.0, iterations=1, sweeps=1, solver_time=1.0,
-                                       final_relative_error=0.4, termination="target", deformation_energy=0.0,
-                                       crossings=c, budget=1.0, normalization=1.0)
-                        trajectory = dict(iteration=np.array([0, 1]), t=np.array([0.0, 1.0]),
-                                          t_target=np.array([0.0, 1.0]), level_frames=np.array([1]),
-                                          level_exact=np.array([True]), x=np.stack([X, X]), requested_frames=1,
-                                          ring_slots=2, stride=1, device_bytes=0, video_seconds=2.0,
-                                          playback_factor=2.0)
-                        log = (np.array([1.0, 0.4]), np.array([0.0, 1.0]), np.array([0, 1]))
-                        results.write_solver(case, solver, levels, [summary], [log], [trajectory])
+            dataset, path, shapes = self.write_files(root)
             self.assertEqual([(b, c, n) for b, c, _, n in list_cases(path)], [("static", "S", [1]),
                                                                                 ("dynamic_h0.01", "S", [1])])
             static = load_selection(path, "static", "S", sample)
@@ -1006,6 +1163,126 @@ class TestBenchmarkViewer(unittest.TestCase):
         values, vminmax, _ = viewer.material_values()
         np.testing.assert_allclose(values, np.log10(masses[viewer.vertices]))
         np.testing.assert_allclose(vminmax, np.percentile(values, material.MASS_PERCENTILES))
+
+    def test_gui_stubbed(self):
+        """Every color and scale mode with polyscope stubbed: balanced IDs, unique widget labels per ID scope; the
+        "Initial error" scale at --error-fraction and the slider's fraction of the initial error."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        stack, labels = [], []
+
+        def widget(label, *args, **kwargs):
+            labels.append((tuple(stack), label))
+            return False, (args[0] if args else None)
+
+        imgui = mock.MagicMock()
+        imgui.PushID.side_effect = lambda i: stack.append(i)
+        imgui.PopID.side_effect = lambda: stack.pop()
+        for name in ("Checkbox", "SliderInt", "SliderFloat", "InputFloat", "Combo"):
+            getattr(imgui, name).side_effect = widget
+        for name in ("Button", "SmallButton", "InvisibleButton"):
+            getattr(imgui, name).side_effect = lambda label, *a, **k: labels.append((tuple(stack), label)) or False
+        imgui.IsItemHovered.return_value = False
+        imgui.GetWindowWidth.return_value = 400.0
+        imgui.GetContentRegionAvail.return_value = (400.0, 300.0)
+        imgui.GetCursorScreenPos.return_value = (0.0, 0.0)
+        imgui.CalcTextSize.return_value = (20.0, 10.0)
+        ps = mock.MagicMock()
+        ps.imgui = imgui
+        ps.register_surface_mesh.side_effect = lambda *a, **k: mock.MagicMock()
+        camera = ps.get_view_camera_parameters.return_value
+        camera.get_view_mat.return_value = np.eye(4)
+        camera.get_fov_vertical_deg.return_value = 45.0
+        camera.get_aspect.return_value = 1.6
+        ps.get_window_size.return_value = (1280, 800)
+        self.assertEqual(parse_args([]).error_fractions("static", "S", 1), ERROR_FRACTION)
+        fractions = parse_args(["--error-fraction", "0.05"]).error_fractions
+        fraction = fractions("dynamic_h0.01", "S", self.SAMPLE)
+        self.assertEqual(fraction, 0.05)
+        for bad in ("0", "1e-4", "2", "S=x", "/S=0.1", "static/=0.1", "S:=0.1", "S:a=0.1", "=0.1"):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr"):
+                parse_args(["--error-fraction", bad])
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, shapes = self.write_files(root)
+            viewer = Viewer(dataset, fractions)
+            viewer.load(path, "dynamic_h0.01", "S", self.SAMPLE)
+            self.assertIsNone(viewer.error)
+            viewer.callback()
+            # The start x(0) is X (the trajectories' frames), the reference the set's x_ref
+            X, _ = self.cube()
+            e0 = np.linalg.norm(X[viewer.vertices] - shapes["x_ref"][self.SAMPLE][viewer.vertices], axis=1).max()
+            self.assertAlmostEqual(viewer.initial_error(), e0, places=5)
+            self.assertAlmostEqual(viewer.vmax, fraction * e0, places=5)
+            self.assertEqual(viewer.scale_text(), f"0 to {fraction * e0:.4g} m (5% of the initial error)")
+            mesh = viewer.meshes["VBD"]
+            self.assertEqual(mesh.add_scalar_quantity.call_args.kwargs["vminmax"], (0.0, viewer.vmax))
+            # The slider (log10 of the fraction) sets it, clamped to the range
+            imgui.SliderFloat.side_effect = lambda label, *a, **k: (label == "Fraction", -1.0 if label == "Fraction"
+                                                                    else a[0])
+            viewer.callback()
+            self.assertAlmostEqual(viewer.error_fraction, 0.1)
+            self.assertAlmostEqual(fractions("dynamic_h0.01", "S", self.SAMPLE), 0.1)  # this problem's only
+            self.assertEqual(fractions("static", "S", self.SAMPLE), 0.05)
+            imgui.SetClipboardText.reset_mock()
+            imgui.SmallButton.side_effect = lambda label, *a, **k: label == "Copy##error_fraction"
+            viewer.callback()  # the meshes follow on the next frame
+            self.assertAlmostEqual(viewer.vmax, 0.1 * e0, places=5)
+            imgui.SetClipboardText.assert_called_with(f"--error-fraction dynamic_h0.01/S:{self.SAMPLE}=0.1")
+            imgui.SmallButton.side_effect = lambda label, *a, **k: labels.append((tuple(stack), label)) or False
+            imgui.SliderFloat.side_effect = lambda label, *a, **k: (label == "Fraction", -9.0 if label == "Fraction"
+                                                                    else a[0])
+            viewer.callback()
+            self.assertAlmostEqual(viewer.error_fraction, ERROR_FRACTION_RANGE[0])
+            imgui.SliderFloat.side_effect = widget
+            # Every color and scale mode: balanced IDs, unique labels
+            for color_mode in range(len(COLOR_MODES)):
+                for scale_mode in range(len(SCALE_MODES)):
+                    viewer.color_mode, viewer.scale_mode, viewer.dirty = color_mode, scale_mode, True
+                    labels.clear()
+                    viewer.callback()
+                    self.assertEqual(stack, [])
+                    self.assertEqual(len(labels), len(set(labels)), labels)
+            # The other scales ignore the fraction
+            viewer.color_mode, viewer.scale_mode, viewer.fixed_max, viewer.dirty = 0, 2, 0.25, True
+            viewer.callback()
+            self.assertEqual(viewer.vmax, 0.25)
+            self.assertEqual(viewer.scale_text(), "0 to 0.25 m")
+        self.assertEqual(imgui.PushID.call_count, imgui.PopID.call_count)
+
+    def test_error_fractions(self):
+        """--error-fraction entries: the most specific match wins (sample over case, benchmark named over not, any
+        over the bare F, which beats the default); malformed or duplicate entries and fractions out of range are
+        refused; entries matching no problem are reported."""
+        self.assertEqual(ErrorFractions()("static", "Y1e5", 0), ERROR_FRACTION)
+        fractions = ErrorFractions(["0.5", "Y1e5=0.4", "static/Y1e5=0.3", "Y1e5:3=0.2", "static/Y1e5:4=0.1",
+                                    "dynamic_h0.01/Y1e7:10=0.25"])
+        self.assertEqual(fractions("static", "Y1e6", 0), 0.5)  # the bare F
+        self.assertEqual(fractions("dynamic_h0.01", "Y1e5", 0), 0.4)  # the case, every benchmark
+        self.assertEqual(fractions("static", "Y1e5", 0), 0.3)  # the benchmark's case
+        self.assertEqual(fractions("static", "Y1e5", 3), 0.2)  # a sample of the case beats its benchmark/case
+        self.assertEqual(fractions("dynamic_h0.01", "Y1e5", 3), 0.2)
+        self.assertEqual(fractions("static", "Y1e5", 4), 0.1)  # the fully named problem
+        self.assertEqual(fractions("dynamic_h0.01", "Y1e5", 4), 0.4)
+        self.assertEqual(fractions("dynamic_h0.01", "Y1e7", 10), 0.25)  # a benchmark name with a dot
+        self.assertEqual(fractions("dynamic_h0.01", "Y1e7", 11), 0.5)
+        fractions.set("static", "Y1e6", 2, 0.05)
+        self.assertEqual(fractions("static", "Y1e6", 2), 0.05)
+        self.assertEqual(fractions("static", "Y1e6", 3), 0.5)
+        self.assertEqual(ErrorFractions.spec("static", "Y1e6", 2, 0.05), "static/Y1e6:2=0.05")
+        self.assertEqual(parse_error_fraction("dynamic_h0.01/Y1e7:10=0.3"), (("dynamic_h0.01", "Y1e7", 10), 0.3))
+        for bad in ("abc", "S=", "S=2", "S=0.0001", "/S=0.1", "static/=0.1", "S:=0.1", "S:-1=0.1", "S:1.5=0.1",
+                    "=0.1"):
+            with self.assertRaises(ValueError, msg=bad):
+                parse_error_fraction(bad)
+        for duplicate in (["S=0.1", "S=0.2"], ["0.1", "0.2"], ["static/S:1=0.1", "static/S:1=0.1"]):
+            with self.assertRaises(ValueError):
+                ErrorFractions(duplicate)
+        cases = [("static", "Y1e5", [], [0, 4]), ("dynamic_h0.01", "Y1e7", [], [10])]
+        self.assertEqual(fractions.unmatched(cases), ["Y1e5:3=0.2", "static/Y1e6:2=0.05"])
+        self.assertEqual(ErrorFractions(["static/Y1e8=0.5", "Y1e5:0=0.2"]).unmatched(cases), ["static/Y1e8=0.5"])
 
 
 if __name__ == "__main__":
