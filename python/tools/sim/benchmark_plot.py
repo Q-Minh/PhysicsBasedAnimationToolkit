@@ -36,12 +36,15 @@ back; the legend lists them in the same order, back to front. ``--solver-order``
 Usage:
     python -m python.tools.sim.benchmark_plot results.h5 -o out/figures/benchmark \
         [--benchmarks static dynamic_h0.01] [--solvers VBD,AAAVBD,...] [--solver-order Newton,VBD,...] \
-        [--budget-factor 1] [--width 5.5] [--no-legend] [--frames PREFIX] [--title] [--elev 28] [--azim -62] [--dpi 200]
+        [--budget-factor 1] [--width 5.5] [--no-legend] [--frames PREFIX] [--dataset DATASET] \
+        [--title] [--elev 28] [--azim -62] [--dpi 200]
 
-``--frames PREFIX`` adds ``benchmark_frames.py``'s example problem beside each chart (:func:`add_frames`): its
-initial iterate above its reference solution, a homogeneous case colored by the error on the left and the
-heterogeneous case colored by Lame lambda on the right, each pair with its colorbar, in two 0.75 in columns (with
-``--width 5.5``, 7 in in all, ACM TOG's text width). The chart keeps its size.
+``--frames PREFIX`` adds ``benchmark_frames.py``'s example problems left of each chart as a 2 x 2 grid
+(:func:`add_frames`): a homogeneous case colored by the error and the heterogeneous case colored by Lame lambda in
+columns headed by the cases' labels, their initial iterates above their reference solutions, a colorbar under each
+column. The grid reaches into the chart's empty top left corner, as large as fits with the figure at most 7 in wide
+(ACM TOG's text width); the chart keeps its size (the paper's: ``--width 5.6``). After a benchmark re-run, regenerate
+the frames first (``benchmark_frames.py``). Its headers are the cases' labels, as on the chart's material axis.
 
 ``--dataset`` gives the dataset when the results file's ``dataset`` attribute doesn't resolve (it is relative to the
 main checkout's root, so e.g. from a worktree), for the case labels' moduli: without it, the heterogeneous case is
@@ -472,10 +475,22 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
     return Bbox.union(shown).padded(pad).transformed(fig.dpi_scale_trans.inverted())
 
 
-# Frames columns (--frames): with the paper's 5.5 in charts, two 0.75 in columns fill ACM TOG's 7 in text width
-FRAMES_WIDTH = 0.75  # inches per column, including its margin to the chart
-FRAMES_MARGIN = 0.05  # inches between a column's content and the chart's region
-FRAMES_LABELS = {"initial": "Initial iterate", "reference": "Reference"}  # short enough for a column
+# Frames (--frames): a 2 x 2 grid left of the chart, reaching into its empty space, as large as fits, the figure at most
+# ACM TOG's text width
+FRAMES_PAGE_WIDTH = 7.0  # inches: the widest the saved region may get with the frames
+FRAMES_MAX_WIDTH = 2.0  # inches: the widest frames tried
+FRAMES_STEP = 0.02  # inches: the placement search's resolution
+FRAMES_CLEARANCE = 0.06  # inches kept clear between the grid's elements and the chart's marks
+# A pixel is one of the chart's marks if a channel is this far below white (of 1): the bars' translucent min-max boxes
+# are (0.1 and more), the 3D box's faint pane edges aren't (0.03 at most), so the frames may cover those
+FRAMES_INK = 0.05
+FRAMES_ROWS = {"initial": "Initial iterate", "reference": "Reference"}
+FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
+FRAMES_TEXT_SIZE = 7  # pt
+FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
+FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
+FRAMES_BAR_HEIGHT = 0.055  # inches
+FRAMES_BAR_LABELS = 0.24  # inches under a colorbar: its tick labels and title
 
 
 def load_frames(prefix: str, benchmark: str) -> dict:
@@ -485,7 +500,7 @@ def load_frames(prefix: str, benchmark: str) -> dict:
         spec = json.load(f)
     directory = os.path.dirname(os.path.abspath(prefix))
     for pair in spec.values():
-        for state in FRAMES_LABELS:
+        for state in FRAMES_ROWS:
             pair[f"{state}_image"] = plt.imread(os.path.join(directory, pair[state]))
     return spec
 
@@ -526,29 +541,135 @@ def _frames_colorbar(cax, pair: dict):
     cax.set_xlim(pair["vmin"], pair["vmax"])
 
 
-def add_frames(fig, region: Bbox, frames: dict, width: float = FRAMES_WIDTH, margin: float = FRAMES_MARGIN) -> Bbox:
-    """Two columns of :func:`load_frames` beside a chart's saved ``region`` (inches): the ``error`` pair to its left,
-    the ``material`` pair to its right, each its initial iterate above its reference solution, labeled, with its
-    colorbar below, centered on the region's height. The chart isn't touched (the columns may lie outside the
-    figure's canvas; the saved region includes them). Returns the region to save, ``2 x width`` wider."""
+def _text_size(fig, text: str, rotation: float = 0.0) -> tuple[float, float]:
+    """A text's extent (inches) at :data:`FRAMES_TEXT_SIZE`, as :func:`add_frames` draws it."""
+    t = fig.text(0, 0, text, fontsize=FRAMES_TEXT_SIZE, rotation=rotation, ha="center", va="center",
+                 multialignment="center")
+    box = t.get_window_extent(fig.canvas.get_renderer())
+    t.remove()
+    return box.width / fig.dpi, box.height / fig.dpi
+
+
+def _wrapped(text: str) -> str:
+    """``text`` on two lines, broken at its middle space (unchanged without one)."""
+    spaces = [i for i, ch in enumerate(text) if ch == " "]
+    if not spaces:
+        return text
+    i = min(spaces, key=lambda k: abs(k - len(text) / 2))
+    return text[:i] + "\n" + text[i + 1:]
+
+
+def _frames_grid(frames: dict, width: float, headers: dict, sizes: dict) -> tuple[list, float]:
+    """The grid at frame ``width`` (inches): its elements (kind, key, x0, y0, w, h) relative to its top left corner (y
+    down) and its height. Columns are :data:`FRAMES_COLUMNS` under their ``headers``, rows :data:`FRAMES_ROWS` with
+    their labels rotated at the left (on two lines if one is longer than the row is high), and a colorbar under each
+    column. ``sizes`` holds the texts' extents (:func:`_text_size`), the row labels' also :func:`_wrapped`."""
+    heights = {r: max(width * frames[c][f"{r}_image"].shape[0] / frames[c][f"{r}_image"].shape[1]
+                      for c in FRAMES_COLUMNS) for r in FRAMES_ROWS}
+    rows = {r: text if sizes[("row", text)][1] <= heights[r] else _wrapped(text) for r, text in FRAMES_ROWS.items()}
+    label_w = max(sizes[("row", text)][0] for text in rows.values())
+    header_h = max(sizes[("header", c)][1] for c in FRAMES_COLUMNS)
+    # Column pitch: the frames' width, or more if the headers would run into each other
+    pitch = max(width + FRAMES_COLUMN_GAP,
+                (sizes[("header", FRAMES_COLUMNS[0])][0] + sizes[("header", FRAMES_COLUMNS[1])][0]) / 2 + FRAMES_COLUMN_GAP)
+    x_frames = label_w + FRAMES_GAP
+    items = []
+    for j, c in enumerate(FRAMES_COLUMNS):
+        hw, hh = sizes[("header", c)]
+        items.append(("header", c, x_frames + j * pitch + (width - hw) / 2, header_h - hh, hw, hh))
+    y = header_h + FRAMES_GAP
+    for r, text in rows.items():
+        h = heights[r]
+        lw, lh = sizes[("row", text)]
+        items.append(("row", text, x_frames - FRAMES_GAP - lw, y + (h - lh) / 2, lw, lh))
+        for j, c in enumerate(FRAMES_COLUMNS):
+            items.append(("frame", (c, r), x_frames + j * pitch, y, width, h))
+        y += h + FRAMES_GAP
+    for j, c in enumerate(FRAMES_COLUMNS):
+        x = x_frames + j * pitch
+        items.append(("colorbar", c, x + 0.06 * width, y, 0.88 * width, FRAMES_BAR_HEIGHT))
+        items.append(("colorbar labels", c, x, y + FRAMES_BAR_HEIGHT, width, FRAMES_BAR_LABELS))
+    return items, y + FRAMES_BAR_HEIGHT + FRAMES_BAR_LABELS
+
+
+def _ink_table(fig) -> tuple[np.ndarray, float]:
+    """The drawn figure's marks (:data:`FRAMES_INK`) as a summed-area table over its canvas pixels (row 0 at the
+    top), and its pixels per inch."""
+    fig.canvas.draw()
+    rgb = np.asarray(fig.canvas.buffer_rgba(), dtype=np.float64)[..., :3] / 255
+    ink = ((1.0 - rgb).max(axis=2) > FRAMES_INK).astype(np.int64)
+    table = np.zeros((ink.shape[0] + 1, ink.shape[1] + 1), dtype=np.int64)
+    table[1:, 1:] = ink.cumsum(axis=0).cumsum(axis=1)
+    return table, float(fig.dpi)
+
+
+def _clear(table: np.ndarray, dpi: float, fig_h: float, x0: float, x1: float, tops: np.ndarray, y0: float,
+           y1: float) -> np.ndarray:
+    """Per grid top in ``tops`` (inches, figure coordinates), whether the box x0..x1 by y0..y1 below that top (inches
+    down from it, plus :data:`FRAMES_CLEARANCE` around) holds none of the chart's marks. Off the canvas is clear."""
+    rows, cols = table.shape[0] - 1, table.shape[1] - 1
+    pad = FRAMES_CLEARANCE
+    c0 = int(np.clip(np.floor((x0 - pad) * dpi), 0, cols))
+    c1 = int(np.clip(np.ceil((x1 + pad) * dpi), 0, cols))
+    r0 = np.clip(np.floor((fig_h - tops + y0 - pad) * dpi), 0, rows).astype(np.int64)
+    r1 = np.clip(np.ceil((fig_h - tops + y1 + pad) * dpi), 0, rows).astype(np.int64)
+    return table[r1, c1] - table[r0, c1] - table[r1, c0] + table[r0, c0] == 0
+
+
+def add_frames(fig, region: Bbox, frames: dict, headers: dict, page_width: float = FRAMES_PAGE_WIDTH) -> Bbox:
+    """:func:`load_frames`' pairs as a 2 x 2 grid left of a chart's saved ``region`` (inches): columns
+    :data:`FRAMES_COLUMNS` under ``headers`` (e.g. the cases' labels), rows the initial iterate and the reference
+    solution, labeled at the left, and each column's colorbar below it. The frames get the largest width at which
+    the grid, its left edge at most ``page_width`` minus the region's width left of the region, fits within the
+    region's height clear of the chart's marks (bars, axes, labels, legend; :data:`FRAMES_INK`,
+    :data:`FRAMES_CLEARANCE`), so it reaches into the chart's empty top left corner; it sits as high as it fits, and
+    as far right as that width allows. The chart isn't touched, and the frames' white background is transparent (the
+    3D box's faint pane edges show through). Returns the region to save, widened to the grid. ValueError if no width
+    from 0.3 in fits."""
     fig_w, fig_h = fig.get_size_inches()
-    content = width - margin
-    label_h, gap, bar_h, bar_label_h = 10 / 72, 2 / 72, 0.055, 0.24  # inches
-    for pair, x0 in ((frames["error"], region.x0 - width), (frames["material"], region.x1 + margin)):
-        heights = [content * pair[f"{s}_image"].shape[0] / pair[f"{s}_image"].shape[1] for s in FRAMES_LABELS]
-        total = sum(heights) + 2 * (label_h + gap) + gap + bar_h + bar_label_h
-        y = (region.y0 + region.y1) / 2 + total / 2  # top of the column
-        for state, h in zip(FRAMES_LABELS, heights):
-            fig.text((x0 + content / 2) / fig_w, (y - label_h / 2) / fig_h, FRAMES_LABELS[state], fontsize=7,
-                     ha="center", va="center")
-            y -= label_h + gap
-            ax = fig.add_axes(((x0) / fig_w, (y - h) / fig_h, content / fig_w, h / fig_h))
-            ax.imshow(pair[f"{state}_image"], interpolation="lanczos")
+    budget = max(page_width - region.width, 0.0)
+    sizes = {("row", t): _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
+    sizes.update({("header", c): _text_size(fig, headers[c]) for c in FRAMES_COLUMNS})
+    table, dpi = _ink_table(fig)
+    for width in np.arange(FRAMES_MAX_WIDTH, 0.3 - 1e-9, -FRAMES_STEP):
+        items, height = _frames_grid(frames, width, headers, sizes)
+        tops = np.arange(region.y1, region.y0 + height - 1e-9, -FRAMES_STEP)
+        if tops.size == 0:
+            continue
+        for extension in np.arange(0.0, budget + 1e-9, FRAMES_STEP):
+            x0 = region.x0 - extension
+            clear = np.ones(tops.size, dtype=bool)
+            for _, _, ix, iy, iw, ih in items:
+                clear &= _clear(table, dpi, fig_h, x0 + ix, x0 + ix + iw, tops, iy, iy + ih)
+                if not clear.any():
+                    break
+            if clear.any():
+                top = float(tops[clear][0])
+                break
+        else:
+            continue
+        break
+    else:
+        raise ValueError("the frames don't fit beside the chart")
+    for kind, key, ix, iy, iw, ih in items:
+        box = ((x0 + ix) / fig_w, (top - iy - ih) / fig_h, iw / fig_w, ih / fig_h)
+        center = ((x0 + ix + iw / 2) / fig_w, (top - iy - ih / 2) / fig_h)
+        if kind == "header":
+            fig.text(*center, headers[key], fontsize=FRAMES_TEXT_SIZE, ha="center", va="center", multialignment="center")
+        elif kind == "row":
+            fig.text(*center, key, fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center",
+                     multialignment="center")
+        elif kind == "frame":
+            column, row = key
+            image = np.asarray(frames[column][f"{row}_image"], dtype=np.float64)[..., :3]
+            alpha = np.clip((1.0 - image.min(axis=2)) / 0.04, 0.0, 1.0)  # white transparent, antialiased edges partly
+            ax = fig.add_axes(box)
+            ax.imshow(np.dstack([image, alpha]), interpolation="lanczos")
             ax.set_axis_off()
-            y -= h + gap
-        cax = fig.add_axes(((x0 + 0.06 * content) / fig_w, (y - bar_h) / fig_h, 0.88 * content / fig_w, bar_h / fig_h))
-        _frames_colorbar(cax, pair)
-    return Bbox.from_extents(region.x0 - width, region.y0, region.x1 + width, region.y1)
+        elif kind == "colorbar":
+            _frames_colorbar(fig.add_axes(box), frames[key])
+    left = min(x0 + ix for _, _, ix, _, _, _ in items)
+    return Bbox.from_extents(min(region.x0, left), region.y0, region.x1, region.y1)
 
 
 def main():
@@ -578,8 +699,8 @@ def main():
                         help="Draw the charts without their solver legend, and write the legend alone to "
                         "<prefix>_legend.pdf, for a figure that stacks several charts under one legend.")
     parser.add_argument("--frames", default=None,
-                        help="Prefix of benchmark_frames.py's output: adds its example problem's frames beside each "
-                        "chart, the error pair to the left and the material pair to the right (see add_frames).")
+                        help="Prefix of benchmark_frames.py's output: adds its example problems' frames as a 2 x 2 grid "
+                        "left of each chart (see add_frames).")
     parser.add_argument("--dataset", default=None,
                         help="The dataset file the results were run on, for the case labels' moduli (default: the "
                         "results file's dataset attribute, relative to the main checkout's root).")
@@ -605,7 +726,10 @@ def main():
             fig, region = plot_at_width(args.width, f, benchmark, solvers, args.elev, args.azim, order, factor,
                                         args.counts, args.title, args.legend, dataset=args.dataset)
             if args.frames:
-                region = add_frames(fig, region, load_frames(args.frames, benchmark))
+                frames = load_frames(args.frames, benchmark)
+                headers = {c: case_label(f[benchmark][frames[c]["case"]], frames[c]["case"], args.dataset)
+                           for c in FRAMES_COLUMNS}
+                region = add_frames(fig, region, frames, headers)
             for ext in ("pdf", "png"):
                 path = f"{args.output}_{benchmark}.{ext}"
                 fig.savefig(path, dpi=args.dpi, bbox_inches=region)
@@ -630,27 +754,40 @@ class TestFrames(unittest.TestCase):
         import tempfile
 
         self.assertEqual((_length_text(0.257), _length_text(0.00143)), ("0.257 m", "1.43 mm"))
+        self.assertEqual((_wrapped("Initial iterate"), _wrapped("Reference")), ("Initial\niterate", "Reference"))
         with tempfile.TemporaryDirectory() as d:
             prefix = os.path.join(d, "frames")
-            spec = {"error": dict(quantity="error", vmin=0.0, vmax=0.25),
-                    "material": dict(quantity="lambda", vmin=4.5, vmax=8.5)}
+            spec = {"error": dict(case="Y1e7", quantity="error", vmin=0.0, vmax=0.25),
+                    "material": dict(case="het", quantity="lambda", vmin=4.5, vmax=8.5)}
             for kind, pair in spec.items():
                 pair["shades"] = np.linspace(0.0, 1.0, 12)[:, None].repeat(3, axis=1).tolist()
-                for state in FRAMES_LABELS:
+                for state in FRAMES_ROWS:
                     pair[state] = f"{kind}_{state}.png"
                     plt.imsave(os.path.join(d, pair[state]), np.full((30, 40, 3), 0.5))
             with open(f"{prefix}_static.json", "w", encoding="utf-8") as f:
                 json.dump(spec, f)
             frames = load_frames(prefix, "static")
             self.assertEqual(frames["error"]["initial_image"].shape[:2], (30, 40))
+            # A chart whose marks fill its region's right part and bottom: the grid goes left of it, into the top left
             fig = plt.figure(figsize=(6.0, 3.0))
-            region = add_frames(fig, Bbox.from_extents(0.25, 0.1, 5.75, 2.9), frames)
-            self.assertAlmostEqual(region.width, 5.5 + 2 * FRAMES_WIDTH)
-            self.assertEqual(len(fig.axes), 6)  # 2 x (2 frames + colorbar)
-            lam = fig.axes[5]
-            self.assertEqual([t.get_text() for t in lam.get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
+            chart = fig.add_axes((0.4, 0.0, 0.6, 1.0))
+            chart.set_axis_off()
+            chart.add_patch(plt.Rectangle((0, 0), 1, 1, color="k"))
+            fig.add_artist(plt.Rectangle((0, 0), 1, 0.3, color="k", transform=fig.transFigure))
+            region = Bbox.from_extents(0.0, 0.0, 6.0, 3.0)
+            headers = {"error": "$E = 10^{7}$ Pa", "material": "$E \\in \\{10^{6}, 10^{8}\\}$ Pa"}
+            saved = add_frames(fig, region, frames, headers, page_width=7.0)
+            self.assertLessEqual(saved.width, 7.0 + 1e-9)
+            self.assertEqual((saved.x1, saved.y0, saved.y1), (6.0, 0.0, 3.0))
+            self.assertEqual(len(fig.axes), 1 + 4 + 2)  # the chart, 4 frames, 2 colorbars
+            for ax in fig.axes[1:]:
+                box = ax.get_position()
+                # Clear of the chart's marks: left of the chart's axes, above the bottom band
+                self.assertLessEqual(box.x1 * 6.0, 0.4 * 6.0 + 1e-6)
+                self.assertGreaterEqual(box.y0 * 3.0, 0.3 * 3.0 - 1e-6)
+            self.assertEqual([t.get_text() for t in fig.axes[-1].get_xticklabels()], ["$10^{5}$", "$10^{8}$"])
             path = os.path.join(d, "out.pdf")
-            fig.savefig(path, bbox_inches=region)
+            fig.savefig(path, bbox_inches=saved)
             plt.close(fig)
             self.assertGreater(os.path.getsize(path), 1000)
 
