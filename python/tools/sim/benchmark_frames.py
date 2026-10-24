@@ -56,7 +56,7 @@ worktree):
     python -m python.tools.sim.benchmark_frames path/to/results.h5 -o out/figures/trampolines_frames \
         [--dataset path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5] [--benchmarks static ...] \
         [--error-case static=Y1e5 --error-case Y1e7] [--material-case het] [--sample static=0 --sample auto] \
-        [--material clay] [--elev 55] [--azim 0] [--zoom 1] [--size 2400 1400] [--max-width 1000]
+        [--material clay] [--elev 25] [--azim 0] [--zoom 1] [--size 2400 1400] [--max-width 1000]
 
 The window must fit the screen (Polyscope's window, hence its screenshots, is clamped to it).
 
@@ -192,7 +192,7 @@ def main():
     parser.add_argument("--sample", action="append", default=["static=0", "auto"],
                         help="[BENCHMARK=]INDEX or auto, the problem of each case's set, repeatable (default: 0 for "
                         "static, else auto; see the module docstring).")
-    parser.add_argument("--elev", type=float, default=55.0, help="Camera elevation above the body's plane (degrees).")
+    parser.add_argument("--elev", type=float, default=25.0, help="Camera elevation above the body's plane (degrees).")
     parser.add_argument("--azim", type=float, default=0.0,
                         help="Camera azimuth from the front, counter-clockwise seen from above (degrees).")
     parser.add_argument("--material", default="clay",
