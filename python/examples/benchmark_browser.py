@@ -2,7 +2,8 @@
 
 Pick a scene, a problem set (static, or dynamic with time step h), a total energy E and a problem, and see:
 
-    start state x       the problem's initial shape, colored by displacement |x - X|, by det(F) (red/blue
+    start state x       the problem's initial shape, colored by its distance to the solution (|x - X| for static
+                        problems, the error |x - x*| for dynamic ones), by det(F) (red/blue
                         diverging around 1; values <= 0 are inverted elements), or by the scene's materials (Lame
                         mu, lambda, Young's modulus per element) or lumped masses per node, named and colored as
                         in the CPU editor (log10(value + 1); masses: log10(m) over their 2nd-98th percentiles),
@@ -199,9 +200,13 @@ if __name__ == "__main__":
         x = data["x"][s]
         start = mesh["start"]
         start.update_vertex_positions(x)
+        dynamic = "xtilde" in data
+        # Static problems' solution is the rest shape X, dynamic problems' the reference x*
+        colorings[0] = "Error |x - x*| (m)" if dynamic else "Displacement |x - X| (m)"
         if state["coloring"] == 0:
+            solution = data["x_ref"][s] if dynamic else data["X"]
             start.add_scalar_quantity(
-                "color", np.linalg.norm(x - data["X"], axis=1), defined_on="vertices", enabled=True, cmap="viridis"
+                "color", np.linalg.norm(x - solution, axis=1), defined_on="vertices", enabled=True, cmap="viridis"
             )
         elif state["coloring"] == 1:
             detF = modalrom.deformation_gradient_determinants(mesh["E"], mesh["egU"], mesh["GNegU"], x.ravel())
@@ -215,7 +220,6 @@ if __name__ == "__main__":
             start.add_scalar_quantity("color", values, defined_on=location, enabled=True, **options)
         if data["v"] is not None:
             start.add_vector_quantity("velocity v", data["v"][s], defined_on="vertices", enabled=True)
-        dynamic = "xtilde" in data
         if dynamic:
             mesh["target"].update_vertex_positions(data["xtilde"][s])
             mesh["reference"].update_vertex_positions(data["x_ref"][s])
