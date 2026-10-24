@@ -484,7 +484,7 @@ FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to r
 # --columns' defaults: both pairs on the static chart; one each on the dynamic charts, which the paper stacks (h = 1e-2
 # above h = 1e-4), so each shows one example and the stacked charts line up
 FRAMES_COLUMNS_DEFAULT = ["error,material", "dynamic_h0.01=error", "dynamic_h0.0001=material"]
-FRAMES_TEXT_SIZE = 7  # pt
+FRAMES_TEXT_SIZE = 7  # pt: the grid's text when the chart has none to match (see _chart_text_sizes)
 FRAMES_GAP = 2 / 72  # inches between the grid's labels, frames and colorbars
 FRAMES_COLUMN_GAP = 0.06  # inches between the grid's columns, at least
 FRAMES_MARGIN = 0.08  # inches between the grid and the chart's region
@@ -508,9 +508,9 @@ def _length_text(meters: float) -> str:
     return f"{meters:.3g} m" if meters >= 0.01 else f"{1e3 * meters:.3g} mm"
 
 
-def _frames_colorbar(cax, pair: dict) -> str:
-    """A pair's colorbar from its rendered shades, with its quantity's ticks. Returns its title (the caller places
-    it)."""
+def _frames_colorbar(cax, pair: dict, tick_size: float = FRAMES_TEXT_SIZE) -> str:
+    """A pair's colorbar from its rendered shades, with its quantity's ticks (labels at ``tick_size`` pt). Returns its
+    title (the caller places it)."""
     from matplotlib.ticker import FixedLocator, NullFormatter
 
     shades = np.asarray(pair["shades"])
@@ -519,7 +519,7 @@ def _frames_colorbar(cax, pair: dict) -> str:
     for side in ("top", "right", "left"):
         cax.spines[side].set_visible(False)
     cax.spines["bottom"].set_linewidth(0.5)
-    cax.tick_params(axis="x", labelsize=7, length=2, width=0.5, pad=1)
+    cax.tick_params(axis="x", labelsize=tick_size, length=2, width=0.5, pad=1)
     if pair["quantity"] == "lambda":
         # log10(lambda + 1) axis: decade ticks, the outer decades labeled
         decades = [k for k in range(int(np.ceil(pair["vmin"])), int(np.floor(pair["vmax"])) + 1)]
@@ -541,9 +541,9 @@ def _frames_colorbar(cax, pair: dict) -> str:
     return title
 
 
-def _text_size(fig, text: str, rotation: float = 0.0) -> tuple[float, float]:
-    """A text's extent (inches) at :data:`FRAMES_TEXT_SIZE`, as :func:`add_frames` draws it."""
-    t = fig.text(0, 0, text, fontsize=FRAMES_TEXT_SIZE, rotation=rotation, ha="center", va="center",
+def _text_size(fig, text: str, fontsize: float, rotation: float = 0.0) -> tuple[float, float]:
+    """A text's extent (inches) at ``fontsize`` pt, as :func:`add_frames` draws it."""
+    t = fig.text(0, 0, text, fontsize=fontsize, rotation=rotation, ha="center", va="center",
                  multialignment="center")
     box = t.get_window_extent(fig.canvas.get_renderer())
     t.remove()
@@ -562,6 +562,17 @@ def _wrapped(text: str) -> str:
 def _baseline(text, renderer) -> float:
     """A drawn horizontal text's baseline (display pixels)."""
     return text.get_window_extent(renderer).y0 - text._get_layout(renderer)[0].y0
+
+
+def _chart_text_sizes(chart) -> tuple[float, float]:
+    """The chart's text sizes (pt) for the grid: its material axis' labels (its last x tick label), for the headers,
+    row labels and colorbar titles, and its numbers (its first y tick label), for the colorbars' ticks; each
+    :data:`FRAMES_TEXT_SIZE` without such a label."""
+    def size(labels):
+        labels = [t for t in labels if t.get_visible() and t.get_text()]
+        return float(labels[0].get_fontsize()) if labels else float(FRAMES_TEXT_SIZE)
+
+    return size(chart.get_xticklabels()[::-1]), size(chart.get_yticklabels())
 
 
 def _frames_anchors(fig, region: Bbox) -> tuple[str, float, float]:
@@ -586,7 +597,8 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict, columns: tuple[st
     reference
     solution, labeled at the left (rotated, on two lines if longer than the row), and each column's colorbar at the
     bottom. The headers line up with the chart's top and the colorbars' titles with its last material label
-    (:func:`_frames_anchors`, the chart being ``fig.axes[0]``); the rows share the height between them, the frames as
+    (:func:`_frames_anchors`, the chart being ``fig.axes[0]``), the texts at the chart's sizes
+    (:func:`_chart_text_sizes`); the rows share the height between them, the frames as
     tall as their rows, their width following from their aspect. The chart isn't touched. Returns the region to save,
     widened to the grid. The rows' height is measured with every pair's header and colorbar (those of ``frames``
     and ``headers``), shown or not, so grids with as many columns beside equally tall charts come out equally wide,
@@ -595,17 +607,18 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict, columns: tuple[st
     fig_w, fig_h = fig.get_size_inches()
     renderer = fig.canvas.get_renderer()
     align, header_y, title_y = _frames_anchors(fig, region)
+    label_size, tick_size = _chart_text_sizes(fig.axes[0])
     inches = lambda artist: artist.get_window_extent(renderer).transformed(fig.dpi_scale_trans.inverted())  # noqa: E731
     # Every pair's texts and colorbar at their heights first (their extents set the rows'), placed along x once the
     # frames' width is known; the columns not shown are removed after measuring
     measured = [c for c in FRAMES_COLUMNS if c in frames and c in headers]
-    header_texts = {c: fig.text(0, header_y / fig_h, headers[c], fontsize=FRAMES_TEXT_SIZE, ha="center", va=align,
+    header_texts = {c: fig.text(0, header_y / fig_h, headers[c], fontsize=label_size, ha="center", va=align,
                                 multialignment="center") for c in measured}
     bars, title_texts = {}, {}
     for c in measured:
         bars[c] = fig.add_axes((0, 0, 1 / fig_w, FRAMES_BAR_HEIGHT / fig_h))
-        title_texts[c] = fig.text(0, title_y / fig_h, _frames_colorbar(bars[c], frames[c]), fontsize=FRAMES_TEXT_SIZE,
-                                  ha="center", va="baseline")
+        title_texts[c] = fig.text(0, title_y / fig_h, _frames_colorbar(bars[c], frames[c], tick_size),
+                                  fontsize=label_size, ha="center", va="baseline")
     fig.canvas.draw()
     title_top = max(inches(t).y1 for t in title_texts.values())
     labels_bottom = min(inches(t).y0 for c in measured for t in bars[c].get_xticklabels() if t.get_text())
@@ -619,7 +632,8 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict, columns: tuple[st
     row_h = (rows_top - rows_bottom - (len(FRAMES_ROWS) - 1) * FRAMES_GAP) / len(FRAMES_ROWS)
     width = min(row_h * frames[c][f"{r}_image"].shape[1] / frames[c][f"{r}_image"].shape[0]
                 for c in measured for r in FRAMES_ROWS)
-    sizes = {t: _text_size(fig, t, rotation=90) for text in FRAMES_ROWS.values() for t in (text, _wrapped(text))}
+    sizes = {t: _text_size(fig, t, label_size, rotation=90) for text in FRAMES_ROWS.values()
+             for t in (text, _wrapped(text))}
     rows = {r: text if sizes[text][1] <= row_h else _wrapped(text) for r, text in FRAMES_ROWS.items()}
     label_w = max(sizes[text][0] for text in rows.values())
     # Column pitch: the frames' width, or more if neighboring headers would run into each other
@@ -634,7 +648,7 @@ def add_frames(fig, region: Bbox, frames: dict, headers: dict, columns: tuple[st
     top = rows_top
     for r, text in rows.items():
         fig.text((x_frames - FRAMES_GAP - label_w / 2) / fig_w, (top - row_h / 2) / fig_h, text,
-                 fontsize=FRAMES_TEXT_SIZE, rotation=90, ha="center", va="center", multialignment="center")
+                 fontsize=label_size, rotation=90, ha="center", va="center", multialignment="center")
         for j, c in enumerate(columns):
             image = np.asarray(frames[c][f"{r}_image"], dtype=np.float64)[..., :3]
             h = width * image.shape[0] / image.shape[1]
@@ -768,6 +782,10 @@ class TestFrames(unittest.TestCase):
             fig.canvas.draw()
             renderer = fig.canvas.get_renderer()
             header, title = fig.texts[texts_before], fig.texts[texts_before + 2]  # the first header and title
+            # The chart's text sizes: its material labels' for the texts, its numbers' for the colorbar ticks
+            chart.tick_params(axis="y", labelsize=6)
+            self.assertEqual((header.get_fontsize(), title.get_fontsize()), (10.0, 10.0))  # matplotlib's default
+            self.assertEqual(_chart_text_sizes(chart), (10.0, 6.0))
             self.assertAlmostEqual(_baseline(header, renderer), _baseline(fig.legends[0].get_texts()[0], renderer),
                                    delta=1.0)
             self.assertAlmostEqual(_baseline(title, renderer), _baseline(chart.get_xticklabels()[-1], renderer),
