@@ -479,7 +479,7 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
 
 
 # Frames (--frames): a 2 x 2 grid of example problems left of the chart, as tall as its saved region
-FRAMES_ROWS = {"initial": "$x^0$", "reference": "Solution"}  # the row labels: the initial iterate, the reference solution
+FRAMES_ROWS = {"initial": "Initial", "reference": "Solution"}  # the row labels: the initial iterate, the reference solution
 FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
 # --columns' defaults: both pairs on the static chart; one each on the dynamic charts, which the paper stacks (h = 1e-2
 # above h = 1e-4), so each shows one example and the stacked charts line up
@@ -536,7 +536,7 @@ def _frames_colorbar(cax, pair: dict) -> str:
         labels = cax.get_xticklabels()
         labels[0].set_ha("left")
         labels[-1].set_ha("right")
-        title = r"$|x - x^*|$"
+        title = "Error"  # |x - x*|, in the tick labels' unit
     cax.set_xlim(pair["vmin"], pair["vmax"])
     return title
 
