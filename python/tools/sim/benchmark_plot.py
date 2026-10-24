@@ -479,7 +479,7 @@ def frame(fig, ax, title: str | None, handles: list | None) -> Bbox:
 
 
 # Frames (--frames): a 2 x 2 grid of example problems left of the chart, as tall as its saved region
-FRAMES_ROWS = {"initial": "Initial iterate", "reference": "Reference"}
+FRAMES_ROWS = {"initial": "$x^0$", "reference": "Solution"}  # the row labels: the initial iterate, the reference solution
 FRAMES_COLUMNS = ("error", "material")  # benchmark_frames.py's pairs, left to right
 # --columns' defaults: both pairs on the static chart; one each on the dynamic charts, which the paper stacks (h = 1e-2
 # above h = 1e-4), so each shows one example and the stacked charts line up
