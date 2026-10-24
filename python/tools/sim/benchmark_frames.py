@@ -2,7 +2,9 @@
 Frames of benchmark problems for the paper's bar figures (``benchmark_plot.py --frames``): per benchmark, an example
 problem's initial iterate x(0) and reference solution x* (the rest shape X for static problems, ``x_ref`` for dynamic
 ones), rendered with Polyscope in the style of the profiling snapshots (``profiling/snapshots.py``): white background,
-no ground plane, smooth shading without edges, SSAA 4, one camera, every image cropped to one box. The camera looks
+no ground plane, smooth shading without edges, SSAA 4 (Polyscope's highest), one camera, every image cropped to one
+box and reduced by an integer factor with block means to at most ``--max-width`` pixels (more anti-aliasing; the
+default window and width give about 1000 px per frame, 800 dpi at the bar figures' 1.25 in). The camera looks
 at the center of the box around every rendered shape, from ``--elev`` above the front, far enough that the box's
 bounding sphere fits the view (``--zoom`` scales that), so strongly deformed problems (e.g. a dataset sampled at a
 higher energy) don't clip; a render that still touches the window's border is an error. The crop is the union of
@@ -53,7 +55,9 @@ worktree):
     python -m python.tools.sim.benchmark_frames path/to/results.h5 -o out/figures/trampolines_frames \
         [--dataset path/to/PhysicsBasedAnimationToolkit/data/benchmarks/trampolines.h5] [--benchmarks static ...] \
         [--error-case static=Y1e5 --error-case Y1e7] [--material-case het] [--sample static=0 --sample auto] \
-        [--material clay] [--elev 55] [--zoom 1] [--size 1600 1200] [--max-width 900]
+        [--material clay] [--elev 55] [--zoom 1] [--size 2400 1400] [--max-width 1000]
+
+The window must fit the screen (Polyscope's window, hence its screenshots, is clamped to it).
 
 Tests: ``python -m unittest python.tools.sim.benchmark_frames``.
 """
@@ -201,9 +205,9 @@ def main():
                         help="Polyscope material (default: clay, the profiling snapshots' Polyscope default).")
     parser.add_argument("--zoom", type=float, default=1.0,
                         help="Camera zoom: 1 fits the bounding sphere of every rendered shape (default: 1).")
-    parser.add_argument("--size", type=int, nargs=2, default=(1600, 1200), metavar=("W", "H"),
-                        help="Window size in pixels before cropping.")
-    parser.add_argument("--max-width", type=int, default=900, dest="max_width",
+    parser.add_argument("--size", type=int, nargs=2, default=(2400, 1400), metavar=("W", "H"),
+                        help="Window size in pixels before cropping (at most the screen's).")
+    parser.add_argument("--max-width", type=int, default=1000, dest="max_width",
                         help="Saved images at most this many pixels wide (integer downsampling of the crop).")
     args = parser.parse_args()
 
