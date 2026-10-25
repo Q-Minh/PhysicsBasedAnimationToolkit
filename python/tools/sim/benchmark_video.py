@@ -8,10 +8,10 @@ Each clip is what the viewer shows with its defaults: the solvers' copies side b
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
-over T_N and the slowdown) and the color scale with its fraction. A color bar shows how to read the colors: viridis
-(Polyscope's table) from 0 to the scale's max, ticks at 0, the middle and the max with the unit, and when the
-scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top color past it. The solver
-labels share one height over the whole recording, every clip of every benchmark it records: just below the lowest
+over T_N and the slowdown). A color bar, centered under the solver labels and captioned "Error |x - x*|", shows
+how to read the colors: viridis (Polyscope's table) from 0 to the scale's max, ticks at 0, the middle and the max
+with the unit, and when the scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top
+color past it. The solver labels share one height over the whole recording, every clip of every benchmark it records: just below the lowest
 point the recorded meshes reach on screen over all their frames, so they clear the most deformed state (printed,
 with the clip setting it). Recording a subset (``--benchmarks``, ``--cases``, ``--samples``) computes it over that
 subset, so ``--label-y`` gives a partial re-record an earlier recording's height.
@@ -22,10 +22,11 @@ clip shows its solve slowed down by its ``playback_factor``. The viewer's transl
 convergence a reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already
 show the distance to the reference.
 
-Text: the titles, labels and the color bar's ticks are in Linux Biolinum, the paper figures' sans serif, drawn
+Text: the titles, labels and the color bar's ticks and caption are in Linux Biolinum, the paper figures' sans serif, drawn
 with Pillow onto each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes
 from ``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
-Without it, a warning, and imgui's default font draws the titles and labels in the window (the ticks: Pillow's).
+Without it, a warning, and imgui's default font draws the titles and labels in the window (the color bar's text:
+Pillow's).
 
 Polyscope has no headless backend on Windows: the recorder opens a window and drives it itself, so leave it open
 and unminimized until it finishes. Frames go straight from the window to ffmpeg's stdin (no image files). ffmpeg

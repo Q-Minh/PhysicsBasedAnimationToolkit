@@ -240,7 +240,7 @@ the viewers need the full results and the dataset.
 | `benchmark_iterations.py` | tables of iterations to each level, median [25th–75th percentile] VBD sweeps, or Newton steps and CG iterations, with n/N, as Markdown and LaTeX | `python -m python.tools.sim.benchmark_iterations RESULTS.h5 -o TABLES/iterations [--budget-factor 2]` |
 | `benchmark_thin.py` | the thin copy of a results file (2.6), checked against the full one | `python -m python.tools.sim.benchmark_thin RESULTS.h5 -o RESULTS-thin.h5 [--max-entries 1000]` |
 | `benchmark_viewer.py` | interactive Polyscope viewer of the trajectories: the solvers side by side, in sync, with the reference, inertial target and start-state overlays, error colors and per-level jumps | `python -m python.tools.sim.benchmark_viewer RESULTS.h5 [--dataset path/to/trampolines.h5]` |
-| `benchmark_video.py` | MP4s of the viewer's side-by-side comparisons, one per benchmark: every trajectory sample (or per case the N with the largest initial error, `--samples-per-case N`), each opening on its start state held for a second, with a color bar, titled and labeled in Linux Biolinum (6.1) | `python -m python.tools.sim.benchmark_video RESULTS.h5 -o VIDEOS/trampolines [--benchmarks static] [--cases Y1e5] [--samples 0] [--samples-per-case 3] [--error-fraction ...]` |
+| `benchmark_video.py` | MP4s of the viewer's side-by-side comparisons, one per benchmark: every trajectory sample (or per case the N with the largest initial error, `--samples-per-case N`), each opening on its start state held for a second, with a color bar under the solver labels (one height for the whole run), titled and labeled in Linux Biolinum (6.1) | `python -m python.tools.sim.benchmark_video RESULTS.h5 -o VIDEOS/trampolines [--benchmarks static] [--cases Y1e5] [--samples 0] [--samples-per-case 3] [--label-y Y] [--error-fraction ...]` |
 | `python/examples/benchmark_browser.py` | interactive Polyscope browser of the dataset: each problem's start state, velocities, inertial target and reference, with energies and sampler diagnostics | `cd python/examples && python benchmark_browser.py -d path/to/trampolines.h5` |
 
 - **Plotting dependencies:** the plotting and table scripts need `h5py`, `numpy` and `matplotlib`. The viewers also
@@ -255,9 +255,17 @@ The viewer and the videos color each vertex by its error |x − x\*| from 0 to t
 solver that stalls at e/e0 ~ 0.1 then looks almost as converged as one at 1e-5, so for the problems where a solver
 stays unconverged the color scale ends at a fraction of the initial error instead (`--error-fraction
 [BENCHMARK/]CASE[:SAMPLE]=F`, repeatable, the most specific entry winning; values above it saturate). Each video
-frame has a viridis color bar from 0 to that max (Polyscope's table), its max marked "≥" with a triangle past it
-when the scale is clamped, and the solver labels sit below the lowest point the meshes reach in the clip. The
-30 kJ videos use:
+frame has a viridis color bar from 0 to that max (Polyscope's table), centered under the solver labels and
+captioned "Error |x - x\*|", its max marked "≥" with a triangle past it when the scale is clamped.
+
+The solver labels sit at one height in every clip of every benchmark a run records: just below the lowest point
+the recorded meshes reach on screen over all their frames, which the script prints with the clip and frame setting
+it. For the 30 kJ videos it is y = 657 px, set by dynamic_h0.01/Y1e5 sample 27 at a later frame, not a start
+state: its solution x\* sits 11 px lower on screen than its start, and AAAVBD's iterate at 1.4 ms dips 2.4 px more.
+A run recording a subset (`--benchmarks`, `--cases`, `--samples`) computes it over that subset, so a partial
+re-record should pass the full recording's height with `--label-y`.
+
+The 30 kJ videos use:
 
 ```bash
 python -m python.tools.sim.benchmark_video data/benchmarks/results/trampolines.30kJ.h5 \
