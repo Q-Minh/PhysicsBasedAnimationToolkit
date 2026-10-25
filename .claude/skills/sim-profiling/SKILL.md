@@ -77,6 +77,12 @@ The `simulate.py` arguments after `--` are passed through unchanged, so `--sim-p
   python -m python.tools.sim.profiling.trajectory out/aaavbd.json out/aaavbd_traj.h5   # adds peak_speed and rms_speed (mass-weighted, free nodes) per step
   ```
 
+- **Runs made in legs** (`simulate.py --resume`, each leg with its own `--profile-out`): merge them into one result before `report` or `paper_figures`, which key runs by scene and solver (a second leg would replace the first). `profiling/legs.py` annotates each leg from its own output, refuses legs that overlap or differ in scene, solver or parameters, and lists the legs in the metadata. The seams' warm-up steps are missing: tables leave them out, the timeline draws them as gaps.
+
+  ```bash
+  python -m python.tools.sim.profiling.legs leg1.json leg2.json -o merged.json --trajectories leg1.h5 leg2.h5
+  ```
+
 - **HTML, overheads:** a production time budget, the anatomy timeline, kernel comparisons and before/after timings, plus "stall hotspots by function" when given `ncu.py --lineinfo` summaries.
 
   ```bash
