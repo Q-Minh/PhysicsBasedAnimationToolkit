@@ -91,6 +91,20 @@ def annotate(result: dict, steps: np.ndarray, speeds: dict[str, np.ndarray]) -> 
     return n
 
 
+def annotate_from(result: dict, trajectory: str) -> tuple[int, list[str]]:
+    """:func:`annotate` the result from its run's ``simulate.py`` output, checking that their time steps agree.
+
+    Returns:
+        tuple[int, list[str]]: The number of steps annotated and the keys set.
+    """
+    with h5py.File(trajectory, "r") as h5f:
+        dt = float(h5f["params/Integration"].attrs["dt"])
+        if "dt" in result["metadata"] and not np.isclose(result["metadata"]["dt"], dt):
+            raise ValueError(f"time steps differ: result dt {result['metadata']['dt']}, trajectory dt {dt}")
+        steps, speeds = frame_speeds(h5f)
+    return annotate(result, steps, speeds), list(speeds)
+
+
 def main():
     """Command line: annotate a profiling result with per-step quantities from its trajectory."""
     parser = argparse.ArgumentParser(description="Add per-step trajectory quantities to a profiling result")
@@ -99,15 +113,10 @@ def main():
     parser.add_argument("-o", "--out", default=None, help="Output .json (default: update the result).")
     args = parser.parse_args()
     result = results.load(args.result)
-    with h5py.File(args.trajectory, "r") as h5f:
-        dt = float(h5f["params/Integration"].attrs["dt"])
-        if "dt" in result["metadata"] and not np.isclose(result["metadata"]["dt"], dt):
-            raise ValueError(f"time steps differ: result dt {result['metadata']['dt']}, trajectory dt {dt}")
-        steps, speeds = frame_speeds(h5f)
-    n = annotate(result, steps, speeds)
+    n, keys = annotate_from(result, args.trajectory)
     out = args.out or args.result
     results.save(result, out)
-    print(f"Annotated {n} of {len(result['steps'])} steps with {', '.join(speeds)}, wrote {out}")
+    print(f"Annotated {n} of {len(result['steps'])} steps with {', '.join(keys)}, wrote {out}")
 
 
 import unittest
