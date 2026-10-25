@@ -652,7 +652,9 @@ def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
            r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
            r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
            r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
-           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget.}",
+           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget. Newton "
+           r"and the VBD-family solvers handle contact differently, so their trajectories are not expected to match: "
+           r"the Newton column reports its cost on the same scene, not the same outcome.}",
            r"\label{tab:scenes}",
            r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{lrrr ccccc}", r"\toprule",
