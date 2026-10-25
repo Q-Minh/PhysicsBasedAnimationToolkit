@@ -225,6 +225,15 @@ def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float)
     # stiff scenes near rest can have a float32 floor, about (h omega)^2 ulps, above both of the test's
     # terms, so they run their full budget. Not implemented (2026-10-20); see python/tools/sim/CLAUDE.md
     # ("Convergence and early exit").
+    # TODO: A stall exit for the in-subproblem checks: stop when, at one check, the residual stopped falling
+    # (r_k >= (1 - X) r_prev) AND no free vertex moved since the previous check by more than
+    # max(rxtol * P, kappa eps32 |x_i|), P = max_i |x_i - x_i^start| the subproblem's progress. Why: on DragonImpact
+    # the residual plateaus after ~40 of 100 sweeps per substep. Calibrated (2026-10-24): its armadillo and dragon
+    # nodes still converge then (creep, cos of consecutive windows +0.85...+1), so it saves only 20-40% at rxtol
+    # 2e-2...5e-2; a movement-only test stalls stiff bodies, which move (1 + (h omega)^2) less per residual (the
+    # 1e8 beam); with the residual condition, the beam's single-check residual noise after ~2000 sweeps still
+    # stalls it at 1.5x its 4000-sweep residual. Not pursued (maintainer, 2026-10-24): no scene needs it, and it
+    # risks the timings and other scenes. Notes: python/tools/sim/docs/solver-accuracy-notes.md, entry 7.
     return float(astol) * float(acceleration) * float(h) ** 2
 
 
