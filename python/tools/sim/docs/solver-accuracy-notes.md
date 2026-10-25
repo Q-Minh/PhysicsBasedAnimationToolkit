@@ -352,3 +352,14 @@ every configuration. The median |M⁻¹g| there is 3.7-5.1 mm with one outer ite
 **For the paper.** On this scene the residual plateau is not the AL penalty force that more multiplier updates
 would remove: extra outer iterations cost a finalization each (dual update and re-detection) and leave the step
 further from stationarity. The production budget stays at 1 outer iteration x 100 sweeps per substep.
+
+**The plateau isn't a stall** (2026-10-24, for a stall exit considered and not pursued; TODO in
+`gpu/vbd/convergence.py`). Traced per 20-sweep check, 1 x 100 per substep, early exit off:
+- From sweep ~41-61 the residual changes by at most ~0.1% per window (VBD's rises slightly), but the iterate keeps
+  moving: the largest window movement, on armadillo and dragon nodes, halves every window, and consecutive
+  windows point the same way (mass-weighted cosine +0.85...+1 over the top 1% movers). That is converging creep that
+  the pillar-contact residual doesn't see, so stopping on the plateau would cut real convergence.
+- A movement test against time-step scales (|a| h², the free-flight displacement) stalls stiff bodies first: a sweep
+  moves a vertex by about H_i⁻¹ g_i, (1 + (h ω)²) less than the residual's M⁻¹ g. On the 1e8 bending beam
+  (`small_beamY1e8.h5`, h = 1e-2, VBD 1 x 4000) the window movement is 1e-2 |a| h² by sweep 200, while the residual
+  ratio falls from 494 to 8 over 4000 sweeps.
