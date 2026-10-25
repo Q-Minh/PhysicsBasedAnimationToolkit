@@ -154,6 +154,19 @@ ARMADILLO_SPAGHETTI_BUDGET = Rule(
      "Solver.Newton.n_max_iters": 4, "Solver.Newton.newton.n_max_iters": 2,
      "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
 )
+DRAGON_IMPACT_BUDGET = Rule(
+    "10 substeps per 10 ms step for the dragons' impact on the armadillo spaghetti (maintainer, 2026-10-23), each of "
+    "1 outer iteration x 100 sweeps for every VBD-family solver: at 5 substeps of 1 x 80 (the fall's budget), the "
+    "pillars jittered after the impact (mid-span RMS speed 0.8-2.2 m/s, velocity reversal 0.7-1.0, rejected by the "
+    "maintainer, against 0.35-0.55 m/s and 0.4-0.5 at 10 substeps, AAAVBD with the twist stopped at 5.0 s), and a "
+    "thin feature at the left dragon's trailing end (375 nodes) settled into a flapping limit cycle (about 8 Hz, 20 cm "
+    "range, 4-5 m/s, with the twist stopped at 4.0 or 5.0 s) that decays at 10 substeps (2.4 to 0.14 m/s over 7 s, "
+    "no 8 Hz component). Newton keeps the fall's 20 outer iterations per step, 2 per substep with 2 Newton steps and "
+    "CG rtol 1e-8, at most 4000 iterations; untested on this scene.",
+    {"Integration.substeps": 10, **_per_solver("n_max_iters", 1), **_per_solver("n_subproblem_max_iters", 100),
+     "Solver.Newton.n_max_iters": 2, "Solver.Newton.newton.n_max_iters": 2,
+     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
+)
 ARMADILLO_GAMMAS = Rule(
     "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
     "documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where AAAVBD "
@@ -344,6 +357,30 @@ SCENES = {
          "at 4 s with the contacts (AAAVBD, 2026-10-22, in the previous pose, before the MultiMesh fix and the first "
          "detection at xt).",
          MULTIMESH_FIX_NOTE],
+    ),
+    "ArmadilloSpaghetti.DragonImpact": Scene(
+        "defaults",
+        "data/scenarios/ArmadilloSpaghetti.DragonImpact.h5: ArmadilloSpaghetti.Fall (pose A, the armadillo's core "
+        "released at 1.5 s) with the twist stopped at 4.0 s (720 deg per end; maintainer, 2026-10-24) and a Fixed "
+        "transform on the pillars' turned end nodes over [0, 1000) s, which keeps the ends where the rotation stopped, "
+        "plus two Stanford dragons (data/stanford-dragon_ftetwild.msh scaled to 1.5 m long, 51k nodes and 204k tets "
+        "each, Young's modulus 1e7, Poisson's ratio 0.45, 1000 kg/m^3) parked left (-x) and right (+x) of the twist "
+        "axis, both leading with the mesh's higher, narrower +x end (the right one turned 180 deg about z): the left "
+        "one's at the armadillo's feet (z -0.60 m), the right one's at its shoulders (z +0.25 m), both at y 1.45 m and "
+        "1.1 and 1.3 m from the axis. Each is held by a Fixed transform over [0, 4.49) s and launched by a Translate "
+        "over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its "
+        "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
+        "the fall's frame at 4.49 s, its twist still on); released, it keeps that velocity. 1.40M tets in all",
+        [*SOLVERS, PENALTY, KYOGRE_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
+        ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
+         "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
+         "5.49 s is data/scenarios/ArmadilloSpaghetti.DragonImpact.TwistStop5s.h5.",
+         "Why 4.0 s (AAAVBD, 2026-10-24): with the twist stopped at 5.0 s (10 substeps of 1 x 100), the armadillo "
+         "kept swinging (about 0.8 m/s RMS at 1.3 Hz, no decay from 8 to 20 s), and a cluster of inverted elements "
+         "(about 19 within 20 cm of element 846743, which first inverts at about 3.8 s in the twist) released at about 18.9 s (the "
+         "armadillo dropped 9 cm, penetration ratio 4.1, nodes at 28 m/s). With the twist stopped at 4.0 s (5 "
+         "substeps of 1 x 80, launch to 4 s after it), the cluster stayed at 1-2 inverted elements and the pillars "
+         "moved less (mid-span RMS 0.28-0.40 m/s, reversal 0.18-0.37)."],
     ),
     "ArmadilloPull": Scene(
         "defaults",
