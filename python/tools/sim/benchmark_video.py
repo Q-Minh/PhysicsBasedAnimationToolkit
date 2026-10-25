@@ -10,9 +10,11 @@ per problem (``--error-fraction``, as the viewer's: values above it saturate, so
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
 over T_N and the slowdown) and the color scale with its fraction. A color bar shows how to read the colors: viridis
 (Polyscope's table) from 0 to the scale's max, ticks at 0, the middle and the max with the unit, and when the
-scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top color past it. The labels share
-one height in a clip, just below the lowest point the meshes reach on screen over its frames, so they clear the
-most deformed state.
+scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top color past it. The solver
+labels share one height over the whole recording, every clip of every benchmark it records: just below the lowest
+point the recorded meshes reach on screen over all their frames, so they clear the most deformed state (printed,
+with the clip setting it). Recording a subset (``--benchmarks``, ``--cases``, ``--samples``) computes it over that
+subset, so ``--label-y`` gives a partial re-record an earlier recording's height.
 Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0, so viewers
 see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's
 budget and play at ``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every
@@ -33,7 +35,7 @@ binary, then ``PATH``.
 Usage:
     python -m python.tools.sim.benchmark_video path/to/results.h5 -o out/videos/trampolines \
         [--dataset path/to/trampolines.h5] [--benchmarks static ...] [--cases Y1e6 ...] [--samples 0 4 ...] \
-        [--samples-per-case 3] \
+        [--samples-per-case 3] [--label-y 657] \
         [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--hold-seconds 1] \
         [--font-dir path/to/fonts] [--error-fraction static/Y1e5=0.2 ...]
 
@@ -175,7 +177,7 @@ class Recorder:
         self.fonts = {}  # Pillow fonts by pixel size
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
-        self.label_y = None  # the selected sample's solver labels' top (label_top), set by frames
+        self.label_y = None  # the solver labels' top in window coordinates, every clip's (place_labels); None: none
         self.colorbar_placement = COLORBAR_PLACEMENT
         self.colorbar = None  # this frame's color bar: (x, y, length, thickness) in window coordinates, or None
 
@@ -361,22 +363,38 @@ class Recorder:
             xy = np.c_[(f / aspect * p[:, 0] / -p[:, 2] + 1) / 2 * width, (1 - f * p[:, 1] / -p[:, 2]) / 2 * height]
         return xy, p[:, 2] < 0
 
-    def label_top(self) -> float | None:
-        """The solver labels' top in window coordinates, the same for every copy of the selected sample:
-        ``LABEL_GAP`` below the lowest point of the meshes over all its frames (the start state included), so the
-        labels clear the most deformed one; None if no mesh is in front of the camera."""
-        import polyscope as ps
-
+    def lowest_point(self) -> tuple[float, int] | None:
+        """The lowest point (largest window y) the selected sample's meshes reach on screen over its trajectory
+        frames, and the frame reaching it (0: the start state); None if no mesh is in front of the camera."""
         v = self.viewer
-        lowest = -math.inf
+        lowest = None
         for tr in v.selection.trajectories:
             x = tr.x[:, v.vertices].astype(np.float64) + v.offsets[tr.solver]
             xy, front = self.project(x.reshape(-1, 3))
-            if front.any():
-                lowest = max(lowest, float(xy[front, 1].max()))
-        if not math.isfinite(lowest):
-            return None
-        return lowest + LABEL_GAP * ps.get_window_size()[1] / 1080
+            y = np.where(front, xy[:, 1], -np.inf).reshape(len(tr.x), -1).max(axis=1)
+            k = int(np.argmax(y))
+            if np.isfinite(y[k]) and (lowest is None or y[k] > lowest[0]):
+                lowest = (float(y[k]), k)
+        return lowest
+
+    def place_labels(self, clips: list[tuple[int, int]]) -> tuple[float, int, int, int] | None:
+        """Sets ``label_y``, the solver labels' top for every clip of a recording: ``LABEL_GAP`` below the lowest
+        point the meshes reach on screen over all frames of ``clips`` ((case index, sample index), selected in the
+        recording's order, so each with its camera), the start states and later frames alike. Returns that point's
+        (y, case index, sample index, trajectory frame), or None (no labels) if no mesh is in front of the camera."""
+        import polyscope as ps
+
+        v = self.viewer
+        binding = None
+        for i, j in clips:
+            v.select(i, j)
+            if v.error:
+                raise SystemExit(v.error)
+            lowest = self.lowest_point()
+            if lowest is not None and (binding is None or lowest[0] > binding[0]):
+                binding = (lowest[0], i, j, lowest[1])
+        self.label_y = None if binding is None else binding[0] + LABEL_GAP * ps.get_window_size()[1] / 1080
+        return binding
 
     def frames(self, case_index: int, sample_index: int):
         """Selects a sample and yields its frames' RGB images: the hold (one captured image, repeated), then one per
@@ -391,7 +409,6 @@ class Recorder:
         for overlay in s.overlays:  # off: a converged solve's overlay z-fights with its mesh
             v.show_overlay[overlay.name] = False
         v.dirty = True
-        self.label_y = self.label_top()  # the camera is set: select frames a new scene
         hold = self.hold_frames()
         if hold > 0:
             v.frame, v.t = 0, s.frame_time(0)
@@ -427,6 +444,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--hold-seconds", type=float, default=HOLD_SECONDS, dest="hold_seconds", metavar="S",
                         help="Seconds of video each clip holds the start state before the solve; 0: no hold "
                         "(default: %(default)g).")
+    parser.add_argument("--label-y", type=float, default=None, dest="label_y", metavar="Y",
+                        help="The solver labels' top, in window pixels from the top (default: just below the lowest "
+                        "point the recorded meshes reach over all their frames, printed; set it to match an earlier "
+                        "recording of other benchmarks, cases or samples).")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
                         help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
                         "installed fonts; without them, imgui's default font).")
@@ -482,6 +503,18 @@ def main():
         if unrecorded:
             print(f"Note: --error-fraction {', '.join(unrecorded)}: not among the recorded samples", flush=True)
     benchmarks = list(dict.fromkeys(b for _, b, _, _, _ in cases))
+    clips = [(i, samples.index(sample)) for benchmark in benchmarks for i, b, _, samples, recorded in cases
+             if b == benchmark for sample in recorded]  # in the recording's order
+    if args.label_y is not None:
+        recorder.label_y = args.label_y
+    else:
+        binding = recorder.place_labels(clips)
+        if binding is not None:
+            y, i, j, k = binding
+            b, c, _, samples = viewer.cases[i]
+            print(f"Solver labels at y = {recorder.label_y:.1f} px (--label-y to set), under the lowest point the "
+                  f"recorded meshes reach, y = {y:.1f} px: {b}/{c} sample {samples[j]}, "
+                  f"{'its start state' if k == 0 else f'trajectory frame {k}'}", flush=True)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     start = time.time()
     for benchmark in benchmarks:
@@ -641,8 +674,9 @@ class TestBenchmarkVideo(unittest.TestCase):
             check_error_fractions(ErrorFractions(["static/S:2=0.1"]), cases)
 
     def test_labels(self):
-        """The solver labels: one height for every copy, LABEL_GAP below the meshes' lowest point on screen over
-        all the sample's frames (here Newton's last, sagging), the start state included."""
+        """The solver labels: one height for every copy of every clip of a recording, across benchmarks,
+        LABEL_GAP below the meshes' lowest point on screen over all the clips' frames (here Newton's last frame of
+        the dynamic clip, sagging); the clip and frame setting it are returned."""
         import sys
         import tempfile
         from unittest import mock
@@ -667,24 +701,28 @@ class TestBenchmarkVideo(unittest.TestCase):
                 x[-1, :, 1] -= 0.5
                 f[key][...] = x
             viewer = Viewer(dataset)
-            viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
+            viewer.load(path)
             recorder = Recorder(viewer, hold_seconds=0.0)
             ps.frame_tick.side_effect = lambda: recorder.callback()
+            clips = [(i, 0) for i in range(len(viewer.cases))]  # static, then dynamic_h0.01
+            self.assertEqual([viewer.cases[i][0] for i, _ in clips], ["static", "dynamic_h0.01"])
+            self.assertIsNone(recorder.label_y)
+            y, i, j, k = recorder.place_labels(clips)
+            self.assertEqual((viewer.cases[i][0], j, k), ("dynamic_h0.01", 0, 1))  # the sagging last frame
             add = imgui.GetForegroundDrawList.return_value.AddText
             add.reset_mock()
-            list(recorder.frames(viewer.case_index, viewer.sample_index))
-            s = viewer.selection
+            for clip in clips:
+                list(recorder.frames(*clip))
             f = 1.0 / math.tan(math.radians(45.0) / 2)
-            lowest = max(float(np.max((1 - f * tr.x[..., 1] / -(tr.x[..., 2] - 5.0)) / 2 * height))
-                         for tr in s.trajectories)
             sagging = float(np.max((1 - f * x[-1, :, 1] / -(x[-1, :, 2] - 5.0)) / 2 * height))
+            names = [display_name(tr.solver) for tr in viewer.selection.trajectories]
             line = recorder.line_height()
-        self.assertEqual(lowest, sagging)
-        self.assertAlmostEqual(recorder.label_y, lowest + LABEL_GAP * height / 1080, places=4)
-        positions = {}  # text -> its draws' y
+        self.assertAlmostEqual(y, sagging, places=4)
+        self.assertAlmostEqual(recorder.label_y, sagging + LABEL_GAP * height / 1080, places=4)
+        positions = {}  # text -> its draws' y, over both clips
         for call in add.call_args_list:
-            positions.setdefault(call.args[2], set()).add(round(call.args[0][1], 6))
-        names = [display_name(tr.solver) for tr in s.trajectories]
+            positions.setdefault(call.args[2], []).append(round(call.args[0][1], 6))
+        self.assertEqual(len(positions[names[0]]), 2 * 2)  # 2 frames per clip
         self.assertEqual({y for name in names for y in positions[name]}, {round(recorder.label_y, 6)})
         errors = {y for text, ys in positions.items() if text.startswith("e/e0") for y in ys}
         self.assertEqual(errors, {round(recorder.label_y + line, 6)})
