@@ -8,7 +8,8 @@ Each clip is what the viewer shows with its defaults: the solvers' copies side b
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
-over T_N and the slowdown) and the color scale with its fraction.
+over T_N and the slowdown) and the color scale with its fraction. The labels share one height in a clip, just
+below the lowest point the meshes reach on screen over its frames, so they clear the most deformed state.
 Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0, so viewers
 see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's budget and play at
 ``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every clip shows its
@@ -58,6 +59,7 @@ TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080
 TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
 TEXT_COLOR = (0.1, 0.1, 0.1, 1.0)
 HOLD_SECONDS = 1.0  # each clip's start state, held before the solve
+LABEL_GAP = 16  # window pixels at a 1080-pixel height between the meshes' lowest point and the solver labels
 
 
 SUPERSCRIPTS = str.maketrans("0123456789-+", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺")
@@ -164,6 +166,7 @@ class Recorder:
         self.fonts = {}  # Pillow fonts by pixel size
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
+        self.label_y = None  # the selected sample's solver labels' top (label_top), set by frames
 
     def font(self, height: int):
         """The Pillow font for a video ``height`` pixels tall."""
@@ -234,8 +237,8 @@ class Recorder:
         return image if self.font_file is None else self.composite(image)
 
     def callback(self):
-        """Per frame: the meshes, then the titles and each copy's label (name and e/e0) on the background."""
-        import polyscope as ps
+        """Per frame: the meshes, then the titles and each copy's label (name and e/e0) on the background, at the
+        same height for every copy (``label_y``)."""
         import polyscope.imgui as imgui
 
         v = self.viewer
@@ -249,23 +252,51 @@ class Recorder:
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
         self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
+        if self.label_y is None:
+            return
+        lo, hi = s.X.min(axis=0), s.X.max(axis=0)
+        below = np.array([(lo[0] + hi[0]) / 2, lo[1], lo[2]])
+        names = [tr.solver for tr in s.trajectories]
+        for tr in s.trajectories:
+            xy, front = self.project((below + v.offsets[tr.solver])[None])  # centered under the copy
+            if not front[0]:
+                continue
+            x, y = xy[0, 0], self.label_y
+            self.draw_text(draw, x, y, display_name(tr.solver), (*_rgb(solver_color(tr.solver, names)), 1.0), center=True)
+            frame = v.shown.get(tr.solver, 0)
+            self.draw_text(draw, x, y + line, f"e/e0 {tr.relative_error[frame]:.1e}", center=True)
+
+    def project(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """(n, 3) world points to (n, 2) window coordinates (x right, y down) through Polyscope's current camera,
+        and whether each is in front of it."""
+        import polyscope as ps
+
         params = ps.get_view_camera_parameters()
         V = np.asarray(params.get_view_mat(), dtype=np.float64)
         f = 1.0 / math.tan(math.radians(params.get_fov_vertical_deg()) / 2)
         aspect = params.get_aspect()
         width, height = ps.get_window_size()
-        lo, hi = s.X.min(axis=0), s.X.max(axis=0)
-        below = np.array([(lo[0] + hi[0]) / 2, lo[1], lo[2]])
-        names = [tr.solver for tr in s.trajectories]
-        for tr in s.trajectories:
-            p = V @ np.append(below + v.offsets[tr.solver], 1.0)
-            if p[2] >= 0:
-                continue
-            x = (f / aspect * p[0] / -p[2] + 1) / 2 * width
-            y = (1 - f * p[1] / -p[2]) / 2 * height + 12
-            self.draw_text(draw, x, y, display_name(tr.solver), (*_rgb(solver_color(tr.solver, names)), 1.0), center=True)
-            frame = v.shown.get(tr.solver, 0)
-            self.draw_text(draw, x, y + line, f"e/e0 {tr.relative_error[frame]:.1e}", center=True)
+        p = points @ V[:3, :3].T + V[:3, 3]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xy = np.c_[(f / aspect * p[:, 0] / -p[:, 2] + 1) / 2 * width, (1 - f * p[:, 1] / -p[:, 2]) / 2 * height]
+        return xy, p[:, 2] < 0
+
+    def label_top(self) -> float | None:
+        """The solver labels' top in window coordinates, the same for every copy of the selected sample:
+        ``LABEL_GAP`` below the lowest point of the meshes over all its frames (the start state included), so the
+        labels clear the most deformed one; None if no mesh is in front of the camera."""
+        import polyscope as ps
+
+        v = self.viewer
+        lowest = -math.inf
+        for tr in v.selection.trajectories:
+            x = tr.x[:, v.vertices].astype(np.float64) + v.offsets[tr.solver]
+            xy, front = self.project(x.reshape(-1, 3))
+            if front.any():
+                lowest = max(lowest, float(xy[front, 1].max()))
+        if not math.isfinite(lowest):
+            return None
+        return lowest + LABEL_GAP * ps.get_window_size()[1] / 1080
 
     def frames(self, case_index: int, sample_index: int):
         """Selects a sample and yields its frames' RGB images: the hold (one captured image, repeated), then one per
@@ -280,6 +311,7 @@ class Recorder:
         for overlay in s.overlays:  # off: a converged solve's overlay z-fights with its mesh
             v.show_overlay[overlay.name] = False
         v.dirty = True
+        self.label_y = self.label_top()  # the camera is set: select frames a new scene
         hold = self.hold_frames()
         if hold > 0:
             v.frame, v.t = 0, s.frame_time(0)
@@ -527,6 +559,55 @@ class TestBenchmarkVideo(unittest.TestCase):
                           [call.args[0] for call in printed.call_args_list])
             # The typo guard checks every sample, recorded or not
             check_error_fractions(ErrorFractions(["static/S:2=0.1"]), cases)
+
+    def test_labels(self):
+        """The solver labels: one height for every copy, LABEL_GAP below the meshes' lowest point on screen over
+        all the sample's frames (here Newton's last, sagging), the start state included."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import h5py
+
+        from .benchmark_viewer import TestBenchmarkViewer
+
+        ps, imgui, _ = self.stubs()
+        V = np.eye(4)
+        V[2, 3] = -5.0  # the camera 5 m in front of the cube, looking down -z
+        camera = ps.get_view_camera_parameters.return_value
+        camera.get_view_mat.return_value = V
+        width, height = 640, 360
+        ps.get_window_size.return_value = (width, height)
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, _ = TestBenchmarkViewer.write_files(root)
+            key = f"dynamic_h0.01/S/Newton/trajectories/{TestBenchmarkViewer.SAMPLE:06d}/x"
+            with h5py.File(path, "r+") as f:
+                x = f[key][()]
+                x[-1, :, 1] -= 0.5
+                f[key][...] = x
+            viewer = Viewer(dataset)
+            viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
+            recorder = Recorder(viewer, hold_seconds=0.0)
+            ps.frame_tick.side_effect = lambda: recorder.callback()
+            add = imgui.GetForegroundDrawList.return_value.AddText
+            add.reset_mock()
+            list(recorder.frames(viewer.case_index, viewer.sample_index))
+            s = viewer.selection
+            f = 1.0 / math.tan(math.radians(45.0) / 2)
+            lowest = max(float(np.max((1 - f * tr.x[..., 1] / -(tr.x[..., 2] - 5.0)) / 2 * height))
+                         for tr in s.trajectories)
+            sagging = float(np.max((1 - f * x[-1, :, 1] / -(x[-1, :, 2] - 5.0)) / 2 * height))
+            line = recorder.line_height()
+        self.assertEqual(lowest, sagging)
+        self.assertAlmostEqual(recorder.label_y, lowest + LABEL_GAP * height / 1080, places=4)
+        positions = {}  # text -> its draws' y
+        for call in add.call_args_list:
+            positions.setdefault(call.args[2], set()).add(round(call.args[0][1], 6))
+        names = [display_name(tr.solver) for tr in s.trajectories]
+        self.assertEqual({y for name in names for y in positions[name]}, {round(recorder.label_y, 6)})
+        errors = {y for text, ys in positions.items() if text.startswith("e/e0") for y in ys}
+        self.assertEqual(errors, {round(recorder.label_y + line, 6)})
 
     def test_plain_label(self):
         """The paper figures' case labels as plain text, with and without Unicode; the title uses them."""
