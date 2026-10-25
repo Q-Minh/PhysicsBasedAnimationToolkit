@@ -9,9 +9,8 @@ and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initi
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
 over T_N and the slowdown) and the color scale with its fraction.
-Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0 with the
-caption "Initial", so viewers see the problem before the solvers change the shape; the caption goes when the
-solve starts. Frames are evenly spaced in solver time over the problem's budget and play at
+Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0, so viewers
+see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's budget and play at
 ``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every clip shows its
 solve slowed down by its ``playback_factor``. The viewer's translucent overlays are off: near convergence a
 reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already show the
@@ -165,7 +164,6 @@ class Recorder:
         self.fonts = {}  # Pillow fonts by pixel size
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
-        self.initial = False  # the hold: the start state, captioned "Initial"
 
     def font(self, height: int):
         """The Pillow font for a video ``height`` pixels tall."""
@@ -251,8 +249,6 @@ class Recorder:
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
         self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
-        if self.initial:
-            self.draw_text(draw, ps.get_window_size()[0] / 2, 20, "Initial", center=True)
         params = ps.get_view_camera_parameters()
         V = np.asarray(params.get_view_mat(), dtype=np.float64)
         f = 1.0 / math.tan(math.radians(params.get_fov_vertical_deg()) / 2)
@@ -287,10 +283,8 @@ class Recorder:
         hold = self.hold_frames()
         if hold > 0:
             v.frame, v.t = 0, s.frame_time(0)
-            self.initial = True
             ps.frame_tick()
             image = self.capture()
-            self.initial = False
             for _ in range(hold):
                 yield image
         for k in range(s.n_frames + 1):
@@ -319,8 +313,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ffmpeg", default=None, help="ffmpeg executable (default: FFMPEG, imageio-ffmpeg, PATH).")
     add_error_fraction_argument(parser)
     parser.add_argument("--hold-seconds", type=float, default=HOLD_SECONDS, dest="hold_seconds", metavar="S",
-                        help="Seconds of video each clip holds the start state, captioned \"Initial\", before the "
-                        "solve; 0: no hold (default: %(default)g).")
+                        help="Seconds of video each clip holds the start state before the solve; 0: no hold "
+                        "(default: %(default)g).")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
                         help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
                         "installed fonts; without them, imgui's default font).")
@@ -579,8 +573,8 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertEqual(recorder.labels[viewer.selection.benchmark, "S"], "E ∈ {2.8 × 10⁵, 2.8 × 10⁷} Pa")
 
     def test_hold(self):
-        """The hold: round(S x fps) copies of one captured start state, captioned "Initial" at t = 0, then the
-        solve's frames without the caption; none with --hold-seconds 0."""
+        """The hold: round(S x fps) copies of one captured start state at t = 0 (no caption), then the solve's
+        frames; none with --hold-seconds 0."""
         import sys
         import tempfile
         from unittest import mock
@@ -600,10 +594,10 @@ class TestBenchmarkVideo(unittest.TestCase):
             fps = s.n_frames / s.video_seconds  # 0.5 fps: 1 frame over 2 s
             recorder = Recorder(viewer, hold_seconds=6.0)
             ps.frame_tick.side_effect = lambda: recorder.callback()
-            captions = []  # per captured image: the shown time and whether it was captioned "Initial"
+            captions = []  # per captured image: the shown time and whether any text says "Initial"
 
             def capture(**kwargs):
-                captions.append((viewer.t, "Initial" in texts))
+                captions.append((viewer.t, any("Initial" in text for text in texts)))
                 texts.clear()
                 return np.zeros((48, 64, 4), dtype=np.uint8)
 
@@ -614,7 +608,7 @@ class TestBenchmarkVideo(unittest.TestCase):
             self.assertEqual(hold, 3)
             self.assertEqual(len(images), hold + s.n_frames + 1)
             self.assertTrue(all(image is images[0] for image in images[:hold]))  # captured once
-            self.assertEqual(captions, [(0.0, True)] + [(s.frame_time(k), False) for k in range(s.n_frames + 1)])
+            self.assertEqual(captions, [(0.0, False)] + [(s.frame_time(k), False) for k in range(s.n_frames + 1)])
             recorder.hold_seconds = 0.0
             self.assertEqual(len(list(recorder.frames(case, 0))), s.n_frames + 1)
 
