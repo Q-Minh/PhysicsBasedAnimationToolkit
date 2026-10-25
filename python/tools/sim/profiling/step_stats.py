@@ -121,6 +121,27 @@ def per_step(result: dict) -> dict:
     }
 
 
+def on_step_grid(table: dict) -> dict:
+    """:func:`per_step` arrays on every step from the first to the last, NaN at the steps the result lacks (the
+    warm-up steps at the seams of merged legs, ``profiling/legs.py``), so that plots break there rather than
+    interpolate; ``measured`` marks the steps the result has."""
+    t = table["t"]
+    if t.size == 0 or t[-1] - t[0] + 1 == t.size:
+        return {**table, "measured": np.ones(t.size, dtype=bool)}
+    index = t - t[0]
+
+    def grid(values):
+        out = np.full(int(t[-1] - t[0]) + 1, np.nan)
+        out[index] = values
+        return out
+
+    out = {k: grid(v) if isinstance(v, np.ndarray) else v for k, v in table.items()}
+    out["t"] = np.arange(t[0], t[-1] + 1)
+    out["phases"] = {p: grid(v) for p, v in table["phases"].items()}
+    out["measured"] = ~np.isnan(grid(np.zeros(t.size)))
+    return out
+
+
 def describe(values: np.ndarray) -> dict | None:
     """Count, mean and :data:`QUANTILES` (named by :data:`QUANTILE_NAMES`) of the finite values, or None."""
     v = np.asarray(values, dtype=float)

@@ -18,7 +18,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines, each with
   its own legend entry. Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
   adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
-  numbers marked at their times on the plots (first row only).
+  numbers marked at their times on the plots (first row only). Steps a result lacks, the warm-up steps at the
+  seams of a run merged from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that
+  hold them), not interpolated.
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
@@ -261,7 +263,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
     for i, run in enumerate(runs):
-        table = step_stats.per_step(run)
+        table = step_stats.on_step_grid(step_stats.per_step(run))
         xr = step_seconds(run, table["t"])
         if i == 0 and np.isfinite(table[SPEED]).any():
             speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
@@ -271,7 +273,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
             handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
                                   label=f"{solver_name(run)} {SPEED_NAME}"))
         ratio = np.maximum(table["gradient_ratio"], RATIO_FLOOR)
-        medians.append(rolling_median(ratio, smooth))
+        medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
         strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
     if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
         speed.fill_between(x, kernels_speed, color=SPEED_FILL, alpha=0.6, linewidth=0)
@@ -302,7 +304,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
     ``snapshots`` (simulated time, image path), numbered at their times on the plots. ``others`` are each row's
     production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run."""
-    tables = [step_stats.per_step(k) for k in kernels]
+    tables = [step_stats.on_step_grid(step_stats.per_step(k)) for k in kernels]
     rows = len(kernels)
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
@@ -338,7 +340,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
         area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
                        colors=[group_color(g) for g in groups], linewidth=0)
         for run in runs:
-            ptable = step_stats.per_step(run)
+            ptable = step_stats.on_step_grid(step_stats.per_step(run))
             area.plot(bin_steps(step_seconds(run, ptable["t"]), bin_n), bin_steps(ptable["time_ms"], bin_n),
                       color=solver_color(run), linewidth=0.6, path_effects=HALO)
             solvers.setdefault(solver_name(run), solver_color(run))
