@@ -317,7 +317,6 @@ class Recorder:
         self.draw_text(draw, 24, 20, f"{benchmark_title(s.benchmark)}: {self.case_label()}, sample {s.sample}")
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
-        self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
         self.colorbar = self.colorbar_layout() if v.color_mode in (0, 1) else None  # error or displacement
         if self.label_y is None:
             return
@@ -555,8 +554,8 @@ class TestBenchmarkVideo(unittest.TestCase):
         return ps, imgui, texts
 
     def test_error_fraction(self):
-        """--error-fraction entries reach the viewer's color scale per problem, and the caption gives the clamped
-        max and fraction."""
+        """--error-fraction entries reach the viewer's color scale per problem, and the color bar's max (no
+        "Color:" title line)."""
         import sys
         import tempfile
         from unittest import mock
@@ -577,9 +576,11 @@ class TestBenchmarkVideo(unittest.TestCase):
             recorder = Recorder(viewer)
             texts.clear()
             recorder.callback()
+            ticks = recorder.colorbar_ticks()
         self.assertAlmostEqual(viewer.vmax, 0.05 * viewer.initial_error(), places=6)
-        caption = f"Color: {COLOR_MODES[0]}, 0 to {viewer.vmax:.4g} m (5% of the initial error)"
-        self.assertIn(caption, texts)
+        self.assertTrue(ticks[-1][1].startswith("≥ ") and ticks[-1][0] == 1.0)
+        self.assertEqual(len(texts), 2)  # the title's two lines, no "Color:" line
+        self.assertFalse(any(text.startswith("Color:") for text in texts))
         self.assertEqual(args.error_fractions("static", "S", TestBenchmarkViewer.SAMPLE), 0.5)
         with self.assertRaises(SystemExit):  # an entry matching no problem
             check_error_fractions(ErrorFractions(["static/T=0.1"]), viewer.cases)
