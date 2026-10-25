@@ -363,3 +363,31 @@ further from stationarity. The production budget stays at 1 outer iteration x 10
   moves a vertex by about H_i⁻¹ g_i, (1 + (h ω)²) less than the residual's M⁻¹ g. On the 1e8 bending beam
   (`small_beamY1e8.h5`, h = 1e-2, VBD 1 x 4000) the window movement is 1e-2 |a| h² by sweep 200, while the residual
   ratio falls from 494 to 8 over 4000 sweeps.
+
+## 8. Unexplained: a gap of exactly −dmin, then a reversed normal, at a vertex-edge to vertex-face hand-off
+
+An observation without an explanation yet; nothing was changed over it.
+
+**Setup.** The DragonImpact production run (`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`: AAAVBD, 10 substeps
+of 1 x 100, dmin = 1 cm, ftol 0.5, so the penetration tolerance is 5 mm). Steps 481-490 replayed eagerly from the
+4.8 s checkpoint, with the convergence check's per-pair penetration (dmin minus the pair's gap) recorded per
+substep; the replay matched the run bit for bit (max |dx| = 0 at step 481). 2026-10-25, scratch diagnostic.
+
+**What was seen.** Two penetration spikes, at the same armadillo edge node and one pillar2 vertex each, shortly after
+the dragons hit:
+- Step 482, substep 8: one vertex-edge pair, pillar2 vertex 101870 against armadillo edge 201706-201708, has a gap of
+  −0.009998 m (penetration ratio 4.0, i.e. −dmin to 0.02%). The next substep, the same vertex is in a vertex-face
+  pair against an adjacent armadillo face, 1.6 mm outside it (ratio 1.68), with a normal of (−0.80, −0.47, −0.36)
+  against the edge pair's (0.83, 0.55, 0.04). The vertex moved about 1.1 cm in that substep (11.3 m/s).
+- Step 484, substep 1: pillar2 vertex 118799 against armadillo edge 201708-201734, gap −0.009974 m (ratio 3.99).
+  The next substep it is a vertex-face pair at −7.8 mm (ratio 3.55) with a normal of (−0.82, −0.56, 0.09) against the
+  edge pair's (0.53, 0.84, 0.13), then every pair is below 0.31 from substep 3 on.
+
+The run went on to 18 s with no other step over 2 (the watcher stopped on the first spike; the stop was later relaxed
+to 10 consecutive steps over 2).
+
+**Not explained.** The gap is measured along the pair's normal stored at detection, with its barycentric coordinates
+held (`_ve_penetration` in `gpu/vbd/convergence.py`). A gap within 0.3% of −dmin, twice, suggests a vertex near the
+activation distance measured against a normal of the opposite orientation rather than a 2 cm overlap, but that was
+not checked (the stored normals and the pairs' unsigned distances were not recorded). Whether the vertex really
+crossed the armadillo's surface is also open.
