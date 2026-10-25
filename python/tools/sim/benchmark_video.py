@@ -8,19 +8,22 @@ Each clip is what the viewer shows with its defaults: the solvers' copies side b
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
-over T_N and the slowdown) and the color scale with its fraction. The labels share one height in a clip, just
-below the lowest point the meshes reach on screen over its frames, so they clear the most deformed state.
+over T_N and the slowdown) and the color scale with its fraction. A color bar shows how to read the colors: viridis
+(Polyscope's table) from 0 to the scale's max, ticks at 0, the middle and the max with the unit, and when the
+scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top color past it. The labels share
+one height in a clip, just below the lowest point the meshes reach on screen over its frames, so they clear the
+most deformed state.
 Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0, so viewers
-see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's budget and play at
-``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every clip shows its
-solve slowed down by its ``playback_factor``. The viewer's translucent overlays are off: near convergence a
-reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already show the
-distance to the reference.
+see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's
+budget and play at ``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every
+clip shows its solve slowed down by its ``playback_factor``. The viewer's translucent overlays are off: near
+convergence a reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already
+show the distance to the reference.
 
-Text: the titles, labels and captions are in Linux Biolinum, the paper figures' sans serif, drawn with Pillow onto
-each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes from
-``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
-Without it, a warning, and imgui's default font draws them in the window.
+Text: the titles, labels and the color bar's ticks are in Linux Biolinum, the paper figures' sans serif, drawn
+with Pillow onto each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes
+from ``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
+Without it, a warning, and imgui's default font draws the titles and labels in the window (the ticks: Pillow's).
 
 Polyscope has no headless backend on Windows: the recorder opens a window and drives it itself, so leave it open
 and unminimized until it finishes. Frames go straight from the window to ffmpeg's stdin (no image files). ffmpeg
