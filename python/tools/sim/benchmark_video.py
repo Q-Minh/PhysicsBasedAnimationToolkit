@@ -8,19 +8,25 @@ Each clip is what the viewer shows with its defaults: the solvers' copies side b
 and e/e0, colored by the per-vertex error |x - x*| from 0 to the problem's initial error, or a fraction of it
 per problem (``--error-fraction``, as the viewer's: values above it saturate, so a stalled solve stays bright);
 plus a title (benchmark, the case's material as in the paper figures, e.g. "E = 10⁵ Pa", sample, solver time
-over T_N and the slowdown) and the color scale with its fraction.
-Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0 with the
-caption "Initial", so viewers see the problem before the solvers change the shape; the caption goes when the
-solve starts. Frames are evenly spaced in solver time over the problem's budget and play at
-``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every clip shows its
-solve slowed down by its ``playback_factor``. The viewer's translucent overlays are off: near convergence a
-reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already show the
-distance to the reference.
+over T_N and the slowdown). A color bar, centered under the solver labels and captioned "Error |x - x*|", shows
+how to read the colors: viridis (Polyscope's table) from 0 to the scale's max, ticks at 0, the middle and the max
+with the unit, and when the scale is clamped (a fraction below 1) a "≥" on the max and a triangle in the top
+color past it. The solver labels share one height over the whole recording, every clip of every benchmark it records: just below the lowest
+point the recorded meshes reach on screen over all their frames, so they clear the most deformed state (printed,
+with the clip setting it). Recording a subset (``--benchmarks``, ``--cases``, ``--samples``) computes it over that
+subset, so ``--label-y`` gives a partial re-record an earlier recording's height.
+Each clip opens on the start state, held for ``--hold-seconds`` (default 1 s; 0: no hold) at t = 0, so viewers
+see the problem before the solvers change the shape. Frames are evenly spaced in solver time over the problem's
+budget and play at ``F / video_seconds`` frames per second (24 fps for the full run's 120 frames in 5 s), so every
+clip shows its solve slowed down by its ``playback_factor``. The viewer's translucent overlays are off: near
+convergence a reference overlay coincides with the solver meshes and flickers (z-fighting), and the colors already
+show the distance to the reference.
 
-Text: the titles, labels and captions are in Linux Biolinum, the paper figures' sans serif, drawn with Pillow onto
-each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes from
-``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
-Without it, a warning, and imgui's default font draws them in the window.
+Text: the titles, labels and the color bar's ticks and caption are in Linux Biolinum, the paper figures' sans serif, drawn
+with Pillow onto each captured frame (sizes in video pixels, for 1080p and scaled with the height); the font comes
+from ``--font-dir``, else ``PBAT_FONT_DIR``, else the installed fonts (``benchmark_plot.register_paper_fonts``).
+Without it, a warning, and imgui's default font draws the titles and labels in the window (the color bar's text:
+Pillow's).
 
 Polyscope has no headless backend on Windows: the recorder opens a window and drives it itself, so leave it open
 and unminimized until it finishes. Frames go straight from the window to ffmpeg's stdin (no image files). ffmpeg
@@ -30,7 +36,7 @@ binary, then ``PATH``.
 Usage:
     python -m python.tools.sim.benchmark_video path/to/results.h5 -o out/videos/trampolines \
         [--dataset path/to/trampolines.h5] [--benchmarks static ...] [--cases Y1e6 ...] [--samples 0 4 ...] \
-        [--samples-per-case 3] \
+        [--samples-per-case 3] [--label-y 657] \
         [--width 1920 --height 1080] [--crf 18] [--ffmpeg path/to/ffmpeg] [--hold-seconds 1] \
         [--font-dir path/to/fonts] [--error-fraction static/Y1e5=0.2 ...]
 
@@ -59,6 +65,9 @@ TEXT_SCALE = 2.0  # the labels and titles, over imgui's default font, for a 1080
 TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height, scaled with it
 TEXT_COLOR = (0.1, 0.1, 0.1, 1.0)
 HOLD_SECONDS = 1.0  # each clip's start state, held before the solve
+LABEL_GAP = 16  # window pixels at a 1080-pixel height between the meshes' lowest point and the solver labels
+# The color bar's length, thickness and gap under the solver labels, in window pixels at a 1080-pixel height
+COLORBAR_LENGTH, COLORBAR_THICKNESS, COLORBAR_GAP = 640, 20, 40
 
 
 SUPERSCRIPTS = str.maketrans("0123456789-+", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺")
@@ -165,15 +174,18 @@ class Recorder:
         self.fonts = {}  # Pillow fonts by pixel size
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
-        self.initial = False  # the hold: the start state, captioned "Initial"
+        self.label_y = None  # the solver labels' top in window coordinates, every clip's (place_labels); None: none
+        self.colorbar = None  # this frame's color bar: (x, y, length, thickness) in window coordinates, or None
 
     def font(self, height: int):
-        """The Pillow font for a video ``height`` pixels tall."""
+        """The Pillow font for a video ``height`` pixels tall (without ``font_file``, Pillow's default font, which
+        only the color bar's ticks use)."""
         from PIL import ImageFont
 
         size = max(round(TEXT_PIXELS * height / 1080), 1)
         if size not in self.fonts:
-            self.fonts[size] = ImageFont.truetype(self.font_file, size)
+            self.fonts[size] = (ImageFont.load_default(size) if self.font_file is None else
+                                ImageFont.truetype(self.font_file, size))
         return self.fonts[size]
 
     def case_label(self) -> str:
@@ -211,8 +223,62 @@ class Recorder:
         width = imgui.CalcTextSize(text)[0]  # imgui's global font scale is TEXT_SCALE (the callback sets it)
         draw.AddText((x - width / 2 if center else x, y), imgui.GetColorU32(color), text)
 
+    def colorbar_clamped(self) -> bool:
+        """Whether the color scale ends below the values it may show (an error fraction below 1, or a fixed max),
+        so its top color reads "at least the max"."""
+        v = self.viewer
+        return v.scale_mode == 2 or (v.scale_mode == 0 and v.error_fraction < 1.0)
+
+    def colorbar_ticks(self) -> list[tuple[float, str]]:
+        """The color bar's ticks as (position along the bar from 0 to 1, label): 0, the middle and the max, in m,
+        mm or µm, the unit on the max; "≥" before the max when the scale is clamped (:meth:`colorbar_clamped`)."""
+        vmax = self.viewer.vmax
+        scale, unit = (1.0, "m") if vmax >= 0.1 else (1e3, "mm") if vmax >= 1e-4 else (1e6, "µm")
+        top = f"{'≥ ' if self.colorbar_clamped() else ''}{vmax * scale:.3g} {unit}"
+        return [(0.0, "0"), (0.5, f"{vmax * scale / 2:.3g}"), (1.0, top)]
+
+    def colorbar_layout(self) -> tuple[float, float, float, float]:
+        """The color bar's (x, y, length, thickness) in window coordinates, (x, y) its top left corner: centered
+        horizontally, ``COLORBAR_GAP`` under the solver labels' e/e0 line (without labels, at 70% of the height),
+        and high enough that its ticks and caption (Pillow's text, ``TEXT_PIXELS`` high) stay in the window."""
+        import polyscope as ps
+
+        width, height = ps.get_window_size()
+        k = height / 1080
+        length, thickness, text = COLORBAR_LENGTH * k, COLORBAR_THICKNESS * k, TEXT_PIXELS * k
+        y = 0.7 * height if self.label_y is None else self.label_y + 2 * self.line_height() + COLORBAR_GAP * k
+        return (width - length) / 2, min(y, height - 1.6 * thickness - 3 * text), length, thickness
+
+    def draw_colorbar(self, picture, font, scale: float):
+        """Draws this frame's color bar on ``picture`` (Pillow, ``scale`` framebuffer pixels per window pixel):
+        Polyscope's viridis (the same 256-color table) from 0 at the left to the viewer's vmax, with its ticks
+        under it, and when clamped a triangle past the max in the top color; under the ticks, centered, what the
+        colors show (the color mode, e.g. "Error |x - x*|")."""
+        from matplotlib import colormaps
+        from PIL import Image, ImageDraw
+
+        x, y, length, thickness = (c * scale for c in self.colorbar)
+        n, t = max(round(length), 2), max(round(thickness), 1)
+        colors = np.round(255 * colormaps["viridis"]((np.arange(n) + 0.5) / n)[:, :3]).astype(np.uint8)
+        x, y = round(x), round(y)
+        picture.paste(Image.fromarray(np.ascontiguousarray(np.repeat(colors[None], t, axis=0))), (x, y))
+        draw = ImageDraw.Draw(picture)
+        ink = tuple(round(255 * c) for c in TEXT_COLOR[:3])
+        draw.rectangle((x - 1, y - 1, x + n, y + t), outline=ink)
+        if self.colorbar_clamped():  # the top color continues: values above the max
+            tip = round(0.9 * t)
+            draw.polygon([(x + n, y - 1), (x + n, y + t), (x + n + tip, y + t / 2 - 0.5)],
+                         fill=tuple(int(c) for c in colors[-1]), outline=ink)
+        tick, gap = max(round(t / 3), 2), max(round(t / 4), 2)
+        for position, label in self.colorbar_ticks():
+            tx = x + position * n
+            draw.line((tx, y + t, tx, y + t + tick), fill=ink, width=max(round(scale), 1))
+            draw.text((tx, y + t + tick + gap), label, font=font, fill=ink, anchor="mt")
+        draw.text((x + n / 2, y + t + tick + gap + round(1.25 * font.size)), COLOR_MODES[self.viewer.color_mode],
+                  font=font, fill=ink, anchor="mt")
+
     def composite(self, image: np.ndarray) -> np.ndarray:
-        """The captured RGB ``image`` with this frame's texts drawn on it in the paper font."""
+        """The captured RGB ``image`` with this frame's texts drawn on it in the paper font, and the color bar."""
         import polyscope as ps
         from PIL import Image, ImageDraw
 
@@ -226,18 +292,20 @@ class Recorder:
                 x -= font.getlength(text) / 2
             draw.text((x, y), text, font=font, fill=tuple(round(255 * c) for c in color[:3]))
         self.texts = []
+        if self.colorbar is not None:
+            self.draw_colorbar(picture, font, scale)
         return np.asarray(picture)
 
     def capture(self) -> np.ndarray:
-        """The window's RGB image after a frame tick, with the texts in the paper font."""
+        """The window's RGB image after a frame tick, with the texts in the paper font and the color bar."""
         import polyscope as ps
 
         image = np.ascontiguousarray(ps.screenshot_to_buffer(transparent_bg=False, include_UI=True)[..., :3])
-        return image if self.font_file is None else self.composite(image)
+        return self.composite(image)
 
     def callback(self):
-        """Per frame: the meshes, then the titles and each copy's label (name and e/e0) on the background."""
-        import polyscope as ps
+        """Per frame: the meshes, then the titles, the color bar's place (drawn by :meth:`composite`) and each
+        copy's label (name and e/e0) on the background, at the same height for every copy (``label_y``)."""
         import polyscope.imgui as imgui
 
         v = self.viewer
@@ -250,26 +318,68 @@ class Recorder:
         self.draw_text(draw, 24, 20, f"{benchmark_title(s.benchmark)}: {self.case_label()}, sample {s.sample}")
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
-        self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
-        if self.initial:
-            self.draw_text(draw, ps.get_window_size()[0] / 2, 20, "Initial", center=True)
+        self.colorbar = self.colorbar_layout() if v.color_mode in (0, 1) else None  # error or displacement
+        if self.label_y is None:
+            return
+        lo, hi = s.X.min(axis=0), s.X.max(axis=0)
+        below = np.array([(lo[0] + hi[0]) / 2, lo[1], lo[2]])
+        names = [tr.solver for tr in s.trajectories]
+        for tr in s.trajectories:
+            xy, front = self.project((below + v.offsets[tr.solver])[None])  # centered under the copy
+            if not front[0]:
+                continue
+            x, y = xy[0, 0], self.label_y
+            self.draw_text(draw, x, y, display_name(tr.solver), (*_rgb(solver_color(tr.solver, names)), 1.0), center=True)
+            frame = v.shown.get(tr.solver, 0)
+            self.draw_text(draw, x, y + line, f"e/e0 {tr.relative_error[frame]:.1e}", center=True)
+
+    def project(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """(n, 3) world points to (n, 2) window coordinates (x right, y down) through Polyscope's current camera,
+        and whether each is in front of it."""
+        import polyscope as ps
+
         params = ps.get_view_camera_parameters()
         V = np.asarray(params.get_view_mat(), dtype=np.float64)
         f = 1.0 / math.tan(math.radians(params.get_fov_vertical_deg()) / 2)
         aspect = params.get_aspect()
         width, height = ps.get_window_size()
-        lo, hi = s.X.min(axis=0), s.X.max(axis=0)
-        below = np.array([(lo[0] + hi[0]) / 2, lo[1], lo[2]])
-        names = [tr.solver for tr in s.trajectories]
-        for tr in s.trajectories:
-            p = V @ np.append(below + v.offsets[tr.solver], 1.0)
-            if p[2] >= 0:
-                continue
-            x = (f / aspect * p[0] / -p[2] + 1) / 2 * width
-            y = (1 - f * p[1] / -p[2]) / 2 * height + 12
-            self.draw_text(draw, x, y, display_name(tr.solver), (*_rgb(solver_color(tr.solver, names)), 1.0), center=True)
-            frame = v.shown.get(tr.solver, 0)
-            self.draw_text(draw, x, y + line, f"e/e0 {tr.relative_error[frame]:.1e}", center=True)
+        p = points @ V[:3, :3].T + V[:3, 3]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xy = np.c_[(f / aspect * p[:, 0] / -p[:, 2] + 1) / 2 * width, (1 - f * p[:, 1] / -p[:, 2]) / 2 * height]
+        return xy, p[:, 2] < 0
+
+    def lowest_point(self) -> tuple[float, int] | None:
+        """The lowest point (largest window y) the selected sample's meshes reach on screen over its trajectory
+        frames, and the frame reaching it (0: the start state); None if no mesh is in front of the camera."""
+        v = self.viewer
+        lowest = None
+        for tr in v.selection.trajectories:
+            x = tr.x[:, v.vertices].astype(np.float64) + v.offsets[tr.solver]
+            xy, front = self.project(x.reshape(-1, 3))
+            y = np.where(front, xy[:, 1], -np.inf).reshape(len(tr.x), -1).max(axis=1)
+            k = int(np.argmax(y))
+            if np.isfinite(y[k]) and (lowest is None or y[k] > lowest[0]):
+                lowest = (float(y[k]), k)
+        return lowest
+
+    def place_labels(self, clips: list[tuple[int, int]]) -> tuple[float, int, int, int] | None:
+        """Sets ``label_y``, the solver labels' top for every clip of a recording: ``LABEL_GAP`` below the lowest
+        point the meshes reach on screen over all frames of ``clips`` ((case index, sample index), selected in the
+        recording's order, so each with its camera), the start states and later frames alike. Returns that point's
+        (y, case index, sample index, trajectory frame), or None (no labels) if no mesh is in front of the camera."""
+        import polyscope as ps
+
+        v = self.viewer
+        binding = None
+        for i, j in clips:
+            v.select(i, j)
+            if v.error:
+                raise SystemExit(v.error)
+            lowest = self.lowest_point()
+            if lowest is not None and (binding is None or lowest[0] > binding[0]):
+                binding = (lowest[0], i, j, lowest[1])
+        self.label_y = None if binding is None else binding[0] + LABEL_GAP * ps.get_window_size()[1] / 1080
+        return binding
 
     def frames(self, case_index: int, sample_index: int):
         """Selects a sample and yields its frames' RGB images: the hold (one captured image, repeated), then one per
@@ -287,10 +397,8 @@ class Recorder:
         hold = self.hold_frames()
         if hold > 0:
             v.frame, v.t = 0, s.frame_time(0)
-            self.initial = True
             ps.frame_tick()
             image = self.capture()
-            self.initial = False
             for _ in range(hold):
                 yield image
         for k in range(s.n_frames + 1):
@@ -319,8 +427,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ffmpeg", default=None, help="ffmpeg executable (default: FFMPEG, imageio-ffmpeg, PATH).")
     add_error_fraction_argument(parser)
     parser.add_argument("--hold-seconds", type=float, default=HOLD_SECONDS, dest="hold_seconds", metavar="S",
-                        help="Seconds of video each clip holds the start state, captioned \"Initial\", before the "
-                        "solve; 0: no hold (default: %(default)g).")
+                        help="Seconds of video each clip holds the start state before the solve; 0: no hold "
+                        "(default: %(default)g).")
+    parser.add_argument("--label-y", type=float, default=None, dest="label_y", metavar="Y",
+                        help="The solver labels' top, in window pixels from the top (default: just below the lowest "
+                        "point the recorded meshes reach over all their frames, printed; set it to match an earlier "
+                        "recording of other benchmarks, cases or samples).")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
                         help="Directory with the Linux Libertine OpenType files (default: PBAT_FONT_DIR, then the "
                         "installed fonts; without them, imgui's default font).")
@@ -376,6 +488,18 @@ def main():
         if unrecorded:
             print(f"Note: --error-fraction {', '.join(unrecorded)}: not among the recorded samples", flush=True)
     benchmarks = list(dict.fromkeys(b for _, b, _, _, _ in cases))
+    clips = [(i, samples.index(sample)) for benchmark in benchmarks for i, b, _, samples, recorded in cases
+             if b == benchmark for sample in recorded]  # in the recording's order
+    if args.label_y is not None:
+        recorder.label_y = args.label_y
+    else:
+        binding = recorder.place_labels(clips)
+        if binding is not None:
+            y, i, j, k = binding
+            b, c, _, samples = viewer.cases[i]
+            print(f"Solver labels at y = {recorder.label_y:.1f} px (--label-y to set), under the lowest point the "
+                  f"recorded meshes reach, y = {y:.1f} px: {b}/{c} sample {samples[j]}, "
+                  f"{'its start state' if k == 0 else f'trajectory frame {k}'}", flush=True)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     start = time.time()
     for benchmark in benchmarks:
@@ -431,8 +555,8 @@ class TestBenchmarkVideo(unittest.TestCase):
         return ps, imgui, texts
 
     def test_error_fraction(self):
-        """--error-fraction entries reach the viewer's color scale per problem, and the caption gives the clamped
-        max and fraction."""
+        """--error-fraction entries reach the viewer's color scale per problem, and the color bar's max (no
+        "Color:" title line)."""
         import sys
         import tempfile
         from unittest import mock
@@ -453,9 +577,11 @@ class TestBenchmarkVideo(unittest.TestCase):
             recorder = Recorder(viewer)
             texts.clear()
             recorder.callback()
+            ticks = recorder.colorbar_ticks()
         self.assertAlmostEqual(viewer.vmax, 0.05 * viewer.initial_error(), places=6)
-        caption = f"Color: {COLOR_MODES[0]}, 0 to {viewer.vmax:.4g} m (5% of the initial error)"
-        self.assertIn(caption, texts)
+        self.assertTrue(ticks[-1][1].startswith("≥ ") and ticks[-1][0] == 1.0)
+        self.assertEqual(len(texts), 2)  # the title's two lines, no "Color:" line
+        self.assertFalse(any(text.startswith("Color:") for text in texts))
         self.assertEqual(args.error_fractions("static", "S", TestBenchmarkViewer.SAMPLE), 0.5)
         with self.assertRaises(SystemExit):  # an entry matching no problem
             check_error_fractions(ErrorFractions(["static/T=0.1"]), viewer.cases)
@@ -534,6 +660,129 @@ class TestBenchmarkVideo(unittest.TestCase):
             # The typo guard checks every sample, recorded or not
             check_error_fractions(ErrorFractions(["static/S:2=0.1"]), cases)
 
+    def test_labels(self):
+        """The solver labels: one height for every copy of every clip of a recording, across benchmarks,
+        LABEL_GAP below the meshes' lowest point on screen over all the clips' frames (here Newton's last frame of
+        the dynamic clip, sagging); the clip and frame setting it are returned."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import h5py
+
+        from .benchmark_viewer import TestBenchmarkViewer
+
+        ps, imgui, _ = self.stubs()
+        V = np.eye(4)
+        V[2, 3] = -5.0  # the camera 5 m in front of the cube, looking down -z
+        camera = ps.get_view_camera_parameters.return_value
+        camera.get_view_mat.return_value = V
+        width, height = 640, 360
+        ps.get_window_size.return_value = (width, height)
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, _ = TestBenchmarkViewer.write_files(root)
+            key = f"dynamic_h0.01/S/Newton/trajectories/{TestBenchmarkViewer.SAMPLE:06d}/x"
+            with h5py.File(path, "r+") as f:
+                x = f[key][()]
+                x[-1, :, 1] -= 0.5
+                f[key][...] = x
+            viewer = Viewer(dataset)
+            viewer.load(path)
+            recorder = Recorder(viewer, hold_seconds=0.0)
+            ps.frame_tick.side_effect = lambda: recorder.callback()
+            clips = [(i, 0) for i in range(len(viewer.cases))]  # static, then dynamic_h0.01
+            self.assertEqual([viewer.cases[i][0] for i, _ in clips], ["static", "dynamic_h0.01"])
+            self.assertIsNone(recorder.label_y)
+            y, i, j, k = recorder.place_labels(clips)
+            self.assertEqual((viewer.cases[i][0], j, k), ("dynamic_h0.01", 0, 1))  # the sagging last frame
+            add = imgui.GetForegroundDrawList.return_value.AddText
+            add.reset_mock()
+            for clip in clips:
+                list(recorder.frames(*clip))
+            f = 1.0 / math.tan(math.radians(45.0) / 2)
+            sagging = float(np.max((1 - f * x[-1, :, 1] / -(x[-1, :, 2] - 5.0)) / 2 * height))
+            names = [display_name(tr.solver) for tr in viewer.selection.trajectories]
+            line = recorder.line_height()
+        self.assertAlmostEqual(y, sagging, places=4)
+        self.assertAlmostEqual(recorder.label_y, sagging + LABEL_GAP * height / 1080, places=4)
+        positions = {}  # text -> its draws' y, over both clips
+        for call in add.call_args_list:
+            positions.setdefault(call.args[2], []).append(round(call.args[0][1], 6))
+        self.assertEqual(len(positions[names[0]]), 2 * 2)  # 2 frames per clip
+        self.assertEqual({y for name in names for y in positions[name]}, {round(recorder.label_y, 6)})
+        errors = {y for text, ys in positions.items() if text.startswith("e/e0") for y in ys}
+        self.assertEqual(errors, {round(recorder.label_y + line, 6)})
+
+    def test_colorbar(self):
+        """The color bar on every captured frame: viridis (as Polyscope's) from 0 to the viewer's vmax, its ticks
+        0, middle and max with the unit, the max marked "≥" with a triangle past it when the scale is clamped (not
+        at fraction 1); centered, under the solver labels (at 70% of the height without them), the caption "Error
+        |x - x*|" under it, all in the window; without the paper font too."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import matplotlib
+        from matplotlib import colormaps
+
+        from .benchmark_viewer import TestBenchmarkViewer
+
+        font_file = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans.ttf")
+        width, height = 640, 360
+        ps, imgui, _ = self.stubs()
+        ps.get_window_size.return_value = (width, height)
+        white = np.full((height, width, 4), 255, dtype=np.uint8)
+        ps.screenshot_to_buffer.side_effect = lambda **k: white
+        viridis = lambda t: np.round(255 * np.asarray(colormaps["viridis"](t))[:3]).astype(int)
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, _ = TestBenchmarkViewer.write_files(root)
+            for fraction in (0.05, 1.0):
+                for font in (font_file, None):
+                    for label_y in (0.4 * height, None):
+                        viewer = Viewer(dataset, ErrorFractions([str(fraction)]))
+                        viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
+                        recorder = Recorder(viewer, hold_seconds=0.0, font_file=font)
+                        recorder.label_y = label_y
+                        ps.frame_tick.side_effect = lambda: recorder.callback()
+                        image = next(recorder.frames(viewer.case_index, viewer.sample_index)).astype(int)
+                        ticks = recorder.colorbar_ticks()
+                        clamped = fraction < 1
+                        self.assertEqual(recorder.colorbar_clamped(), clamped)
+                        x, y, length, thickness = recorder.colorbar
+                        line = recorder.line_height()
+                        self.assertAlmostEqual(x + length / 2, width / 2)  # centered
+                        if label_y is None:
+                            self.assertAlmostEqual(y, 0.7 * height)
+                        else:  # under the e/e0 line
+                            self.assertAlmostEqual(y, label_y + 2 * line + COLORBAR_GAP * height / 1080)
+                        text = TEXT_PIXELS * height / 1080
+                        self.assertLessEqual(y + 1.6 * thickness + 3 * text, height)  # its ticks and caption fit
+                        x, y, length, thickness = (round(c) for c in recorder.colorbar)
+                        n = max(round(length), 2)
+                        for i in (0, n // 2, n - 1):  # the bar's ends and middle, along its center line
+                            np.testing.assert_array_equal(image[y + thickness // 2, x + i], viridis((i + 0.5) / n))
+                        # Past the max: the triangle's top color when clamped, else the background
+                        np.testing.assert_array_equal(image[y + thickness // 2, x + n + 2],
+                                                      viridis(1.0) if clamped else [255, 255, 255])
+                        # Under the bar's middle: its tick and value, then the caption, and nothing under that
+                        under = y + thickness + round(thickness / 3 + thickness / 4 + 1.25 * text)
+                        self.assertTrue((image[y + thickness + 3:under - 2, x + n // 2 - 3:x + n // 2 + 3] < 128).any())
+                        self.assertTrue((image[under:under + round(text) + 2, x + n // 2 - 40:x + n // 2 + 40]
+                                         < 128).any())
+                        self.assertTrue((image[under + round(text) + 4:] == 255).all())  # nothing under it
+            vmax = viewer.vmax
+        self.assertEqual([t for t, _ in ticks], [0.0, 0.5, 1.0])
+        self.assertEqual(ticks[0][1], "0")
+        self.assertAlmostEqual(vmax, viewer.initial_error(), places=6)  # fraction 1
+        scale, unit = (1.0, "m") if vmax >= 0.1 else (1e3, "mm") if vmax >= 1e-4 else (1e6, "µm")
+        self.assertEqual(ticks[2][1], f"{vmax * scale:.3g} {unit}")  # no "≥" at fraction 1
+        recorder.viewer.error_fractions = ErrorFractions(["0.05"])
+        for vmax, top in ((0.2509, "≥ 0.251 m"), (0.009493, "≥ 9.49 mm"), (5e-5, "≥ 50 µm")):
+            recorder.viewer.vmax = vmax
+            self.assertEqual(recorder.colorbar_ticks()[2][1], top)
+
     def test_plain_label(self):
         """The paper figures' case labels as plain text, with and without Unicode; the title uses them."""
         self.assertEqual(plain_label("$E = 10^{5}$ Pa"), "E = 10⁵ Pa")
@@ -579,8 +828,8 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertEqual(recorder.labels[viewer.selection.benchmark, "S"], "E ∈ {2.8 × 10⁵, 2.8 × 10⁷} Pa")
 
     def test_hold(self):
-        """The hold: round(S x fps) copies of one captured start state, captioned "Initial" at t = 0, then the
-        solve's frames without the caption; none with --hold-seconds 0."""
+        """The hold: round(S x fps) copies of one captured start state at t = 0 (no caption), then the solve's
+        frames; none with --hold-seconds 0."""
         import sys
         import tempfile
         from unittest import mock
@@ -600,10 +849,10 @@ class TestBenchmarkVideo(unittest.TestCase):
             fps = s.n_frames / s.video_seconds  # 0.5 fps: 1 frame over 2 s
             recorder = Recorder(viewer, hold_seconds=6.0)
             ps.frame_tick.side_effect = lambda: recorder.callback()
-            captions = []  # per captured image: the shown time and whether it was captioned "Initial"
+            captions = []  # per captured image: the shown time and whether any text says "Initial"
 
             def capture(**kwargs):
-                captions.append((viewer.t, "Initial" in texts))
+                captions.append((viewer.t, any("Initial" in text for text in texts)))
                 texts.clear()
                 return np.zeros((48, 64, 4), dtype=np.uint8)
 
@@ -614,7 +863,7 @@ class TestBenchmarkVideo(unittest.TestCase):
             self.assertEqual(hold, 3)
             self.assertEqual(len(images), hold + s.n_frames + 1)
             self.assertTrue(all(image is images[0] for image in images[:hold]))  # captured once
-            self.assertEqual(captions, [(0.0, True)] + [(s.frame_time(k), False) for k in range(s.n_frames + 1)])
+            self.assertEqual(captions, [(0.0, False)] + [(s.frame_time(k), False) for k in range(s.n_frames + 1)])
             recorder.hold_seconds = 0.0
             self.assertEqual(len(list(recorder.frames(case, 0))), s.n_frames + 1)
 
