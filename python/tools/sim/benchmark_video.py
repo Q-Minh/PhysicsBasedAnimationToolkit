@@ -60,6 +60,12 @@ TEXT_PIXELS = 34  # the paper font's size in pixels at a 1080-pixel video height
 TEXT_COLOR = (0.1, 0.1, 0.1, 1.0)
 HOLD_SECONDS = 1.0  # each clip's start state, held before the solve
 LABEL_GAP = 16  # window pixels at a 1080-pixel height between the meshes' lowest point and the solver labels
+# The color bar: "top" (horizontal, under the title block) or "right" (vertical, at the window's right edge); its
+# length and thickness in window pixels at a 1080-pixel height.
+# TODO: keep the placement the maintainer picks and drop the other.
+COLORBAR_PLACEMENT = "top"
+COLORBAR_LENGTH = {"top": 480, "right": 432}
+COLORBAR_THICKNESS = 20
 
 
 SUPERSCRIPTS = str.maketrans("0123456789-+", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺")
@@ -167,14 +173,18 @@ class Recorder:
         self.texts = []  # with font_file, this frame's (x, y, text, color, center) in window coordinates
         self.labels = {}  # the cases' titles (plain_label of benchmark_plot.case_label), by (benchmark, case)
         self.label_y = None  # the selected sample's solver labels' top (label_top), set by frames
+        self.colorbar_placement = COLORBAR_PLACEMENT
+        self.colorbar = None  # this frame's color bar: (x, y, length, thickness) in window coordinates, or None
 
     def font(self, height: int):
-        """The Pillow font for a video ``height`` pixels tall."""
+        """The Pillow font for a video ``height`` pixels tall (without ``font_file``, Pillow's default font, which
+        only the color bar's ticks use)."""
         from PIL import ImageFont
 
         size = max(round(TEXT_PIXELS * height / 1080), 1)
         if size not in self.fonts:
-            self.fonts[size] = ImageFont.truetype(self.font_file, size)
+            self.fonts[size] = (ImageFont.load_default(size) if self.font_file is None else
+                                ImageFont.truetype(self.font_file, size))
         return self.fonts[size]
 
     def case_label(self) -> str:
@@ -212,8 +222,72 @@ class Recorder:
         width = imgui.CalcTextSize(text)[0]  # imgui's global font scale is TEXT_SCALE (the callback sets it)
         draw.AddText((x - width / 2 if center else x, y), imgui.GetColorU32(color), text)
 
+    def colorbar_clamped(self) -> bool:
+        """Whether the color scale ends below the values it may show (an error fraction below 1, or a fixed max),
+        so its top color reads "at least the max"."""
+        v = self.viewer
+        return v.scale_mode == 2 or (v.scale_mode == 0 and v.error_fraction < 1.0)
+
+    def colorbar_ticks(self) -> list[tuple[float, str]]:
+        """The color bar's ticks as (position along the bar from 0 to 1, label): 0, the middle and the max, in m,
+        mm or µm, the unit on the max; "≥" before the max when the scale is clamped (:meth:`colorbar_clamped`)."""
+        vmax = self.viewer.vmax
+        scale, unit = (1.0, "m") if vmax >= 0.1 else (1e3, "mm") if vmax >= 1e-4 else (1e6, "µm")
+        top = f"{'≥ ' if self.colorbar_clamped() else ''}{vmax * scale:.3g} {unit}"
+        return [(0.0, "0"), (0.5, f"{vmax * scale / 2:.3g}"), (1.0, top)]
+
+    def colorbar_layout(self) -> tuple[float, float, float, float]:
+        """The color bar's (x, y, length, thickness) in window coordinates, (x, y) its top left corner: under the
+        title block, or centered on the window's right edge."""
+        import polyscope as ps
+
+        width, height = ps.get_window_size()
+        k = height / 1080
+        length, thickness = COLORBAR_LENGTH[self.colorbar_placement] * k, COLORBAR_THICKNESS * k
+        if self.colorbar_placement == "top":
+            return 24, 20 + 3.25 * self.line_height(), length, thickness
+        return width - 24 - thickness, (height - length) / 2, length, thickness
+
+    def draw_colorbar(self, picture, font, scale: float):
+        """Draws this frame's color bar on ``picture`` (Pillow, ``scale`` framebuffer pixels per window pixel):
+        Polyscope's viridis (the same 256-color table) from 0 to the viewer's vmax, with its ticks; when clamped, a
+        triangle past the max in the top color. Horizontal ("top") grows to the right, vertical ("right") up, its
+        ticks on the left under the title."""
+        from matplotlib import colormaps
+        from PIL import Image, ImageDraw
+
+        x, y, length, thickness = (c * scale for c in self.colorbar)
+        n, t = max(round(length), 2), max(round(thickness), 1)
+        colors = np.round(255 * colormaps["viridis"]((np.arange(n) + 0.5) / n)[:, :3]).astype(np.uint8)
+        vertical = self.colorbar_placement == "right"
+        bar = np.repeat(colors[::-1, None] if vertical else colors[None], t, axis=1 if vertical else 0)
+        x, y = round(x), round(y)
+        picture.paste(Image.fromarray(np.ascontiguousarray(bar)), (x, y))
+        draw = ImageDraw.Draw(picture)
+        ink = tuple(round(255 * c) for c in TEXT_COLOR[:3])
+        w, h = (t, n) if vertical else (n, t)
+        draw.rectangle((x - 1, y - 1, x + w, y + h), outline=ink)
+        if self.colorbar_clamped():  # the top color continues: values above the max
+            tip = round(0.9 * t)
+            triangle = ([(x - 1, y - 1), (x + t, y - 1), (x + t / 2 - 0.5, y - 1 - tip)] if vertical else
+                        [(x + n, y - 1), (x + n, y + t), (x + n + tip, y + t / 2 - 0.5)])
+            draw.polygon(triangle, fill=tuple(int(c) for c in colors[-1]), outline=ink)
+        tick, gap = max(round(t / 3), 2), max(round(t / 4), 2)
+        for position, label in self.colorbar_ticks():
+            if vertical:
+                ty = y + n - position * n
+                draw.line((x - 1 - tick, ty, x - 1, ty), fill=ink, width=max(round(scale), 1))
+                draw.text((x - 1 - tick - gap, ty), label, font=font, fill=ink, anchor="rm")
+            else:
+                tx = x + position * n
+                draw.line((tx, y + t, tx, y + t + tick), fill=ink, width=max(round(scale), 1))
+                draw.text((tx, y + t + tick + gap), label, font=font, fill=ink, anchor="lt" if position == 0 else "mt")
+        if vertical:  # its title, above it (horizontal, the caption line above names it)
+            draw.text((x + t, y - round(1.5 * t)), COLOR_MODES[self.viewer.color_mode], font=font, fill=ink,
+                      anchor="rb")
+
     def composite(self, image: np.ndarray) -> np.ndarray:
-        """The captured RGB ``image`` with this frame's texts drawn on it in the paper font."""
+        """The captured RGB ``image`` with this frame's texts drawn on it in the paper font, and the color bar."""
         import polyscope as ps
         from PIL import Image, ImageDraw
 
@@ -227,18 +301,20 @@ class Recorder:
                 x -= font.getlength(text) / 2
             draw.text((x, y), text, font=font, fill=tuple(round(255 * c) for c in color[:3]))
         self.texts = []
+        if self.colorbar is not None:
+            self.draw_colorbar(picture, font, scale)
         return np.asarray(picture)
 
     def capture(self) -> np.ndarray:
-        """The window's RGB image after a frame tick, with the texts in the paper font."""
+        """The window's RGB image after a frame tick, with the texts in the paper font and the color bar."""
         import polyscope as ps
 
         image = np.ascontiguousarray(ps.screenshot_to_buffer(transparent_bg=False, include_UI=True)[..., :3])
-        return image if self.font_file is None else self.composite(image)
+        return self.composite(image)
 
     def callback(self):
-        """Per frame: the meshes, then the titles and each copy's label (name and e/e0) on the background, at the
-        same height for every copy (``label_y``)."""
+        """Per frame: the meshes, then the titles, the color bar's place (drawn by :meth:`composite`) and each
+        copy's label (name and e/e0) on the background, at the same height for every copy (``label_y``)."""
         import polyscope.imgui as imgui
 
         v = self.viewer
@@ -252,6 +328,7 @@ class Recorder:
         self.draw_text(draw, 24, 20 + line, f"Solver time {v.t / s.T_N:.3f} T_N  (T_N = {s.T_N:.4g} s, "
                                             f"{slowdown_text(s.playback_factor)})")
         self.draw_text(draw, 24, 20 + 2 * line, f"Color: {COLOR_MODES[v.color_mode]}, {v.scale_text()}")
+        self.colorbar = self.colorbar_layout() if v.color_mode in (0, 1) else None  # error or displacement
         if self.label_y is None:
             return
         lo, hi = s.X.min(axis=0), s.X.max(axis=0)
@@ -608,6 +685,62 @@ class TestBenchmarkVideo(unittest.TestCase):
         self.assertEqual({y for name in names for y in positions[name]}, {round(recorder.label_y, 6)})
         errors = {y for text, ys in positions.items() if text.startswith("e/e0") for y in ys}
         self.assertEqual(errors, {round(recorder.label_y + line, 6)})
+
+    def test_colorbar(self):
+        """The color bar on every captured frame: viridis (as Polyscope's) from 0 to the viewer's vmax, its ticks
+        0, middle and max with the unit, the max marked "≥" with a triangle past it when the scale is clamped (not
+        at fraction 1); both placements; without the paper font too."""
+        import sys
+        import tempfile
+        from unittest import mock
+
+        import matplotlib
+        from matplotlib import colormaps
+
+        from .benchmark_viewer import TestBenchmarkViewer
+
+        font_file = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans.ttf")
+        width, height = 640, 360
+        ps, imgui, _ = self.stubs()
+        ps.get_window_size.return_value = (width, height)
+        white = np.full((height, width, 4), 255, dtype=np.uint8)
+        ps.screenshot_to_buffer.side_effect = lambda **k: white
+        viridis = lambda t: np.round(255 * np.asarray(colormaps["viridis"](t))[:3]).astype(int)
+        with tempfile.TemporaryDirectory() as root, mock.patch.dict(sys.modules, {"polyscope": ps,
+                                                                                  "polyscope.imgui": imgui}):
+            dataset, path, _ = TestBenchmarkViewer.write_files(root)
+            for fraction in (0.05, 1.0):
+                for placement in ("top", "right"):
+                    for font in (font_file, None):
+                        viewer = Viewer(dataset, ErrorFractions([str(fraction)]))
+                        viewer.load(path, "dynamic_h0.01", "S", TestBenchmarkViewer.SAMPLE)
+                        recorder = Recorder(viewer, hold_seconds=0.0, font_file=font)
+                        recorder.colorbar_placement = placement
+                        ps.frame_tick.side_effect = lambda: recorder.callback()
+                        image = next(recorder.frames(viewer.case_index, viewer.sample_index)).astype(int)
+                        ticks = recorder.colorbar_ticks()
+                        clamped = fraction < 1
+                        self.assertEqual(recorder.colorbar_clamped(), clamped)
+                        x, y, length, thickness = (round(c) for c in recorder.colorbar)
+                        n = max(round(length), 2)
+                        # The bar's ends and middle, along its center line (0 at the left or bottom)
+                        for i in (0, n // 2, n - 1):
+                            px = ((y + thickness // 2, x + i) if placement == "top" else
+                                  (y + n - 1 - i, x + thickness // 2))
+                            np.testing.assert_array_equal(image[px], viridis((i + 0.5) / n), err_msg=placement)
+                        # Past the max: the triangle's top color when clamped, else the background
+                        past = (y + thickness // 2, x + n + 2) if placement == "top" else (y - 3, x + thickness // 2)
+                        np.testing.assert_array_equal(image[past], viridis(1.0) if clamped else [255, 255, 255])
+            vmax = viewer.vmax
+        self.assertEqual([t for t, _ in ticks], [0.0, 0.5, 1.0])
+        self.assertEqual(ticks[0][1], "0")
+        self.assertAlmostEqual(vmax, viewer.initial_error(), places=6)  # fraction 1
+        scale, unit = (1.0, "m") if vmax >= 0.1 else (1e3, "mm") if vmax >= 1e-4 else (1e6, "µm")
+        self.assertEqual(ticks[2][1], f"{vmax * scale:.3g} {unit}")  # no "≥" at fraction 1
+        recorder.viewer.error_fractions = ErrorFractions(["0.05"])
+        for vmax, top in ((0.2509, "≥ 0.251 m"), (0.009493, "≥ 9.49 mm"), (5e-5, "≥ 50 µm")):
+            recorder.viewer.vmax = vmax
+            self.assertEqual(recorder.colorbar_ticks()[2][1], top)
 
     def test_plain_label(self):
         """The paper figures' case labels as plain text, with and without Unicode; the title uses them."""
