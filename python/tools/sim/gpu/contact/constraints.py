@@ -540,6 +540,11 @@ def carry_across_features(
     # TODO: Edge-edge contacts (OGC) keep exact-key warm starts only. The same idea would match an EE contact to a
     # previous one whose edges share a vertex with its own on both sides. OGC's VV/VE/VF contacts already go through
     # this, untested; with several contacts per vertex and mesh, the mutual choice can leave a transition unmatched.
+    # TODO: A geodesic transfer instead of the one-ring rule: a new contact inherits a previous contact's multipliers
+    # scaled by a weight that decays with the geodesic distance between the old and new partner features and vanishes
+    # at a set geodesic radius. Why: a vertex that slides past its one-ring in one detection (fast sliding, large
+    # substeps) restarts at lambda = 0 today, so the outer test sees a pressed contact without a force (notes entry 4).
+    # Maintainer's idea for future work (2026-10-26), out of scope for the current paper.
     vv, ve, vf = sets
     for kind, me in ((KIND_VV, vv), (KIND_VE, ve), (KIND_VF, vf)):
         wp.launch(
