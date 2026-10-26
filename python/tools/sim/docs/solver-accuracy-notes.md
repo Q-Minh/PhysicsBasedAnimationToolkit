@@ -451,7 +451,7 @@ Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.Sho
 `.ShortBudget.From4.4s.*` (20 sweeps from 4.4 s), `.MidBudget.From4.4s.*` (40 sweeps from 4.4 s), and the replay's
 per-sweep records, `ArmadilloSpaghetti.DragonImpact.AAAVBD.ShortBudget.Diagnostic.h5`.
 
-## 10. A weak spot on the armadillo's underside: a finer mesh that low budgets leave least converged
+## 10. A weak spot on the armadillo's underside: a finer, relatively stiffer mesh that low budgets expose
 
 **Question.** Three of entry 9's five failures ran away at the same few armadillo nodes, with either solver and from
 t = 0 or from 4.4 s. Is that part of the mesh defective?
@@ -475,7 +475,8 @@ and the saved frames (2026-10-26, scratch script).
   than the armadillo's worst (11.1°, 0.11).
 - Smaller elements of the same material make it the stiffest part of the armadillo relative to its mass. As a proxy,
   a node's summed element stiffness μ h_e (h_e an element's size) over its mass has p50 5.3e7 against 3.4e7 and p95
-  1.5e8 against 8.2e7, about 1.6-1.8x. Per sweep it is therefore the slowest part of the armadillo to converge.
+  1.5e8 against 8.2e7, about 1.6-1.8x. So per sweep it is expected to converge slowest; per-region residuals were
+  not measured.
 
 **Load in the 100-sweep runs.** The region is barely strained and rarely in contact:
 - Contact with the pillars (every 40 steps through the twist, then every 10 steps to 5.0 s): AAAVBD's region never
@@ -493,9 +494,10 @@ and the saved frames (2026-10-26, scratch script).
 - AAAVBD from 4.4 s, at 20 and 40 sweeps, failed elsewhere (dragonL's tail, dragonR against pillar 1); the region
   stayed at ≤ 1.07 up to the failure at 20 sweeps.
 
-**Reading.** A weak spot that low budgets expose, not a defective element: the finer mesh makes the region the least
-converged part of the armadillo at a fixed budget, and it breaks when a load reaches it (pillar contact during the
-twist, a dragon's landing), while at 100 sweeps it is neither strained nor loaded. Remeshing it was not tried.
+**Reading.** A weak spot that low budgets expose, not a defective element. From the stiffness proxy, the finer mesh
+is expected to leave the region the least converged part of the armadillo at a fixed budget (not measured per
+region). It breaks when a load reaches it (pillar contact during the twist, a dragon's landing), while at 100 sweeps
+it is neither strained nor loaded. Remeshing it was not tried.
 
 ## 11. DragonImpact's residual floor sits on persistent contacts, at the same level for every solver
 
