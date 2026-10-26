@@ -396,3 +396,57 @@ held (`_ve_penetration` in `gpu/vbd/convergence.py`). A gap within 0.3% of −dm
 activation distance measured against a normal of the opposite orientation rather than a 2 cm overlap, but that was
 not checked (the stored normals and the pairs' unsigned distances were not recorded). Whether the vertex really
 crossed the armadillo's surface is also open.
+
+## 9. Low budgets at 10 substeps fail through the twist or the impact, without warning from the residual
+
+**Setup.** The DragonImpact production config (`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`: 10 substeps of
+1 outer iteration x 100 sweeps, launch at 4.49 s), with only the sweep budget lowered,
+`--set Solver.<S>.n_subproblem_max_iters=20` or `40`, on the code of the 100-sweep runs (c649f50a). Runs started at
+t = 0 or resumed from each solver's own 100-sweep checkpoint at 4.4 s (step 440), so AAAVBD's betaG stayed warm
+started. A run stopped on a non-finite state, on dropped contact pairs, or on a penetration ratio over 2 for 10
+consecutive steps; inverted elements were only logged (2026-10-26).
+
+| Budget, start | Solver | End | Where | Before it, in the frames |
+|---|---|---|---|---|
+| 10 x 20, t = 0 | AAAVBD | non-finite at step 70 (twist) | armadillo underside | 10-18 inverted armadillo elements from step 60 (0 at 100 sweeps) |
+| 10 x 20, t = 0 | VBD | dropped pairs at step 67 (twist) | armadillo underside against pillars 1-3 | 2-5 inverted from step 62, 59 and a penetration ratio of 4.98 at step 66 |
+| 10 x 20, 4.4 s | AAAVBD | non-finite at step 500 (impact) | dragonL's tail the fastest feature | nothing: inversions as at 100 sweeps, feasibility ratio 0.42-0.59 (0.15) |
+| 10 x 20, 4.4 s | VBD | dropped pairs at step 480 (impact) | dragonL landing on the armadillo underside | 54 m/s at step 479 (11.8 m/s at 100 sweeps) |
+| 10 x 40, 4.4 s | AAAVBD | non-finite at step 494 (impact) | dragonR hitting pillar 1 | step 493: 4 inverted in pillar 1 and 3 in dragonR at the contact |
+| 10 x 40, 4.4 s | VBD | 18 s, every gate passed (entry 12) | | |
+
+**How a run fails.** An eager replay of AAAVBD's twist failure (10 x 20, from its step-60 checkpoint, a convergence
+check after every sweep, early exit off) reproduced the run's frames bit for bit:
+- Step 68's last two substeps already have 15 and 18 inverted armadillo elements and 16 and 34 m/s.
+- Step 69's first substep starts with normal pair counts (2617 vertex-face pairs against a capacity of 166,435), then
+  diverges within its sweeps: the largest displacement since the substep's start is 5.6 cm after sweep 2, 27 cm after
+  sweep 3 and 21 m after sweep 4, at armadillo surface nodes next to the inverted elements (1.0 and 1.9 cm from one
+  for two of them); 57 elements are inverted after sweep 2 and 4439 after sweep 10.
+- Only the substep's final detection, on the exploded positions, overflows (294,679 vertex-face pairs requested). The
+  first non-finite value comes in the next substep, after sweep 19.
+
+So the inversions come first, then a divergence within one substep's sweeps, and the contact overflow last. The other
+failures show the same end: a step requesting 2.6-5.2x the vertex-face capacity, which took 186-1933 s against 3-15 s
+for the step before.
+
+**The residual didn't warn.** Before the failing step the gradient ratios were in the 100-sweep runs' range: AAAVBD
+from 4.4 s at 20 sweeps 195-300 (about the same at 100), VBD 150-450 (140-290), AAAVBD at 40 sweeps 155-340 (143-400).
+Only the failing step itself jumped (AAAVBD at 40 sweeps: 6480 at step 493, against 309).
+
+**Relation to entry 5.** Entry 5's error jumps come from the stencil augmentation at the first sweep of a subproblem
+after an outer iteration's dual update and re-detection. These runs have one outer iteration per substep, and since
+8cce9b3d (in the code these runs used) AAAVBD skips the augmentation at every subproblem's first sweep. The failures
+don't single out AAAVBD either: VBD failed first in two of the three pairs (steps 67 vs 70, 480 vs 500), AAAVBD in the
+third (494, while VBD reached 18 s). betaG (read only) ran higher at 20 sweeps: in the step-60 checkpoints, the
+armadillo's surface median was 0.963 against 0.876 at 100 sweeps (p95 1.0 against 0.946), and the interior median
+0.995 against 0.984. Nothing unusual came before the blow-up. After it, gammadown lowered the surface p5 to 0.74 and
+then 0.48. betaG at the runaway nodes themselves wasn't recorded.
+
+**For the paper.** On this scene a budget below 10 x 100 isn't safe through the twist and the impact, for VBD and
+AAAVBD alike, and the stopping test's residual doesn't flag it. A failure is local (a few inverted elements, or one
+contact) and becomes a divergence within one substep. The five failures happened at three places: the armadillo
+underside (entry 10), dragonL's tail and dragonR against pillar 1.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.ShortBudget.*` (20 sweeps from t = 0),
+`.ShortBudget.From4.4s.*` (20 sweeps from 4.4 s), `.MidBudget.From4.4s.*` (40 sweeps from 4.4 s), and the replay's
+per-sweep records, `ArmadilloSpaghetti.DragonImpact.AAAVBD.ShortBudget.Diagnostic.h5`.
