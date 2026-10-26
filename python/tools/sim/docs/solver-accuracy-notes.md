@@ -567,3 +567,72 @@ floor has reached it within the first tens of sweeps.
 
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At<4.85|7.0|10.0>s.AAAVBDState.SweepTrace.h5`
 (per-sweep checks and per-detection churn rows); the Newton probe, `ArmadilloSpaghetti.DragonImpact.Newton.From4.8s.Probe.h5`.
+
+## 12. VBD at 10 x 40 on DragonImpact: stable to 18 s, 0.86x the step time, a different landing
+
+**Setup.** VBD at 10 substeps of 1 x 40 sweeps (`--set Solver.VBD.n_subproblem_max_iters=40`), from its own
+100-sweep checkpoint at 4.4 s (entry 9) to 18 s, against the 100-sweep production runs of VBD and AAAVBD
+(`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`), all on c649f50a. The 40-sweep run first stopped at step 526
+on the watcher's speed rule (a node over 15 m/s for 10 steps) while finite; it was resumed from its step-520
+checkpoint with that rule logged only, and the other stops kept (2026-10-26). Speeds below are mass-weighted RMS speeds
+from consecutive frames.
+
+**Stability.** Every gate passed (4.4-7.0 s, 7.0-12.0 s and 12.0-18.0 s), with no non-finite frame and no dropped
+pairs. The 100-sweep columns come from those runs' gates, which cover 4.4-12.0 and 12.8-18 s for VBD and 4.8-18 s for
+AAAVBD.
+
+| 4.4-18 s | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| Max penetration ratio | 0.75 (step 470) | 0.70 | 4.0 (two single steps, entry 8) |
+| Inverted armadillo elements, every 10th frame, max | 3 | 7 | 4 |
+| Longest run of frames over 15 m/s (peak) | 19 (31.9 m/s) | 7 (25.4 m/s) | 4 (29 m/s) |
+| Median step time, steps 441-1799 | 13.24 s | 15.38 s | 15.62 s |
+| GPU time, steps 441-1799 | 5.0 h | 5.8 h | 5.9 h |
+
+The speed rule's own measure (the end-of-substep node velocity) ran 26 steps over 15 m/s at the 40-sweep run's
+impact (steps 517-542, peak 35.7 m/s in dragonR); no streak reached 10 steps after 5.42 s. The 40-sweep frames also
+have up to 4 inverted dragonR elements at steps 500 and 517-520, gone by the next frames; the 100-sweep runs' other
+bodies weren't counted.
+
+**Step time.** Cutting the sweeps by 60% saves 14% (0.86x VBD 100, every leg 0.86-0.87x). A kernels profile of one
+AAAVBD 10 x 100 step at 7.0 s (`ArmadilloSpaghetti.DragonImpact.AAAVBD.At7.0s.Kernels.Profile.json`) shows why:
+73% of the GPU time is one kernel, the vertex SDF narrow phase `_detect_vertex_mesh_contacts`
+(`gpu/contact/mesh/sd.py`), at 574 ms per launch, twice per substep (the initial and the final detection). The sweeps
+take 27%, 4.24 ms each.
+
+**Landing.** Each dragon's tilt at 18 s, from its best-fit rotation from the rest shape, against a frame where the
+renders show it on its feet (dragonL: VBD 100 at 18 s; dragonR: VBD 40 at 18 s); 0° is on its feet, ~180° on its back:
+
+| | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| dragonL tilt | 7° | 0° | 116° |
+| dragonR tilt | 0° | 112° | 127° |
+| dragonR CoM path, 7-12 s / 12-18 s | 0.22 / 0.03 m | 1.89 / 0.12 m | 0.40 / 0.04 m |
+| dragonL CoM path, 7-12 s / 12-18 s | 0.15 / 0.05 m | 0.08 / 0.02 m | 0.15 / 0.05 m |
+
+At 40 sweeps both dragons land on their feet; at VBD 100 dragonR ends on its side and slides about 2 m on it between
+7 and 13 s; at AAAVBD 100 both end on their side or back. The poses are set by 7.0 s and hold to 18 s. The three runs
+land three different ways, so the landing also differs between the two 100-sweep solvers.
+
+**Settling** (RMS speed, mean over 17-18 s, m/s; time under 1 cm/s within 5-18 s):
+
+| | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| Pillars (mid-spans) | 0.193 | 0.294 | 0.311 |
+| Armadillo | 0.401 | 0.886 | 0.896 |
+| dragonL | 0.0134 (0.24 s under) | 0.0042 (5.0 s, from 13.7 s on) | 0.0098 (2.1 s) |
+| dragonR | 0.0090 (1.5 s) | 0.0081 (1.8 s, from 17.7 s on) | 0.0105 (0.8 s) |
+
+- The pillars and the armadillo move at about the same speed in VBD 100 and AAAVBD 100. In VBD 40 the pillars move
+  at about two thirds of that from about 10 s on, and the armadillo at about half from about 6 s on. Neither falls
+  under 1 cm/s in any run.
+- The dragons' landing poses and slides differ across all three runs (Landing, above).
+
+**For the paper.** On this scene VBD at 10 x 40 stays stable where every 10 x 20 run and AAAVBD at 10 x 40 failed
+(entry 9), at 0.86x the step time, because contact detection, not the sweeps, dominates the step. It isn't at parity
+with the 100-sweep run: its landing, its dragons' settling and its pillar and armadillo motion differ. The two
+100-sweep solvers also land differently from each other, so a single landing outcome can't serve as a reference here.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.VBD.MidBudget.From4.4s.h5` (Leg1 up to step 520, then
+Leg2-4) and its merged `.Profile.json`; the 100-sweep runs `ArmadilloSpaghetti.DragonImpact.<VBD|AAAVBD>.h5` and their
+`.Profile.json`.
