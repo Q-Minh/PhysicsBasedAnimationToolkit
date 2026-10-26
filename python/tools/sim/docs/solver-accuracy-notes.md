@@ -143,9 +143,14 @@ the multipliers of a constraint set the step's solve never used.
 
 **For the paper.** Every solver's "unconverged" ratio of 5-9 on this scene comes from ~2% of contacts, not from
 unresolved elasticity. A residual-based comparison would rank solvers by how their contact sets flicker at the last
-detection. Possible fixes, all of which change the shared stopping test (not done): test before the final
-re-detection; carry lambda across a vertex's pair changes; or give contacts new at the final detection
-lambda = sigma max(-c_n, 0).
+detection. Possible fixes, all of which change the shared stopping test: test before the final re-detection; carry
+lambda across a vertex's pair changes; or give contacts new at the final detection lambda = sigma max(-c_n, 0).
+
+**Update (2026-10-22).** The second fix is in: a vertex contact whose partner feature changes to one sharing a mesh
+vertex keeps its multipliers (`gpu/contact/constraints.py`, `carry_across_features`; d34e6341), always on. Jumps to a
+non-adjacent feature and edge-edge contacts still start at lambda = 0. CapsulesIntoBowl's floor hasn't been
+re-measured with it, and DragonImpact's leftover residual (entry 7, mostly pillar-pillar contacts) was measured with it
+on.
 
 ## 5. AAAVBD loses its edge at impacts: stale stencil gradients after each outer iteration
 
