@@ -450,3 +450,49 @@ underside (entry 10), dragonL's tail and dragonR against pillar 1.
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.ShortBudget.*` (20 sweeps from t = 0),
 `.ShortBudget.From4.4s.*` (20 sweeps from 4.4 s), `.MidBudget.From4.4s.*` (40 sweeps from 4.4 s), and the replay's
 per-sweep records, `ArmadilloSpaghetti.DragonImpact.AAAVBD.ShortBudget.Diagnostic.h5`.
+
+## 10. A weak spot on the armadillo's underside: a finer mesh that low budgets leave least converged
+
+**Question.** Three of entry 9's five failures ran away at the same few armadillo nodes, with either solver and from
+t = 0 or from 4.4 s. Is that part of the mesh defective?
+
+**Region.** The armadillo nodes within 10 cm of the rest centroid (−0.83, 1.17, −0.73) of the 12 nodes that ran away
+first in those failures (186045, 186086, 186314, 186410, 186426, 186488, 186519, 187265, 187351, 187391, 215950,
+221111): 614 nodes (408 on the surface) in 2446 of the armadillo's 162,385 elements, on its underside. It isn't held
+(the nearest held node is 45 cm away), and its material is the armadillo's uniform one. CPU analysis of the rest mesh
+and the saved frames (2026-10-26, scratch script).
+
+**Mesh.** Rest-mesh percentiles, region against the rest of the armadillo:
+
+| | p1 | p5 | p50 | p95 |
+|---|---|---|---|---|
+| Element volume (cm³) | 0.016 / 0.034 | 0.032 / 0.068 | 0.15 / 0.30 | 0.50 / 2.2 |
+| Min dihedral angle (°) | 19.7 / 26.0 | 29.9 / 33.4 | 46.4 / 47.6 | 59.6 / 60.0 |
+| Radius ratio (3 r_in / r_circ) | 0.33 / 0.46 | 0.55 / 0.60 | 0.79 / 0.81 | 0.94 / 0.94 |
+
+- The region is meshed about 2x finer: half the median element volume, a quarter of the p95.
+- Its low-quality tail is somewhat worse, but it has no outlier: its worst element (12.9°, radius ratio 0.19) is better
+  than the armadillo's worst (11.1°, 0.11).
+- Smaller elements of the same material make it the stiffest part of the armadillo relative to its mass. As a proxy,
+  a node's summed element stiffness μ h_e (h_e an element's size) over its mass has p50 5.3e7 against 3.4e7 and p95
+  1.5e8 against 8.2e7, about 1.6-1.8x. Per sweep it is therefore the slowest part of the armadillo to converge.
+
+**Load in the 100-sweep runs.** The region is barely strained and rarely in contact:
+- Contact with the pillars (every 40 steps through the twist, then every 10 steps to 5.0 s): AAAVBD's region never
+  comes within 15 mm of a pillar (39-379 mm). VBD's touches pillars 0-2 around step 80 only (10 mm), then stays
+  86-368 mm away.
+- Deformation: in both runs the largest principal stretch is at most 1.41 at steps 60-69 of the twist and 1.02 at
+  4.4 s, against 1.5-4.7 in the rest of the armadillo, which also holds its known inverted elements. At 4.8 s, VBD's
+  dragonL lands on the region (up to 1.51; J ≥ 0.81); AAAVBD's dragonL lands 33 cm away.
+
+**At low budgets** the region deforms much more before each failure:
+- AAAVBD, 20 sweeps from t = 0: largest stretch 1.91 at step 60 (1.11 at 100 sweeps), 22 at step 69. By then the
+  region has drifted ~35 cm from its 100-sweep position and presses on pillars 0-1 (105 surface nodes within 10 mm).
+- VBD, 20 sweeps from t = 0: 1.07 at step 60, 25 at step 66, pressed on pillars 1-3 (170 surface nodes).
+- VBD, 20 sweeps from 4.4 s: 1.22 at step 470, 63 at step 479, under dragonL's landing.
+- AAAVBD from 4.4 s, at 20 and 40 sweeps, failed elsewhere (dragonL's tail, dragonR against pillar 1); the region
+  stayed at ≤ 1.07 up to the failure at 20 sweeps.
+
+**Reading.** A weak spot that low budgets expose, not a defective element: the finer mesh makes the region the least
+converged part of the armadillo at a fixed budget, and it breaks when a load reaches it (pillar contact during the
+twist, a dragon's landing), while at 100 sweeps it is neither strained nor loaded. Remeshing it was not tried.
