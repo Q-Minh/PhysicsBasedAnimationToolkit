@@ -561,9 +561,11 @@ iterations raise it. A possible reading, not measured (the trace recorded keys, 
 the AL penalty holds these persistent contacts, while the outer test's Lagrangian gradient counts only -lambda grad c,
 so whatever part of a contact force the multiplier hasn't absorbed shows as residual.
 
-**For the paper.** On this scene the stopping test reports a floor that AAAVBD, VBD and GPU Newton share, 100-200x the
-tolerance and well above float32's, located on persistent contacts. It ranks no solver, and a solver ending at the
-floor has reached it within the first tens of sweeps.
+**For the paper.** On this scene the stopping test reports a floor that AAAVBD, VBD and GPU Newton share, well above
+float32's and located on persistent contacts. Its level depends on the frame: as the outer test sees it (after the
+final detection), about 150-200x the tolerance around the impact (the 4.85 s trace, steps 480-490) and 800-900x at
+7.0 and 10.0 s (689-1251 at 6.0-6.8 s in entry 7). It ranks no solver, and a solver ending at the floor has reached it
+within the first tens of sweeps.
 
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At<4.85|7.0|10.0>s.AAAVBDState.SweepTrace.h5`
 (per-sweep checks and per-detection churn rows); the Newton probe, `ArmadilloSpaghetti.DragonImpact.Newton.From4.8s.Probe.h5`.
