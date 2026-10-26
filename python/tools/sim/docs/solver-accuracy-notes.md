@@ -396,3 +396,247 @@ held (`_ve_penetration` in `gpu/vbd/convergence.py`). A gap within 0.3% of −dm
 activation distance measured against a normal of the opposite orientation rather than a 2 cm overlap, but that was
 not checked (the stored normals and the pairs' unsigned distances were not recorded). Whether the vertex really
 crossed the armadillo's surface is also open.
+
+## 9. Low budgets at 10 substeps fail through the twist or the impact, without warning from the residual
+
+**Setup.** The DragonImpact production config (`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`: 10 substeps of
+1 outer iteration x 100 sweeps, launch at 4.49 s), with only the sweep budget lowered,
+`--set Solver.<S>.n_subproblem_max_iters=20` or `40`, on the code of the 100-sweep runs (c649f50a). Runs started at
+t = 0 or resumed from each solver's own 100-sweep checkpoint at 4.4 s (step 440), so AAAVBD's betaG stayed warm
+started. A run stopped on a non-finite state, on dropped contact pairs, or on a penetration ratio over 2 for 10
+consecutive steps; inverted elements were only logged (2026-10-26).
+
+| Budget, start | Solver | End | Where | Before it, in the frames |
+|---|---|---|---|---|
+| 10 x 20, t = 0 | AAAVBD | non-finite at step 70 (twist) | armadillo underside | 10-18 inverted armadillo elements from step 60 (0 at 100 sweeps) |
+| 10 x 20, t = 0 | VBD | dropped pairs at step 67 (twist) | armadillo underside against pillars 1-3 | 2-5 inverted from step 62, 59 and a penetration ratio of 4.98 at step 66 |
+| 10 x 20, 4.4 s | AAAVBD | non-finite at step 500 (impact) | dragonL's tail the fastest feature | nothing: inversions as at 100 sweeps, feasibility ratio 0.42-0.59 (0.15) |
+| 10 x 20, 4.4 s | VBD | dropped pairs at step 480 (impact) | dragonL landing on the armadillo underside | 54 m/s at step 479 (11.8 m/s at 100 sweeps) |
+| 10 x 40, 4.4 s | AAAVBD | non-finite at step 494 (impact) | dragonR hitting pillar 1 | step 493: 4 inverted in pillar 1 and 3 in dragonR at the contact |
+| 10 x 40, 4.4 s | VBD | 18 s, every gate passed (entry 12) | | |
+
+**How a run fails.** An eager replay of AAAVBD's twist failure (10 x 20, from its step-60 checkpoint, a convergence
+check after every sweep, early exit off) reproduced the run's frames bit for bit:
+- Step 68's last two substeps already have 15 and 18 inverted armadillo elements and 16 and 34 m/s.
+- Step 69's first substep starts with normal pair counts (2617 vertex-face pairs against a capacity of 166,435), then
+  diverges within its sweeps: the largest displacement since the substep's start is 5.6 cm after sweep 2, 27 cm after
+  sweep 3 and 21 m after sweep 4, at armadillo surface nodes next to the inverted elements (1.0 and 1.9 cm from one
+  for two of them); 57 elements are inverted after sweep 2 and 4439 after sweep 10.
+- Only the substep's final detection, on the exploded positions, overflows (294,679 vertex-face pairs requested). The
+  first non-finite value comes in the next substep, after sweep 19.
+
+So the inversions come first, then a divergence within one substep's sweeps, and the contact overflow last. The other
+failures show the same end: a step requesting 2.6-5.2x the vertex-face capacity, which took 186-1933 s against 3-15 s
+for the step before.
+
+**The residual didn't warn.** Before the failing step the gradient ratios were in the 100-sweep runs' range: AAAVBD
+from 4.4 s at 20 sweeps 195-300 (about the same at 100), VBD 150-450 (140-290), AAAVBD at 40 sweeps 155-340 (143-400).
+Only the failing step itself jumped (AAAVBD at 40 sweeps: 6480 at step 493, against 309).
+
+**Relation to entry 5.** Entry 5's error jumps come from the stencil augmentation at the first sweep of a subproblem
+after an outer iteration's dual update and re-detection. These runs have one outer iteration per substep, and since
+8cce9b3d (in the code these runs used) AAAVBD skips the augmentation at every subproblem's first sweep. The failures
+don't single out AAAVBD either: VBD failed first in two of the three pairs (steps 67 vs 70, 480 vs 500), AAAVBD in the
+third (494, while VBD reached 18 s). betaG (read only) ran higher at 20 sweeps: in the step-60 checkpoints, the
+armadillo's surface median was 0.963 against 0.876 at 100 sweeps (p95 1.0 against 0.946), and the interior median
+0.995 against 0.984. Nothing unusual came before the blow-up. After it, gammadown lowered the surface p5 to 0.74 and
+then 0.48. betaG at the runaway nodes themselves wasn't recorded.
+
+**For the paper.** On this scene a budget below 10 x 100 isn't safe through the twist and the impact, for VBD and
+AAAVBD alike, and the stopping test's residual doesn't flag it. A failure is local (a few inverted elements, or one
+contact) and becomes a divergence within one substep. The five failures happened at three places: the armadillo
+underside (entry 10), dragonL's tail and dragonR against pillar 1.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.ShortBudget.*` (20 sweeps from t = 0),
+`.ShortBudget.From4.4s.*` (20 sweeps from 4.4 s), `.MidBudget.From4.4s.*` (40 sweeps from 4.4 s), and the replay's
+per-sweep records, `ArmadilloSpaghetti.DragonImpact.AAAVBD.ShortBudget.Diagnostic.h5`.
+
+## 10. A weak spot on the armadillo's underside: a finer, relatively stiffer mesh that low budgets expose
+
+**Question.** Three of entry 9's five failures ran away at the same few armadillo nodes, with either solver and from
+t = 0 or from 4.4 s. Is that part of the mesh defective?
+
+**Region.** The armadillo nodes within 10 cm of the rest centroid (−0.83, 1.17, −0.73) of the 12 nodes that ran away
+first in those failures (186045, 186086, 186314, 186410, 186426, 186488, 186519, 187265, 187351, 187391, 215950,
+221111): 614 nodes (408 on the surface) in 2446 of the armadillo's 162,385 elements, on its underside. It isn't held
+(the nearest held node is 45 cm away), and its material is the armadillo's uniform one. CPU analysis of the rest mesh
+and the saved frames (2026-10-26, scratch script).
+
+**Mesh.** Rest-mesh percentiles, region against the rest of the armadillo:
+
+| | p1 | p5 | p50 | p95 |
+|---|---|---|---|---|
+| Element volume (cm³) | 0.016 / 0.034 | 0.032 / 0.068 | 0.15 / 0.30 | 0.50 / 2.2 |
+| Min dihedral angle (°) | 19.7 / 26.0 | 29.9 / 33.4 | 46.4 / 47.6 | 59.6 / 60.0 |
+| Radius ratio (3 r_in / r_circ) | 0.33 / 0.46 | 0.55 / 0.60 | 0.79 / 0.81 | 0.94 / 0.94 |
+
+- The region is meshed about 2x finer: half the median element volume, a quarter of the p95.
+- Its low-quality tail is somewhat worse, but it has no outlier: its worst element (12.9°, radius ratio 0.19) is better
+  than the armadillo's worst (11.1°, 0.11).
+- Smaller elements of the same material make it the stiffest part of the armadillo relative to its mass. As a proxy,
+  a node's summed element stiffness μ h_e (h_e an element's size) over its mass has p50 5.3e7 against 3.4e7 and p95
+  1.5e8 against 8.2e7, about 1.6-1.8x. So per sweep it is expected to converge slowest; per-region residuals were
+  not measured.
+
+**Load in the 100-sweep runs.** The region is barely strained and rarely in contact:
+- Contact with the pillars (every 40 steps through the twist, then every 10 steps to 5.0 s): AAAVBD's region never
+  comes within 15 mm of a pillar (39-379 mm). VBD's touches pillars 0-2 around step 80 only (10 mm), then stays
+  86-368 mm away.
+- Deformation: in both runs the largest principal stretch is at most 1.41 at steps 60-69 of the twist and 1.02 at
+  4.4 s, against 1.5-4.7 in the rest of the armadillo, which also holds its known inverted elements. At 4.8 s, VBD's
+  dragonL lands on the region (up to 1.51; J ≥ 0.81); AAAVBD's dragonL lands 33 cm away.
+
+**At low budgets** the region deforms much more before each failure:
+- AAAVBD, 20 sweeps from t = 0: largest stretch 1.91 at step 60 (1.11 at 100 sweeps), 22 at step 69. By then the
+  region has drifted ~35 cm from its 100-sweep position and presses on pillars 0-1 (105 surface nodes within 10 mm).
+- VBD, 20 sweeps from t = 0: 1.07 at step 60, 25 at step 66, pressed on pillars 1-3 (170 surface nodes).
+- VBD, 20 sweeps from 4.4 s: 1.22 at step 470, 63 at step 479, under dragonL's landing.
+- AAAVBD from 4.4 s, at 20 and 40 sweeps, failed elsewhere (dragonL's tail, dragonR against pillar 1); the region
+  stayed at ≤ 1.07 up to the failure at 20 sweeps.
+
+**Reading.** A weak spot that low budgets expose, not a defective element. From the stiffness proxy, the finer mesh
+is expected to leave the region the least converged part of the armadillo at a fixed budget (not measured per
+region). It breaks when a load reaches it (pillar contact during the twist, a dragon's landing), while at 100 sweeps
+it is neither strained nor loaded. Remeshing it was not tried.
+
+## 11. DragonImpact's residual floor sits on persistent contacts, at the same level for every solver
+
+**Setup.** One traced 10 x 100 step each, eager, with the convergence check after every sweep and early exit off,
+from AAAVBD's production states at 4.85 s, 7.0 s and 10.0 s, for AAAVBD and for VBD from the same state. The traced
+AAAVBD steps reproduced the production frames bit for bit. Ratios are the production gradient ratio to the default
+tolerance, medians over the step's 10 substeps. At every detection the trace also classified each vertex contact:
+the same (u, v) key as before, carried to an adjacent feature by `carry_across_features`, or new (2026-10-26).
+
+| Frame | Solver | R0 | R20 / R100 | R40 / R100 | R100 | After the final detection | Sweeps to 90 / 99 % of the drop |
+|---|---|---|---|---|---|---|---|
+| 4.85 s | AAAVBD | 319 | 1.107 | 1.034 | 95 | 155 | 7 / 38 |
+| 4.85 s | VBD | 289 | 1.029 | 1.015 | 93 | 146 | 6 / 30 |
+| 7.0 s | AAAVBD | 1464 | 1.011 | 0.999 | 521 | 888 | 7 / 16 |
+| 7.0 s | VBD | 1470 | 0.984 | 0.996 | 537 | 895 | 6 / 10 |
+| 10.0 s | AAAVBD | 1359 | 1.008 | 1.000 | 477 | 825 | 7 / 14 |
+| 10.0 s | VBD | 1354 | 0.979 | 0.994 | 491 | 830 | 5 / 9 |
+
+At 4.85 s the two solvers' substeps stop sharing a state within the step (AAAVBD's dragonL spike starts in substep 7),
+so that frame's medians compare different states; at 7.0 and 10.0 s, R0 agrees within 1%.
+
+- **The plateau comes early.** Both solvers reach it within about 10-40 sweeps, VBD in fewer. At 7.0 and 10.0 s VBD's
+  ratio rises slightly after sweep 20.
+- **Finalization raises it 1.6-1.7x.** The dual update and the final detection take the ratio from R100 to the value
+  the outer test sees.
+- **Nodes without contacts aren't converged either, but hold almost none of it.** Their own ratio at sweep 100 is
+  4.0 / 6.1 (AAAVBD / VBD) at 4.85 s, 15.5 / 15.6 at 7.0 s and 13.1 / 13.2 at 10.0 s. AAAVBD is no faster there: at
+  sweep 20 its contact-free ratio is 2.5-6x its sweep-100 value, VBD's about 1.5x.
+
+**Where the plateau sits** (shares of Σ |gᵢ|²/mᵢ, medians; kept means the same key or carried, changed means new at
+the detection that made the set):
+
+| Frame | Solver | At sweep 100: no contact / kept / changed | After the final detection: no contact / kept / changed |
+|---|---|---|---|
+| 4.85 s | AAAVBD | 0.2 / 92.2 / 7.6 % | 0.2 / 97.3 / 2.0 % |
+| 4.85 s | VBD | 0.3 / 91.8 / 7.8 % | 0.5 / 96.6 / 2.7 % |
+| 7.0 s | both | 0.1 / 99.9 / 0.0 % | 0.0 / 99.5 / 0.5 % |
+| 10.0 s | both | 0.1 / 99.9 / 0.0 % | 0.0 / 99.1-99.2 / 0.8-0.9 % |
+
+**Contact churn per detection** (20 per traced step; fractions of the new set, dropped as a fraction of the previous):
+
+| Frame | Same / carried / new / dropped, median | At the step's last detection |
+|---|---|---|
+| 4.85 s (both solvers) | 97.0-97.2 / 2.1-2.2 / 0.5 / 0.5 % | 95.6-95.9 / 4.1-4.3 / 0.04-0.07 / 0.9-1.0 % |
+| 7.0 s | 98.6 / 1.4 / 0.03 / 0.03 % | 97.1 / 2.8 / 0.01 / 0.1 % |
+| 10.0 s | 98.7 / 1.3 / 0.04 / 0.03 % | 97.5 / 2.5 / 0.01 / 0.07 % |
+
+The few contacts new at the last detection (3-20) are armadillo-dragon and pillar-armadillo pairs.
+
+**Same floor for three solvers.** End-of-solve ratios over steps 480-490 (110 substeps each), from the production
+frames' `solve_status` and a GPU Newton probe (2 outer iterations x 2 Newton steps per substep, CG never at its cap,
+from AAAVBD's 4.8 s checkpoint): medians AAAVBD 160, VBD 194, Newton 171. Every substep lies between 98 and 368,
+except three of AAAVBD's at steps 481-483 (600-5306), around its penetration spikes (entry 8). The trajectories differ
+after step 480, which starts AAAVBD and Newton from AAAVBD's checkpoint and VBD from its own, nearly identical state:
+there Newton ends at 117 against 164 for both VBD-family solvers. A ±1-ulp perturbation of every free coordinate
+(2026-10-24) put float32's floor at ratios of 10.6 (6.0 s) and 25 (6.8 s), against entry 7's plateaus of 689 and 1251.
+
+**Relation to entries 4 and 7.** On CapsulesIntoBowl (entry 4) the floor sat at the ~2% of contacts that end the step
+pressed without a multiplier, mostly re-entered at the final detection. On DragonImpact it doesn't: 99% or more sits
+on contacts whose key persisted or was carried, and new contacts hold 0.5-2.7% after the final detection. This
+matches entry 7, where 87-96% of the residual is on pillar nodes within 1.5 cm of another pillar and more outer
+iterations raise it. A possible reading, not measured (the trace recorded keys, not multipliers): during the sweeps
+the AL penalty holds these persistent contacts, while the outer test's Lagrangian gradient counts only -lambda grad c,
+so whatever part of a contact force the multiplier hasn't absorbed shows as residual.
+
+**For the paper.** On this scene the stopping test reports a floor that AAAVBD, VBD and GPU Newton share, well above
+float32's and located on persistent contacts. Its level depends on the frame: as the outer test sees it (after the
+final detection), about 150-200x the tolerance around the impact (the 4.85 s trace, steps 480-490) and 800-900x at
+7.0 and 10.0 s (689-1251 at 6.0-6.8 s in entry 7). It ranks no solver, and a solver ending at the floor has reached it
+within the first tens of sweeps.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At<4.85|7.0|10.0>s.AAAVBDState.SweepTrace.h5`
+(per-sweep checks and per-detection churn rows); the Newton probe, `ArmadilloSpaghetti.DragonImpact.Newton.From4.8s.Probe.h5`.
+
+## 12. VBD at 10 x 40 on DragonImpact: stable to 18 s, 0.86x the step time, a different landing
+
+**Setup.** VBD at 10 substeps of 1 x 40 sweeps (`--set Solver.VBD.n_subproblem_max_iters=40`), from its own
+100-sweep checkpoint at 4.4 s (entry 9) to 18 s, against the 100-sweep production runs of VBD and AAAVBD
+(`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`), all on c649f50a. The 40-sweep run first stopped at step 526
+on the watcher's speed rule (a node over 15 m/s for 10 steps) while finite; it was resumed from its step-520
+checkpoint with that rule logged only, and the other stops kept (2026-10-26). Speeds below are mass-weighted RMS speeds
+from consecutive frames.
+
+**Stability.** Every gate passed (4.4-7.0 s, 7.0-12.0 s and 12.0-18.0 s), with no non-finite frame and no dropped
+pairs. The 100-sweep columns come from those runs' gates, which cover 4.4-12.0 and 12.8-18 s for VBD and 4.8-18 s for
+AAAVBD.
+
+| 4.4-18 s | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| Max penetration ratio | 0.75 (step 470) | 0.70 | 4.0 (two single steps, entry 8) |
+| Inverted armadillo elements, every 10th frame, max | 3 | 7 | 4 |
+| Longest run of frames over 15 m/s (peak) | 19 (31.9 m/s) | 7 (25.4 m/s) | 4 (29 m/s) |
+| Median step time, steps 441-1799 | 13.24 s | 15.38 s | 15.62 s |
+| GPU time, steps 441-1799 | 5.0 h | 5.8 h | 5.9 h |
+
+The speed rule's own measure (the end-of-substep node velocity) ran 26 steps over 15 m/s at the 40-sweep run's
+impact (steps 517-542, peak 35.7 m/s in dragonR); no streak reached 10 steps after 5.42 s. The 40-sweep frames also
+have up to 4 inverted dragonR elements at steps 500 and 517-520, gone by the next frames; the 100-sweep runs' other
+bodies weren't counted.
+
+**Step time.** Cutting the sweeps by 60% saves 14% (0.86x VBD 100, every leg 0.86-0.87x). A kernels profile of one
+AAAVBD 10 x 100 step at 7.0 s (`ArmadilloSpaghetti.DragonImpact.AAAVBD.At7.0s.Kernels.Profile.json`) shows why:
+73% of the GPU time is one kernel, the vertex SDF narrow phase `_detect_vertex_mesh_contacts`
+(`gpu/contact/mesh/sd.py`), at 574 ms per launch, twice per substep (the initial and the final detection). The sweeps
+take 27%, 4.24 ms each.
+
+**Landing.** Each dragon's tilt at 18 s, from its best-fit rotation from the rest shape, against a frame where the
+renders show it on its feet (dragonL: VBD 100 at 18 s; dragonR: VBD 40 at 18 s); 0° is on its feet, ~180° on its back:
+
+| | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| dragonL tilt | 7° | 0° | 116° |
+| dragonR tilt | 0° | 112° | 127° |
+| dragonR CoM path, 7-12 s / 12-18 s | 0.22 / 0.03 m | 1.89 / 0.12 m | 0.40 / 0.04 m |
+| dragonL CoM path, 7-12 s / 12-18 s | 0.15 / 0.05 m | 0.08 / 0.02 m | 0.15 / 0.05 m |
+
+At 40 sweeps both dragons land on their feet; at VBD 100 dragonR ends on its side and slides about 2 m on it between
+7 and 13 s; at AAAVBD 100 both end on their side or back. The poses are set by 7.0 s and hold to 18 s. The three runs
+land three different ways, so the landing also differs between the two 100-sweep solvers.
+
+**Settling** (RMS speed, mean over 17-18 s, m/s; time under 1 cm/s within 5-18 s):
+
+| | VBD 10 x 40 | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| Pillars (mid-spans) | 0.193 | 0.294 | 0.311 |
+| Armadillo | 0.401 | 0.886 | 0.896 |
+| dragonL | 0.0134 (0.24 s under) | 0.0042 (5.0 s, from 13.7 s on) | 0.0098 (2.1 s) |
+| dragonR | 0.0090 (1.5 s) | 0.0081 (1.8 s, from 17.7 s on) | 0.0105 (0.8 s) |
+
+- The pillars and the armadillo move at about the same speed in VBD 100 and AAAVBD 100. In VBD 40 the pillars move
+  at about two thirds of that from about 10 s on, and the armadillo at about half from about 6 s on. Neither falls
+  under 1 cm/s in any run.
+- The dragons' landing poses and slides differ across all three runs (Landing, above).
+
+**For the paper.** On this scene VBD at 10 x 40 stays stable where every 10 x 20 run and AAAVBD at 10 x 40 failed
+(entry 9), at 0.86x the step time, because contact detection, not the sweeps, dominates the step. It isn't at parity
+with the 100-sweep run: its landing, its dragons' settling and its pillar and armadillo motion differ. The two
+100-sweep solvers also land differently from each other, so a single landing outcome can't serve as a reference here.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.VBD.MidBudget.From4.4s.h5` (Leg1 up to step 520, then
+Leg2-4) and its merged `.Profile.json`; the 100-sweep runs `ArmadilloSpaghetti.DragonImpact.<VBD|AAAVBD>.h5` and their
+`.Profile.json`.
