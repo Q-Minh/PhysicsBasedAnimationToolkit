@@ -496,3 +496,74 @@ and the saved frames (2026-10-26, scratch script).
 **Reading.** A weak spot that low budgets expose, not a defective element: the finer mesh makes the region the least
 converged part of the armadillo at a fixed budget, and it breaks when a load reaches it (pillar contact during the
 twist, a dragon's landing), while at 100 sweeps it is neither strained nor loaded. Remeshing it was not tried.
+
+## 11. DragonImpact's residual floor sits on persistent contacts, at the same level for every solver
+
+**Setup.** One traced 10 x 100 step each, eager, with the convergence check after every sweep and early exit off,
+from AAAVBD's production states at 4.85 s, 7.0 s and 10.0 s, for AAAVBD and for VBD from the same state. The traced
+AAAVBD steps reproduced the production frames bit for bit. Ratios are the production gradient ratio to the default
+tolerance, medians over the step's 10 substeps. At every detection the trace also classified each vertex contact:
+the same (u, v) key as before, carried to an adjacent feature by `carry_across_features`, or new (2026-10-26).
+
+| Frame | Solver | R0 | R20 / R100 | R40 / R100 | R100 | After the final detection | Sweeps to 90 / 99 % of the drop |
+|---|---|---|---|---|---|---|---|
+| 4.85 s | AAAVBD | 319 | 1.107 | 1.034 | 95 | 155 | 7 / 38 |
+| 4.85 s | VBD | 289 | 1.029 | 1.015 | 93 | 146 | 6 / 30 |
+| 7.0 s | AAAVBD | 1464 | 1.011 | 0.999 | 521 | 888 | 7 / 16 |
+| 7.0 s | VBD | 1470 | 0.984 | 0.996 | 537 | 895 | 6 / 10 |
+| 10.0 s | AAAVBD | 1359 | 1.008 | 1.000 | 477 | 825 | 7 / 14 |
+| 10.0 s | VBD | 1354 | 0.979 | 0.994 | 491 | 830 | 5 / 9 |
+
+At 4.85 s the two solvers' substeps stop sharing a state within the step (AAAVBD's dragonL spike starts in substep 7),
+so that frame's medians compare different states; at 7.0 and 10.0 s, R0 agrees within 1%.
+
+- **The plateau comes early.** Both solvers reach it within about 10-40 sweeps, VBD in fewer. At 7.0 and 10.0 s VBD's
+  ratio rises slightly after sweep 20.
+- **Finalization raises it 1.6-1.7x.** The dual update and the final detection take the ratio from R100 to the value
+  the outer test sees.
+- **Nodes without contacts aren't converged either, but hold almost none of it.** Their own ratio at sweep 100 is
+  4.0 / 6.1 (AAAVBD / VBD) at 4.85 s, 15.5 / 15.6 at 7.0 s and 13.1 / 13.2 at 10.0 s. AAAVBD is no faster there: at
+  sweep 20 its contact-free ratio is 2.5-6x its sweep-100 value, VBD's about 1.5x.
+
+**Where the plateau sits** (shares of Σ |gᵢ|²/mᵢ, medians; kept means the same key or carried, changed means new at
+the detection that made the set):
+
+| Frame | Solver | At sweep 100: no contact / kept / changed | After the final detection: no contact / kept / changed |
+|---|---|---|---|
+| 4.85 s | AAAVBD | 0.2 / 92.2 / 7.6 % | 0.2 / 97.3 / 2.0 % |
+| 4.85 s | VBD | 0.3 / 91.8 / 7.8 % | 0.5 / 96.6 / 2.7 % |
+| 7.0 s | both | 0.1 / 99.9 / 0.0 % | 0.0 / 99.5 / 0.5 % |
+| 10.0 s | both | 0.1 / 99.9 / 0.0 % | 0.0 / 99.1-99.2 / 0.8-0.9 % |
+
+**Contact churn per detection** (20 per traced step; fractions of the new set, dropped as a fraction of the previous):
+
+| Frame | Same / carried / new / dropped, median | At the step's last detection |
+|---|---|---|
+| 4.85 s (both solvers) | 97.0-97.2 / 2.1-2.2 / 0.5 / 0.5 % | 95.6-95.9 / 4.1-4.3 / 0.04-0.07 / 0.9-1.0 % |
+| 7.0 s | 98.6 / 1.4 / 0.03 / 0.03 % | 97.1 / 2.8 / 0.01 / 0.1 % |
+| 10.0 s | 98.7 / 1.3 / 0.04 / 0.03 % | 97.5 / 2.5 / 0.01 / 0.07 % |
+
+The few contacts new at the last detection (3-20) are armadillo-dragon and pillar-armadillo pairs.
+
+**Same floor for three solvers.** End-of-solve ratios over steps 480-490 (110 substeps each), from the production
+frames' `solve_status` and a GPU Newton probe (2 outer iterations x 2 Newton steps per substep, CG never at its cap,
+from AAAVBD's 4.8 s checkpoint): medians AAAVBD 160, VBD 194, Newton 171. Every substep lies between 98 and 368,
+except three of AAAVBD's at steps 481-483 (600-5306), around its penetration spikes (entry 8). The trajectories differ
+after step 480, which starts AAAVBD and Newton from AAAVBD's checkpoint and VBD from its own, nearly identical state:
+there Newton ends at 117 against 164 for both VBD-family solvers. A ±1-ulp perturbation of every free coordinate
+(2026-10-24) put float32's floor at ratios of 10.6 (6.0 s) and 25 (6.8 s), against entry 7's plateaus of 689 and 1251.
+
+**Relation to entries 4 and 7.** On CapsulesIntoBowl (entry 4) the floor sat at the ~2% of contacts that end the step
+pressed without a multiplier, mostly re-entered at the final detection. On DragonImpact it doesn't: 99% or more sits
+on contacts whose key persisted or was carried, and new contacts hold 0.5-2.7% after the final detection. This
+matches entry 7, where 87-96% of the residual is on pillar nodes within 1.5 cm of another pillar and more outer
+iterations raise it. A possible reading, not measured (the trace recorded keys, not multipliers): during the sweeps
+the AL penalty holds these persistent contacts, while the outer test's Lagrangian gradient counts only -lambda grad c,
+so whatever part of a contact force the multiplier hasn't absorbed shows as residual.
+
+**For the paper.** On this scene the stopping test reports a floor that AAAVBD, VBD and GPU Newton share, 100-200x the
+tolerance and well above float32's, located on persistent contacts. It ranks no solver, and a solver ending at the
+floor has reached it within the first tens of sweeps.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At<4.85|7.0|10.0>s.AAAVBDState.SweepTrace.h5`
+(per-sweep checks and per-detection churn rows); the Newton probe, `ArmadilloSpaghetti.DragonImpact.Newton.From4.8s.Probe.h5`.
