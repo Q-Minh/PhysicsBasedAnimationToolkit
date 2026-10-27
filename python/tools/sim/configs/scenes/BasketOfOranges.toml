@@ -68,6 +68,7 @@ gamman_adaptive = 1.0
 min_sigma_n = 10000.0
 mu_f = 0.30000001192092896
 penalty_adaptivity = 1
+penalty_stiffness = 0
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.0

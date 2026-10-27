@@ -25,11 +25,17 @@ from ..common.reduce import Reduce
 from ..contact.mesh.cd import ContactDetection
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
 from ..contact.dynamics import (
+    CONTACT_EE,
+    CONTACT_VE,
+    CONTACT_VF,
+    CONTACT_VV,
     MeshDynamics as ContactDynamics,
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
     capped_friction_energy,
     capped_friction_scale,
+    friction_penalty,
+    normal_penalty,
 )
 from ..contact.constraints import stored_friction_limit
 from ..contact.mesh.pairs import ContactBasesData
@@ -139,8 +145,8 @@ def _energy_vv(
     c_n = wp.dot(xi - xj, n) - contact.dmin - contact.cvv.s[c]  # type: ignore
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VV, c)
+    sigma_f = friction_penalty(contact, CONTACT_VV, c)
     E = contact.cvv.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvv.lambda_n[c] * c_n
@@ -179,8 +185,8 @@ def _energy_ve(
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cve.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VE, c)
+    sigma_f = friction_penalty(contact, CONTACT_VE, c)
     E = contact.cve.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cve.lambda_n[c] * c_n
@@ -219,8 +225,8 @@ def _energy_vf(
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cvf.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VF, c)
+    sigma_f = friction_penalty(contact, CONTACT_VF, c)
     E = contact.cvf.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cvf.lambda_n[c] * c_n
@@ -262,8 +268,8 @@ def _energy_ee(
     c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_EE, c)
+    sigma_f = friction_penalty(contact, CONTACT_EE, c)
     E = contact.cee.gamma[c] * (
         wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
         - contact.cee.lambda_n[c] * c_n
@@ -394,8 +400,8 @@ def _compute_vv_contact_hessian_triplets(
     v = contact.contacts.vv.v[c]
     i = contact.meshes.V[u]
     j = contact.meshes.V[v]
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VV, c)
+    sigma_f = friction_penalty(contact, CONTACT_VV, c)
     bases = contact.contacts.vv_bases
     n, t, b = bases.n[c], bases.t[c], bases.b[c]
     gamma = contact.cvv.gamma[c]
@@ -462,8 +468,8 @@ def _compute_ve_contact_hessian_triplets(
     i = contact.meshes.V[vi]
     ea = halfedges.incoming_vertex(contact.meshes.F, he)
     eb = halfedges.outgoing_vertex(contact.meshes.F, he)
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VE, c)
+    sigma_f = friction_penalty(contact, CONTACT_VE, c)
     du = (x[i] - xt[i]) - ((b0 * x[ea] + b1 * x[eb]) - (b0 * xt[ea] + b1 * xt[eb]))
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
@@ -550,8 +556,8 @@ def _compute_vf_contact_hessian_triplets(
     i = contact.meshes.V[vi]
     finds = contact.meshes.F[f]
     j, k, l = finds[0], finds[1], finds[2]
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VF, c)
+    sigma_f = friction_penalty(contact, CONTACT_VF, c)
     du = (x[i] - xt[i]) - (
         (b0 * x[j] + b1 * x[k] + b2 * x[l]) - (b0 * xt[j] + b1 * xt[k] + b2 * xt[l])
     )
@@ -671,8 +677,8 @@ def _compute_ee_contact_hessian_triplets(
     ic = halfedges.incoming_vertex(contact.meshes.F, he_v)
     id = halfedges.outgoing_vertex(contact.meshes.F, he_v)
     gamma = contact.cee.gamma[c]
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_EE, c)
+    sigma_f = friction_penalty(contact, CONTACT_EE, c)
     du = ((b0 * x[ia] + b1 * x[ib]) - (b0 * xt[ia] + b1 * xt[ib])) - (
         (b2 * x[ic] + b3 * x[id]) - (b2 * xt[ic] + b3 * xt[id])
     )

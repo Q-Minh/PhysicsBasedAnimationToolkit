@@ -7,9 +7,15 @@ import warp as wp
 from .common import profiling
 
 from .contact.dynamics import (
+    CONTACT_EE,
+    CONTACT_VE,
+    CONTACT_VF,
+    CONTACT_VV,
     MeshDynamics as ContactDynamics,
     MeshDynamicsData,
     capped_friction_scale,
+    friction_penalty,
+    normal_penalty,
 )
 from .contact.constraints import frozen_friction_limit
 from .elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
@@ -112,8 +118,8 @@ def _vv_gradient(
     c_n = wp.dot(xi - xj, n) - contact.dmin - sk
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VV, c)
+    sigma_f = friction_penalty(contact, CONTACT_VV, c)
     gamma = contact.cvv.gamma[c]
     dEn = -contact.cvv.lambda_n[c]
     dEf = -contact.cvv.lambda_f[c]
@@ -160,8 +166,8 @@ def _ve_gradient(
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cve.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VE, c)
+    sigma_f = friction_penalty(contact, CONTACT_VE, c)
     gamma = contact.cve.gamma[c]
     dEn = -contact.cve.lambda_n[c]
     dEf = -contact.cve.lambda_f[c]
@@ -211,8 +217,8 @@ def _vf_gradient(
     c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cvf.s[c]
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VF, c)
+    sigma_f = friction_penalty(contact, CONTACT_VF, c)
     gamma = contact.cvf.gamma[c]
     dEn = -contact.cvf.lambda_n[c]
     dEf = -contact.cvf.lambda_f[c]
@@ -267,8 +273,8 @@ def _ee_gradient(
     c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_EE, c)
+    sigma_f = friction_penalty(contact, CONTACT_EE, c)
     gamma = contact.cee.gamma[c]
     dEn = -contact.cee.lambda_n[c]
     dEf = -contact.cee.lambda_f[c]

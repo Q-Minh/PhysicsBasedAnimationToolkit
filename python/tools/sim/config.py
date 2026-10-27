@@ -273,8 +273,8 @@ _ENUM_KEYS = {"Integration.init_strategy": ("pbatoolkit", "pbat.sim.dynamics.EFe
 _VBD_FAMILY = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver")
 GPU_IGNORED = {
     "Solver.Newton.linear_solver": "GPU: ignored; always Warp's Jacobi-preconditioned CG (Solver.Newton.LinearSolver)",
-    **{f"Solver.{s}.e_penalty_stiffness": "GPU: ignored; the GPU's contact penalty is "
-       "Contact.ContactDynamics.penalty_adaptivity" for s in _VBD_FAMILY},
+    **{f"Solver.{s}.e_penalty_stiffness": "GPU: ignored; the GPU's is Contact.ContactDynamics.penalty_stiffness "
+       "(with Contact.ContactDynamics.penalty_adaptivity)" for s in _VBD_FAMILY},
     **{f"Solver.{s}.betaR": "GPU: ignored; copied to the GPU params but no kernel reads it" for s in _VBD_FAMILY},
     **{f"Solver.{s}.{k}": "GPU: ignored; a C++ runtime counter, not copied to the GPU" for s in _VBD_FAMILY for k in ("k", "kp")},
 }
