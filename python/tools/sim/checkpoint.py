@@ -16,7 +16,9 @@ A checkpoint file holds one group per checkpointed time step, ``<t:08d>`` (``sta
   expressed, for the feature transitions of that update (``constraints.carry_across_features``). Older
   checkpoints have none: a contact whose feature changes at the resumed step's first update then starts its
   lambda_f over.
-- ``contact/{sigma_n,sigma_f}``: the penalties (adaptive ones are recomputed each step or subproblem).
+- ``contact/{sigma_n,sigma_f}``: the penalties (adaptive ones are recomputed each step or subproblem). Per-contact
+  (local) penalties aren't stored: like the global ones, every step or subproblem recomputes them from its own
+  Hessian before reading them.
 - ``detection/sds``: the vertex SDF's signed distances, if VertexSdf detects.
 - ``solver/<SolverType name>/...``: the active solver's buffers that carry across time steps. The
   VBD family's vertex state (``xb``, ``gk``, ``xk``, ``Hnk``, AAAVBD's ``betaG``, ``Qnk``, ``Qfk``), plus
@@ -214,7 +216,7 @@ class TestCheckpoint(unittest.TestCase):
 
     n = 5
 
-    def _state(self, solver):
+    def _state(self, solver, penalty_stiffness=None):
         from pbatoolkit import pbat, pypbat
         from .gpu.kinematics.constraints import (
             KinematicConstraint,
@@ -240,6 +242,8 @@ class TestCheckpoint(unittest.TestCase):
         )
         kinematics = (fixed_constraints_from_dmask(fem.dmask) + [push], 0.0, None)
         state = SimulationState(fem, load_params(fem), kinematics)
+        if penalty_stiffness is not None:
+            state.contact_params.penalty_stiffness = penalty_stiffness
         state.solver = solver
         state.reset()
         return state
@@ -247,19 +251,31 @@ class TestCheckpoint(unittest.TestCase):
     def test_resume_matches_uninterrupted(self):
         from .state import SolverType
 
+        self._check_resume(list(SolverType))
+
+    def test_resume_matches_uninterrupted_local_penalties(self):
+        from pbatoolkit import pbat
+        from .state import SolverType
+
+        local = pbat.sim.algorithm.vbd.SALPenaltyStiffness.LocalMaxRayleighQuotient
+        self._check_resume([SolverType.VBD, SolverType.AAAVBD, SolverType.Newton], local)
+
+    def _check_resume(self, solvers, penalty_stiffness=None):
+        from .state import SolverType
+
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "ckpt.h5")
-            for solver in SolverType:
+            for solver in solvers:
                 with self.subTest(solver=solver.name):
-                    straight = self._state(solver)
+                    straight = self._state(solver, penalty_stiffness)
                     for _ in range(2 * self.n):
                         straight.step()
-                    first = self._state(solver)
+                    first = self._state(solver, penalty_stiffness)
                     for _ in range(self.n):
                         first.step()
                     write(first, path)
                     self.assertGreater(float(first.contact.cvf.lambda_n.current.numpy().sum()), 0.0)
-                    resumed = self._state(solver)
+                    resumed = self._state(solver, penalty_stiffness)
                     self.assertEqual(restore(resumed, path), self.n)
                     self.assertEqual(resumed.kinematics.step, self.n)
                     for _ in range(self.n):
