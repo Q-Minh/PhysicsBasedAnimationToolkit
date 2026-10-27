@@ -27,6 +27,30 @@ tvelist = wp.types.vector(length=MAX_VE_PER_THREAD, dtype=wp.int32)
 tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
 # teelist = wp.types.vector(length=MAX_EE_PER_THREAD, dtype=wp.int32)
 
+MAX_BLOCK_DIM = 256
+
+
+def detection_block_dim(n_meshes: int) -> int:
+    """Threads per block (one block per contact vertex) of _detect_vertex_mesh_contacts for n_meshes contact
+    components: the fewest whole warps that give every partner its own thread, at most MAX_BLOCK_DIM.
+
+    Each thread queries ceil(n_meshes / block_dim) partners, and with one pair per partner its pairs of one type
+    must fit the per-thread lists (MAX_*_PER_THREAD). A fixed 256 left most threads idle: DragonImpact has 9 meshes,
+    so 8 threads queried while the whole block summed and sorted its 256-wide tiles.
+
+    Raises:
+        ValueError: If a thread would have more partners than the smallest per-thread list holds.
+    """
+    block_dim = min(MAX_BLOCK_DIM, 32 * max(1, -(-n_meshes // 32)))
+    per_thread = -(-n_meshes // block_dim)
+    capacity = min(int(MAX_VV_PER_THREAD), int(MAX_VE_PER_THREAD), int(MAX_VF_PER_THREAD))
+    if per_thread > capacity:
+        raise ValueError(
+            f"{n_meshes} contact components need {per_thread} partners per thread at block_dim {block_dim}, more "
+            f"than the per-thread pair lists hold ({capacity}): raise MAX_*_PER_THREAD or MAX_BLOCK_DIM"
+        )
+    return block_dim
+
 
 @wp.kernel
 def _detect_vertex_mesh_contacts(
@@ -438,6 +462,7 @@ class Sd(ContactDetection):
 
     _wp_meshes: list[wp.Mesh]
     _mesh_ids: wp.array[wp.uint64]
+    _block_dim: int  # threads per contact vertex in detection (detection_block_dim)
     _mesh_kind: wp.array[wp.int32]  # (# meshes,) MESH_CLOSED, MESH_OPEN or MESH_PLANE
     _mesh_depth: wp.array[wp.float32]  # (# meshes,) contact depth of plane meshes (inf: half-space)
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
@@ -480,6 +505,7 @@ class Sd(ContactDetection):
             for b in range(FP.shape[0] - 1)
         ]
         self._mesh_ids = wp.array([m.id for m in self._wp_meshes], dtype=wp.uint64)
+        self._block_dim = detection_block_dim(len(self._wp_meshes))
         # The same meshes over xt, for a time step's first detection (from_xt)
         self._wp_meshes_xt = [wp.Mesh(self._xt, wp.array(data=Fb[b], dtype=wp.int32)) for b in range(FP.shape[0] - 1)]
         self._mesh_ids_xt = wp.array([m.id for m in self._wp_meshes_xt], dtype=wp.uint64)
@@ -563,7 +589,7 @@ class Sd(ContactDetection):
         main_stream = wp.get_stream()
         self._contacts.clear()
         n_verts = self._meshes.data.V.shape[0]
-        block_dim = 256
+        block_dim = self._block_dim
         wp.launch(
             _detect_vertex_mesh_contacts,
             dim=n_verts * block_dim,
@@ -730,6 +756,20 @@ class TestFeatureClassification(unittest.TestCase):
             self.assertAlmostEqual(float(np.dot(x[V[u[c]]] - xc, normals[c])), distance, delta=1e-6)
         state.convergence._measure_penetration()
         self.assertEqual(float(state.convergence.penetration.numpy()[0]), 0.0)
+
+
+class TestDetectionBlockDim(unittest.TestCase):
+    def test_partners_fit_the_thread_lists(self):
+        """Whole warps, one partner per thread up to MAX_BLOCK_DIM meshes, and an error past the lists' size."""
+        self.assertEqual(detection_block_dim(1), 32)
+        self.assertEqual(detection_block_dim(9), 32)  # DragonImpact
+        self.assertEqual(detection_block_dim(33), 64)
+        self.assertEqual(detection_block_dim(MAX_BLOCK_DIM), MAX_BLOCK_DIM)
+        self.assertEqual(detection_block_dim(MAX_BLOCK_DIM + 1), MAX_BLOCK_DIM)  # 2 partners per thread
+        capacity = min(int(MAX_VV_PER_THREAD), int(MAX_VE_PER_THREAD), int(MAX_VF_PER_THREAD))
+        self.assertEqual(detection_block_dim(capacity * MAX_BLOCK_DIM), MAX_BLOCK_DIM)
+        with self.assertRaises(ValueError):
+            detection_block_dim(capacity * MAX_BLOCK_DIM + 1)
 
 
 class TestSurfaceVertices(unittest.TestCase):
