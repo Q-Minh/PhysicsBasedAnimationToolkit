@@ -135,6 +135,15 @@ KYOGRE_CONTACT = Rule(
     "detection distance dmin + band = 1.5 cm, so they report no contacts.",
     {"Contact.CDType.VertexSdf.max_dist": 0.2, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
 )
+ARMADILLO_SPAGHETTI_CONTACT = Rule(
+    "Contact for the armadillo spaghetti scenes, the kyogre spaghetti scene's (maintainer, 2026-10-21) with the "
+    "source's 5 cm VertexSdf max_dist: band 5 mm and a 1 cm AL margin dmin. The scene file's floor and ceiling planes "
+    "sit 2 cm from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report no contacts. "
+    "max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex inside a pillar (10 "
+    "cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of "
+    "DragonImpact's step at 7.0 s with identical pairs.",
+    {"Contact.CDType.VertexSdf.max_dist": 0.05, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
+)
 KYOGRE_BUDGET = Rule(
     "The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80 = "
     "400 sweeps per step for every VBD-family solver; Newton 20 x 2 with a tighter CG (rtol 1e-8, at most 4000 "
@@ -345,7 +354,7 @@ SCENES = {
         "squeezed out past pillar 3 while elements inverted, to -54% of their rest volume at 2.82 s). The held nodes stay off the "
         "surface: holding surface nodes pits the pillars' prescribed twist against "
         "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, ARMADILLO_SPAGHETTI_BUDGET, CONTACT_CAPACITIES],
+        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, ARMADILLO_SPAGHETTI_BUDGET, CONTACT_CAPACITIES],
         ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
          "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
          "flat, contacts with the folded edge flip sign, and the step diverges. Every step runs its full budget with "
@@ -371,7 +380,7 @@ SCENES = {
         "over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its "
         "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
         "the fall's frame at 4.49 s, its twist still on); released, it keeps that velocity. 1.40M tets in all",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
+        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
         ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
          "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
          "5.49 s is data/scenarios/ArmadilloSpaghetti.DragonImpact.TwistStop5s.h5.",
