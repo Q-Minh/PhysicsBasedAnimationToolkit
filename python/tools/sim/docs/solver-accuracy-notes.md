@@ -704,14 +704,20 @@ the penetration ratios (0.5-1.1 mm into the margin) come from other contacts, wh
 ratio's rise is also off the pillars: at AAAVBD's substep 0, outer iteration 5, the ratio peaks (552) while the pp
 share of the residual falls to 0.65.
 
-**Penalty.** σ_n was 1.0 at every update, the value of `min_sigma_n`. Whether the adaptive value (the vertex
-Hessians' largest contact Rayleigh quotient) is below that floor here was not checked.
+**Penalty.** σ_n was 1.0 at every update, the value of `min_sigma_n`. The unfloored adaptive value was then read
+at the same state, with no stepping. A scratch script stopped AAAVBD at the substep's TIMESTEP adaptation and
+repeated the Rayleigh quotients with the floor at 0 (code 5c554424, 2026-10-26). The global max quotient Q is 0.846,
+so the floor of 1.0 sits 1.18x above it. A pillar-pillar vertex-edge contact sets the max, and the next seven are
+pillar-pillar at 0.66-0.78. In every body pair the h²K part of nᵀHn is about 1000x the mass part (median Q 0.25
+over all 29.9k contacts, median mass part 1.8e-4). The 199 contacts that alternate at every update have Q with
+median 0.25 and max 0.45: σ_n is 4.0x their median with the floor, and 3.4x from the global max alone. So here the
+global max separates σ_n from these contacts' stiffness, not the floor. Per-contact penalties (the TODO in
+`gpu/contact/dynamics.py`) are untested. Hi was taken at the substep's initial x, as TIMESTEP adapts, not at the
+subproblem's later iterates. The floor is a fixed value, while Q scales with h². It is made time-step consistent
+in the change that follows this entry.
 
 **Not tested** (ideas only):
 - Hysteresis on the vertex-edge / vertex-face choice, or keeping a carried multiplier when only the feature changed.
-- Whether the floor sits above the adaptive value at 10 substeps (h = 1 ms): the stiffness part of the vertex
-  Hessians scales with h², 100x smaller than at one substep. If it does, each dual update takes a larger step than
-  the vertex stiffness supports, and inexact subproblems would then overshoot past the margin.
 - Which non-pillar contacts set the alternating penetration.
 
 **For the paper.** Extra outer iterations don't lose multipliers through the contact set here; the projection
@@ -719,4 +725,5 @@ zeroes a few hundred tiny pillar multipliers every other update, so each outer i
 those contacts hold about a third of the residual.
 
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At6.8s.OuterTrace.h5` (10 x 100) and
-`ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.OneOuter.OuterTrace.h5` (1 x 100).
+`ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.OneOuter.OuterTrace.h5` (1 x 100); the penalty read,
+`ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.RayleighQuotients.npz` (Hi, m, the pairs and the unfloored Qc).
