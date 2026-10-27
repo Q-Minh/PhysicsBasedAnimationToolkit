@@ -1,17 +1,19 @@
 # Scene config: ArmadilloSpaghetti.Fall, every serialized parameter written out (diff it against configs/paper).
 # For: data/scenarios/ArmadilloSpaghetti.Fall.h5: the twist of KyogreSpaghetti.h5 (its floor and ceiling planes, and its top and bottom ends turned at -180 and 180 deg/s from 0 s) on four round pillars, cylinders 0.1 m in diameter (fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m from the twist axis (0.735 m apart), around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, Young's modulus 1e6, was 8e5 until it froze crushed, 2026-10-22; tet quality at least 0.23, triangle angles at least 11 deg) whose waist (the slice at 50-55% of its height, where only the torso is) is near the twist axis: lowered 15 cm along it (z from -0.75 to 0.45 m; floor 1.07 m below), then turned -10 deg about it and moved (+10.0, -2.5) cm in xy (pose A, maintainer, 2026-10-23), with rest gaps of 4.8, 7.2, 7.7 and 2.6 cm to the four pillars; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body. The armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed transform until 1.5 s, so that the pillars, twisting from 0 s, tangle around it rather than push it up or down, and then released (maintainer, 2026-10-22). Pose A makes all four pillars engage the armadillo (chosen by a search over yaw and xy offset, with the pillars as taut lines between their twisting ends): its surface vertices within dmin + band of each pillar were 289, 362, 270 and 392 at 1.5 s (previous pose: 232, 287, 441 and 327), and after the release all four kept and gained contact (387, 441, 529 and 545 at 2.5 s), where in the previous pose pillar 1 lost the armadillo and it squeezed out past pillar 3. Its 1.5 s release (AAAVBD, 5 substeps) ran to 2.5 s with at most one inverted element (worst -41% of its rest volume, recovered by 2.32 s) and speeds under 6 m/s. The copy held for the whole run (1000 s) is data/scenarios/ArmadilloSpaghetti.Fall.PoseA.Held.h5: a release time is tried by shortening the hold in a copy and resuming the held run from a checkpoint, since the windows are read from the scene file and checkpoints carry only the anchors and step counter. Thin pillars close to the armadillo wrap it rather than push it out (after the JGS2-GQ paper's scene). Earlier variants, in data/scenarios: .Previous.h5 (centered at z = 0, the core held for 0.45 s), .Lowered.h5 (lowered only, held for 0.45 s: the twist moved the whole armadillo rather than wrapping it), .Squeeze.h5 (the pillars' ends translated 10-28 cm toward the axis over 0.5 s, then the twist, the core held to 0.6 s: the pillars' mid-spans lagged their ends by ~0.3 s, and the released armadillo fell almost freely), and .Held.h5 and .PoseCurrent.h5 (lowered only, held for the whole run or to 1.5 s: one pillar strapped it to the other three, and once released, at 1.25 or 1.5 s, it squeezed out past pillar 3 while elements inverted, to -54% of their rest volume at 2.82 s). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against prescribed armadillo nodes in contact, with no feasible position, and the simulation froze.
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-10-23 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
 #   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
 #     Solver.AAAVBD.gammaupS = 0.3 (source 0.5)
-# - Contact for the kyogre spaghetti scene (maintainer, 2026-10-21): VertexSdf max_dist 20 cm and band 5 mm, and
-#   a 1 cm AL margin dmin. The scene file's floor and ceiling planes sit 2 cm from the pillars' ends, beyond the
-#   detection distance dmin + band = 1.5 cm, so they report no contacts.
+# - Contact for the armadillo spaghetti scenes, the kyogre spaghetti scene's (maintainer, 2026-10-21) with the
+#   source's 5 cm VertexSdf max_dist: band 5 mm and a 1 cm AL margin dmin. The scene file's floor and ceiling
+#   planes sit 2 cm from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report
+#   no contacts. max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex
+#   inside a pillar (10 cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and
+#   saves about 21% of DragonImpact's step at 7.0 s with identical pairs.
 #     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
-#     Contact.CDType.VertexSdf.max_dist = 0.2 (source 0.05)
 #     Contact.ContactDynamics.dmin = 0.01 (source 0.002)
 # - 5 substeps per 10 ms step for the armadillo spaghetti fall (maintainer, 2026-10-22), each of 1 outer
 #   iteration x 80 sweeps for every VBD-family solver, the same 400 sweeps and more contact detections per 10 ms
@@ -67,7 +69,7 @@ truncation_strategy = 0
 [Contact.CDType.VertexSdf]
 band = 0.005
 deactivate = 0
-max_dist = 0.2
+max_dist = 0.05
 use_step_filter = 0
 
 [Contact.ContactDynamics]
