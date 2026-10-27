@@ -366,7 +366,7 @@ def compute_augmented_lagrangian_penalty(
         inputs=[fem.data, params.data, contact.Hi, h2],
         block_dim=block_dim,
     )
-    contact.adapt_penalty_parameters()
+    contact.adapt_penalty_parameters(h2)
 
 
 @profiling.scoped("solve.prepare_subproblem")

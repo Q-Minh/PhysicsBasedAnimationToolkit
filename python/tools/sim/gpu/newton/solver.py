@@ -1187,7 +1187,7 @@ def adapt_penalty_parameters(
     at the current positions and set the penalties to the largest contact Rayleigh quotient in it
     (:meth:`MeshDynamics.adapt_penalty_parameters_to_hessian`)."""
     _assemble_hessian(fem, contact, params, wp.float32(fem.h2), with_contacts=False)
-    contact.adapt_penalty_parameters_to_hessian(params._H, fem.data.dmask)
+    contact.adapt_penalty_parameters_to_hessian(params._H, fem.data.dmask, fem.h2)
 
 
 class SubproblemStatus(IntEnum):
