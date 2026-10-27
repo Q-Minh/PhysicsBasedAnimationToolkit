@@ -129,48 +129,23 @@ SPHERE_BAND = Rule(
     {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
-KYOGRE_CONTACT = Rule(
-    "Contact for the kyogre spaghetti scene (maintainer, 2026-10-21): VertexSdf max_dist 20 cm and band 5 mm, and a "
-    "1 cm AL margin dmin. The scene file's floor and ceiling planes sit 2 cm from the pillars' ends, beyond the "
-    "detection distance dmin + band = 1.5 cm, so they report no contacts.",
-    {"Contact.CDType.VertexSdf.max_dist": 0.2, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
-)
 ARMADILLO_SPAGHETTI_CONTACT = Rule(
-    "Contact for the armadillo spaghetti scenes, the kyogre spaghetti scene's (maintainer, 2026-10-21) with the "
-    "source's 5 cm VertexSdf max_dist: band 5 mm and a 1 cm AL margin dmin. The scene file's floor and ceiling planes "
+    "Contact for the armadillo spaghetti scene: VertexSdf band 5 mm and a 1 cm AL margin dmin (maintainer, "
+    "2026-10-21), with the source's 5 cm VertexSdf max_dist. The scene file's floor and ceiling planes "
     "sit 2 cm from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report no contacts. "
     "max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex inside a pillar (10 "
     "cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of "
     "DragonImpact's step at 7.0 s with identical pairs.",
     {"Contact.CDType.VertexSdf.max_dist": 0.05, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
 )
-KYOGRE_BUDGET = Rule(
-    "The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80 = "
-    "400 sweeps per step for every VBD-family solver; Newton 20 x 2 with a tighter CG (rtol 1e-8, at most 4000 "
-    "iterations), since the energy stiffens as the pillars tangle (maintainer).",
-    {"Integration.substeps": 1, **_per_solver("n_max_iters", 5), **_per_solver("n_subproblem_max_iters", 80),
-     "Solver.Newton.n_max_iters": 20, "Solver.Newton.newton.n_max_iters": 2,
-     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
-)
-ARMADILLO_SPAGHETTI_BUDGET = Rule(
-    "5 substeps per 10 ms step for the armadillo spaghetti fall (maintainer, 2026-10-22), each of 1 outer iteration x 80 "
-    "sweeps for every VBD-family solver, the same 400 sweeps and more contact detections per 10 ms than the kyogre "
-    "budget's 5 x 80 without substeps: with 1 substep, AAAVBD diverged (NaN) at step 60 with every detector; with 5 it "
-    "stayed finite, with no inverted element, to 4 s. Newton's 20 outer iterations per step are split across the "
-    "substeps, 4 per substep with the kyogre budget's inner settings (2 Newton steps, CG rtol 1e-8, at most 4000 "
-    "iterations); untested.",
-    {"Integration.substeps": 5, **_per_solver("n_max_iters", 1), **_per_solver("n_subproblem_max_iters", 80),
-     "Solver.Newton.n_max_iters": 4, "Solver.Newton.newton.n_max_iters": 2,
-     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
-)
 DRAGON_IMPACT_BUDGET = Rule(
     "10 substeps per 10 ms step for the dragons' impact on the armadillo spaghetti (maintainer, 2026-10-23), each of "
-    "1 outer iteration x 100 sweeps for every VBD-family solver: at 5 substeps of 1 x 80 (the fall's budget), the "
+    "1 outer iteration x 100 sweeps for every VBD-family solver: at 5 substeps of 1 x 80, the "
     "pillars jittered after the impact (mid-span RMS speed 0.8-2.2 m/s, velocity reversal 0.7-1.0, rejected by the "
     "maintainer, against 0.35-0.55 m/s and 0.4-0.5 at 10 substeps, AAAVBD with the twist stopped at 5.0 s), and a "
     "thin feature at the left dragon's trailing end (375 nodes) settled into a flapping limit cycle (about 8 Hz, 20 cm "
     "range, 4-5 m/s, with the twist stopped at 4.0 or 5.0 s) that decays at 10 substeps (2.4 to 0.14 m/s over 7 s, "
-    "no 8 Hz component). Newton keeps the fall's 20 outer iterations per step, 2 per substep with 2 Newton steps and "
+    "no 8 Hz component). Newton gets 20 outer iterations per step, 2 per substep with 2 Newton steps and "
     "CG rtol 1e-8, at most 4000 iterations; untested on this scene.",
     {"Integration.substeps": 10, **_per_solver("n_max_iters", 1), **_per_solver("n_subproblem_max_iters", 100),
      "Solver.Newton.n_max_iters": 2, "Solver.Newton.newton.n_max_iters": 2,
@@ -220,13 +195,6 @@ CONTACT_CAPACITIES = Rule(
         "Contact.ContactStorage.n_vv_contact_capacity": 0.17,
         "Contact.ContactStorage.n_ee_contact_capacity": 0.0,
     },
-)
-MULTIMESH_FIX_NOTE = (
-    "Until the MultiMesh fix of 2026-10-22 (ConstructFromTriangleMesh's vertices are the nodes its triangles "
-    "reference), this scene's contact multimesh, built over its plane colliders, listed every FEM node as a vertex: "
-    "VertexSdf also detected from interior nodes, and GPU AAAVBD treated every node as a surface node (surface "
-    "parameters and stencils). AAAVBD results from before it used that classification, and its checkpoints from "
-    "before it don't resume (their per-vertex arrays have the old size)."
 )
 
 SCENES = {
@@ -311,75 +279,33 @@ SCENES = {
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, CONTACT_CAPACITIES],
     ),
-    "KyogreSpaghetti": Scene(
-        "defaults",
-        "data/scenarios/KyogreSpaghetti.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
-        "2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET, CONTACT_CAPACITIES],
-        ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
-         "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
-         "10 ms); going further would need a finer mesh (maintainer, 2026-10-21).",
-         MULTIMESH_FIX_NOTE],
-    ),
-    "ArmadilloSpaghetti.Fall": Scene(
-        "defaults",
-        "data/scenarios/ArmadilloSpaghetti.Fall.h5: the twist of KyogreSpaghetti.h5 (its floor and ceiling planes, "
-        "and its top and bottom ends turned at -180 and 180 deg/s from 0 s) on four round pillars, cylinders "
-        "0.1 m in diameter "
-        "(fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m "
-        "from the twist axis (0.735 m apart), around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, "
-        "Young's modulus 1e6, was 8e5 until it froze crushed, 2026-10-22; tet quality at least 0.23, triangle angles "
-        "at least 11 deg) whose waist (the slice at 50-55% of its height, where only the torso is) is near the twist "
-        "axis: lowered 15 cm along it (z from -0.75 to 0.45 m; floor 1.07 m below), then turned -10 deg about it and "
-        "moved (+10.0, -2.5) cm in xy (pose A, maintainer, 2026-10-23), with rest gaps of 4.8, 7.2, 7.7 and 2.6 cm to "
-        "the four pillars; 0.99M tets in all. Gravity (-9.81 m/s^2 in z) acts on every body. The armadillo's interior "
-        "core (its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
-        "transform until 1.5 s, so that the pillars, twisting from 0 s, tangle around it rather than push it up or "
-        "down, and then released (maintainer, 2026-10-22). Pose A makes all four pillars engage the armadillo (chosen "
-        "by a search over yaw and xy offset, with the pillars as taut lines between their twisting ends): its surface "
-        "vertices within dmin + band of each pillar were 289, 362, 270 and 392 at 1.5 s (previous pose: 232, 287, 441 "
-        "and 327), and after the release all four kept and gained contact (387, 441, 529 and 545 at 2.5 s), where in "
-        "the previous pose pillar 1 lost the armadillo and it squeezed out past pillar 3. Its 1.5 s release (AAAVBD, "
-        "5 substeps) ran to 2.5 s with at most one inverted element (worst -41% of its rest volume, recovered by "
-        "2.32 s) and speeds under 6 m/s. The copy held for the whole run (1000 s) is "
-        "data/scenarios/ArmadilloSpaghetti.Fall.PoseA.Held.h5: a release time is tried by shortening the hold in a "
-        "copy and resuming the held run from a checkpoint, since the windows are read from the scene file and "
-        "checkpoints carry only the anchors and step counter. Thin pillars close to the armadillo wrap it rather than "
-        "push it out (after the JGS2-GQ paper's scene). Earlier variants, in data/scenarios: .Previous.h5 (centered "
-        "at z = 0, the core held for 0.45 s), .Lowered.h5 (lowered only, held for 0.45 s: the twist moved the whole "
-        "armadillo rather than wrapping it), .Squeeze.h5 (the pillars' ends translated 10-28 cm toward the axis over "
-        "0.5 s, then the twist, the core held to 0.6 s: the pillars' mid-spans lagged their ends by ~0.3 s, and the "
-        "released armadillo fell almost freely), and .Held.h5 and .PoseCurrent.h5 (lowered only, held for the whole "
-        "run or to 1.5 s: one pillar strapped it to the other three, and once released, at 1.25 or 1.5 s, it "
-        "squeezed out past pillar 3 while elements inverted, to -54% of their rest volume at 2.82 s). The held nodes stay off the "
-        "surface: holding surface nodes pits the pillars' prescribed twist against "
-        "prescribed armadillo nodes in contact, with no feasible position, and the simulation froze",
-        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, ARMADILLO_SPAGHETTI_BUDGET, CONTACT_CAPACITIES],
-        ["It freezes at about step 175 (1.75 s): the unbounded twist keeps tightening the stiff pillars around the "
-         "soft armadillo, whose elements near (-0.68, 1.37, -0.42) m invert from step 170; its surface there folds "
-         "flat, contacts with the folded edge flip sign, and the step diverges. Every step runs its full budget with "
-         "the residual ~1e3 x its tolerance (2026-10-22, at Young's modulus 8e5; the maintainer then stiffened it to 1e6).",
-         "At 1 MPa without substeps (AAAVBD 5 x 80), it diverged (NaN) at step 60, with dev's and the detect-at-xt "
-         "detectors alike. With 5 substeps of 1 x 80 it stayed finite, with no inverted element, to 4 s: the "
-         "feasibility ratio stayed at most 0.26 (1.3 mm), the residual ratio (against the 2 ms substep's tolerance) "
-         "rose from ~130 at step 60 to ~4400 at step 400 as the pillars tangle, and steps took 3.3 s at 0.6 s and 13 s "
-         "at 4 s with the contacts (AAAVBD, 2026-10-22, in the previous pose, before the MultiMesh fix and the first "
-         "detection at xt).",
-         MULTIMESH_FIX_NOTE],
-    ),
     "ArmadilloSpaghetti.DragonImpact": Scene(
         "defaults",
-        "data/scenarios/ArmadilloSpaghetti.DragonImpact.h5: ArmadilloSpaghetti.Fall (pose A, the armadillo's core "
-        "released at 1.5 s) with the twist stopped at 4.0 s (720 deg per end; maintainer, 2026-10-24) and a Fixed "
-        "transform on the pillars' turned end nodes over [0, 1000) s, which keeps the ends where the rotation stopped, "
-        "plus two Stanford dragons (data/stanford-dragon_ftetwild.msh scaled to 1.5 m long, 51k nodes and 204k tets "
+        "data/scenarios/ArmadilloSpaghetti.DragonImpact.h5: four round pillars, cylinders 0.1 m in diameter "
+        "(fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m "
+        "from the twist axis (0.735 m apart), their top and bottom ends turned at -180 and 180 deg/s from 0 s, between "
+        "a floor and a ceiling plane 2 cm beyond the pillars' ends, around one soft armadillo (data/armadillo.mesh, "
+        "162k tets, 1.2 m tall, Young's modulus 1e6; tet quality at least 0.23, triangle angles at least 11 deg) whose "
+        "waist (the slice at 50-55% of its height, where only the torso is) is near the twist axis: lowered 15 cm "
+        "along it (z from -0.75 to 0.45 m; floor 1.07 m below), then turned -10 deg about it and moved (+10.0, -2.5) "
+        "cm in xy (pose A, maintainer, 2026-10-23), with rest gaps of 4.8, 7.2, 7.7 and 2.6 cm to the four pillars, "
+        "so that all four pillars engage it. Thin pillars close to the armadillo wrap it rather than push it out "
+        "(after the JGS2-GQ paper's scene). Gravity (-9.81 m/s^2 in z) acts on every body. The armadillo's interior "
+        "core (its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed "
+        "transform until 1.5 s, so that the twisting pillars tangle around it rather than push it up or down, and "
+        "then released (maintainer, 2026-10-22). The held nodes stay off the surface: holding surface nodes pits the "
+        "pillars' prescribed twist against prescribed armadillo nodes in contact, with no feasible position, and the "
+        "simulation froze. The twist stops at 4.0 s (720 deg per end; maintainer, 2026-10-24), and a Fixed "
+        "transform on the pillars' turned end nodes over [0, 1000) s keeps the ends where the rotation stopped. "
+        "Two Stanford dragons (data/stanford-dragon_ftetwild.msh scaled to 1.5 m long, 51k nodes and 204k tets "
         "each, Young's modulus 1e7, Poisson's ratio 0.45, 1000 kg/m^3) parked left (-x) and right (+x) of the twist "
         "axis, both leading with the mesh's higher, narrower +x end (the right one turned 180 deg about z): the left "
         "one's at the armadillo's feet (z -0.60 m), the right one's at its shoulders (z +0.25 m), both at y 1.45 m and "
         "1.1 and 1.3 m from the axis. Each is held by a Fixed transform over [0, 4.49) s and launched by a Translate "
         "over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its "
         "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
-        "the fall's frame at 4.49 s, its twist still on); released, it keeps that velocity. 1.40M tets in all",
+        "the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); "
+        "released, it keeps that velocity. 1.40M tets in all",
         [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
         ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
          "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
