@@ -196,13 +196,21 @@ CONTACT_CAPACITIES = Rule(
         "Contact.ContactStorage.n_ee_contact_capacity": 0.0,
     },
 )
+PENALTY_FLOOR = Rule(
+    "Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the effective "
+    "normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with BDF1 like the "
+    "former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it would floor the "
+    "penalty at 1e-4 at 10 ms.",
+    {"Contact.ContactDynamics.min_sigma_n": 1e4},
+)
 
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT, CONTACT_CAPACITIES],
+        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT, PENALTY_FLOOR,
+         CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
         "Celebration",
@@ -216,6 +224,7 @@ SCENES = {
                 "letters' edges ~4 cm.",
                 {"Contact.CDType.VertexSdf.max_dist": 0.3},
             ),
+            PENALTY_FLOOR,
             CONTACT_CAPACITIES,
         ],
         ["The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's."],
@@ -234,6 +243,7 @@ SCENES = {
             ),
             *SOLVERS,
             *HET_CONTACT,
+            PENALTY_FLOOR,
             CONTACT_CAPACITIES,
         ],
         ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
@@ -243,13 +253,13 @@ SCENES = {
         "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE,
-         CONTACT_CAPACITIES],
+         PENALTY_FLOOR, CONTACT_CAPACITIES],
     ),
     "Trampoline.StiffSoft": Scene(
         "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
-         *TRAMPOLINE, CONTACT_CAPACITIES],
+         *TRAMPOLINE, PENALTY_FLOOR, CONTACT_CAPACITIES],
     ),
     "Trampoline.SoftSoft": Scene(
         "Trampoline.SoftStiff.5Substeps",
@@ -261,6 +271,7 @@ SCENES = {
             *SOLVERS,
             *CONTACT,
             *TRAMPOLINE,
+            PENALTY_FLOOR,
             CONTACT_CAPACITIES,
         ],
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
@@ -269,7 +280,7 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -277,7 +288,7 @@ SCENES = {
         "CapsulesIntoBowl",
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
-        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, CONTACT_CAPACITIES],
+        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, PENALTY_FLOOR, CONTACT_CAPACITIES],
     ),
     "ArmadilloSpaghetti.DragonImpact": Scene(
         "defaults",
@@ -306,7 +317,8 @@ SCENES = {
         "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
         "the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); "
         "released, it keeps that velocity. 1.40M tets in all",
-        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
+        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, PENALTY_FLOOR,
+         CONTACT_CAPACITIES],
         ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
          "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
          "5.49 s is data/scenarios/ArmadilloSpaghetti.DragonImpact.TwistStop5s.h5.",
@@ -326,14 +338,14 @@ SCENES = {
         "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
-        [*SOLVERS, *CONTACT, CONTACT_CAPACITIES],
+        [*SOLVERS, *CONTACT, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
          "Young's modulus ~1e7."],
     ),
     "BasketOfOranges": Scene(
         "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *HET_CONTACT, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
