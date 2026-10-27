@@ -61,7 +61,7 @@ The normal penalty is `gamma * kc` and the friction penalty is `gammaf * kc`. `v
 **Differences on the GPU** (`python/tools/sim/gpu/contact`):
 - Detection is pluggable: OGC or vertex-SDF.
 - Penalty adaptivity uses a GPU-only enum.
-- Penalties are floored at `min_sigma_n`.
+- Penalties are floored at `h2 * min_sigma_n` (a stiffness times the solve's BetaTilde²).
 - Dual state is warm-started across constraint-set rebuilds.
 
 Expect small numerical differences in the contact model between the two sides. Treat large ones as bugs.
