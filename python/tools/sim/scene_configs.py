@@ -304,7 +304,8 @@ SCENES = {
         "1.1 and 1.3 m from the axis. Each is held by a Fixed transform over [0, 4.49) s and launched by a Translate "
         "over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its "
         "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
-        "the bodies' positions at 4.49 s in ArmadilloSpaghetti.Fall.h5, its twist still on); released, it keeps that velocity. 1.40M tets in all",
+        "the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); "
+        "released, it keeps that velocity. 1.40M tets in all",
         [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, CONTACT_CAPACITIES],
         ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
          "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
