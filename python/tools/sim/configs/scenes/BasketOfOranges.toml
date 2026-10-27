@@ -1,7 +1,7 @@
 # Scene config: BasketOfOranges, every serialized parameter written out (diff it against configs/paper).
 # For: a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded).
 # Source: configs/paper/BasketOfOranges.toml. Keys not listed below have the source's values.
-# Generated 2026-10-22 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -26,6 +26,11 @@
 #     Solver.Newton.n_max_iters = 30 (source 1)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
+# - Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the
+#   effective normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with
+#   BDF1 like the former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it
+#   would floor the penalty at 1e-4 at 10 ms.
+#     Contact.ContactDynamics.min_sigma_n = 10000.0 (source 1.0)
 # - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
 #   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
 #   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
@@ -60,7 +65,7 @@ gammaf = 10000.0
 gammaf_adaptive = 0.01
 gamman = 20000.0
 gamman_adaptive = 1.0
-min_sigma_n = 1.0
+min_sigma_n = 10000.0
 mu_f = 0.30000001192092896
 penalty_adaptivity = 1
 

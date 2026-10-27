@@ -396,7 +396,7 @@ def _compute_rayleigh_vv(
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
         if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
-            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            # Empty slots hold the floor, so the reduced penalty is at least h2 * min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -422,7 +422,7 @@ def _compute_rayleigh_ve(
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ve.prefix[n_u]:  # type: ignore
         if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
-            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            # Empty slots hold the floor, so the reduced penalty is at least h2 * min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -456,7 +456,7 @@ def _compute_rayleigh_vf(
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.vf.prefix[n_u]:  # type: ignore
         if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
-            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            # Empty slots hold the floor, so the reduced penalty is at least h2 * min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -493,7 +493,7 @@ def _compute_rayleigh_ee(
     c = wp.tid()  # type: ignore
     if wp.uint64(c) >= contacts.ee.prefix[n_u]:  # type: ignore
         if penalty_adaptivity != PENALTY_ADAPTIVITY_CONSTANT:
-            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            # Empty slots hold the floor, so the reduced penalty is at least h2 * min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
         if penalty_adaptivity == PENALTY_ADAPTIVITY_CONSTANT:
             assert False, "No Rayleigh quotients when constant penalty adaptivity"
@@ -585,7 +585,7 @@ def _compute_hessian_rayleigh(
     n = wp.vec3f()
     if kind == 0:
         if wp.uint64(c) >= contacts.vv.prefix[n_u]:  # type: ignore
-            # Empty slots hold the floor, so the reduced penalty is at least min_sigma_n / gamma_n.
+            # Empty slots hold the floor, so the reduced penalty is at least h2 * min_sigma_n / gamma_n.
             Qc[offset + c] = Qcmin  # type: ignore
             return
         n = contacts.vv_bases.n[c]
@@ -672,8 +672,12 @@ class Params(SerializableMixin):
                       lets lambda push until the gap reaches lambda / sigma).
         gammaf_adaptive : Friction counterpart of ``gamman_adaptive``, C++ ``gammaf``. The default
                       1e-2 is small for the same reason as ``gammaf``'s (at 0.1, sliding bodies creep).
-        min_sigma_n : Floor of the effective normal penalty ``gamman_adaptive * sigma_n`` in both
-                      adaptive modes.
+        min_sigma_n : Floor stiffness (N/m) of the effective normal penalty in both adaptive modes:
+                      ``gamman_adaptive * sigma_n >= h2 * min_sigma_n``, with ``h2`` the solve's scale of
+                      the elastic energy (``FemElastoDynamics.h2``: ``BetaTilde^2`` of the substep, 1 for
+                      static problems), as the stiffness part of the vertex Hessians the quotients come
+                      from. The default 1e4 gives a floor of 1 at h = 10 ms (BDF1) and 0.01 at 1 ms.
+                      **Changed meaning (2026-10-26):** it was the floor itself, independent of h.
         penalty_adaptivity : TIMESTEP (default), SUBPROBLEM or CONSTANT. CONSTANT: ``sigma_n = sigma_f = dt^2``, so the effective penalties
                       ``gamman * dt^2`` and ``gammaf * dt^2`` are stiffnesses scaled like
                       ``dt^2 Psi`` (1e4 * 1e-4 = 1 by default). TIMESTEP / SUBPROBLEM:
@@ -702,7 +706,9 @@ class Params(SerializableMixin):
         1e-2, "Friction penalty scaling with adaptive penalties, as gamman_adaptive (see gammaf on the Coulomb cap)"
     )
     min_sigma_n = DocField(
-        1.0, "Floor of the effective normal penalty with adaptive penalties (gamman_adaptive * sigma_n)"
+        1e4,
+        "Floor stiffness (N/m) of the effective normal penalty with adaptive penalties: gamman_adaptive * sigma_n "
+        ">= h2 * min_sigma_n, h2 the solve's BetaTilde^2 (1 for static problems)",
     )
     # TODO: No penalty is right for every scene yet (2026-10-20, circle trampolines with sphere, released at 2 s):
     # - The paper configs' CONSTANT gamman 2e4 (sigma 2 at dt 0.01) lets the sphere penetrate 1-5 cm on impact.
@@ -887,7 +893,19 @@ class MeshDynamics:
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
 
-    def adapt_penalty_parameters(self):
+    def penalty_floor(self, h2: float) -> float:
+        """The effective normal penalty's floor, ``h2 * min_sigma_n``, for a solve whose elastic energy is
+        scaled by ``h2`` (``FemElastoDynamics.h2``). The quotient kernels get it divided by ``gamma_n``.
+
+        It is a float32 product, the precision of ``dt`` (``pbat::Scalar``) and of the kernels: the scenes'
+        10 ms is the float32 0.00999999977, whose square times 1e4 rounds to 1 - 6e-8 from float64 but is
+        exactly 1 in float32, the former floor."""
+        return float(np.float32(h2) * np.float32(self.sigma_n_min))
+
+    def adapt_penalty_parameters(self, h2: float):
+        """Adapt the penalties to the vertex Hessians ``Hi`` (the VBD family): ``sigma_n = sigma_f`` = the
+        largest contact Rayleigh quotient of ``Hi``, floored at :meth:`penalty_floor` ``(h2) / gamma_n``.
+        ``h2`` is the scale of ``Hi``'s elastic part; it is host-side, fixed per capture."""
         if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
             return
         vv_cap, ve_cap, vf_cap, _ = self.contacts.capacity
@@ -918,7 +936,7 @@ class MeshDynamics:
                     cs.n_u,
                     self._data.Qc,
                     offset,
-                    self.sigma_n_min / self._data.gamma_n,
+                    self.penalty_floor(h2) / self._data.gamma_n,
                     int(self.params.penalty_adaptivity.value),  # type: ignore
                 ],
                 stream=stream,
@@ -932,17 +950,18 @@ class MeshDynamics:
     # by the stiffest contact's Rayleigh quotient also applies to soft-side contacts, which may worsen CG
     # conditioning and stiffen soft-on-stiff contact (suspected, unmeasured, for Newton on the
     # heterogeneous trampoline + sphere and its CG iteration counts).
-    def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array):
+    def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array, h2: float):
         """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
         (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
         ``grad c^T H grad c / |grad c|^2`` over the stencil's blocks of ``H``, floored at
-        ``min_sigma_n / gamma_n``. :meth:`adapt_penalty_parameters` (the VBD family) uses the vertex
+        :meth:`penalty_floor` ``(h2) / gamma_n``. :meth:`adapt_penalty_parameters` (the VBD family) uses the vertex
         Hessians ``Hi`` instead, i.e. only the diagonal blocks.
 
         Args:
             H (warp.sparse.BsrMatrix): Hessian with 3x3 blocks, one block row per node, without contact
                 terms. Blocks of Dirichlet nodes (``dmask``) are skipped.
             dmask (wp.array): (N,) int32 Dirichlet mask.
+            h2 (float): Scale of ``H``'s elastic part (``FemElastoDynamics.h2``), for the floor.
         """
         if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
             return
@@ -972,7 +991,7 @@ class MeshDynamics:
                     cs.n_u,
                     self._data.Qc,
                     offset,
-                    self.sigma_n_min / self._data.gamma_n,
+                    self.penalty_floor(h2) / self._data.gamma_n,
                 ],
                 stream=stream,
             )
@@ -1104,6 +1123,49 @@ class TestNewtonFrictionConsistency(unittest.TestCase):
                 # Only the gradient stores, and only a positive estimate into an unset limit
                 expected = before if before >= 0 else (estimate if estimate > 0 else float(FRICTION_LIMIT_UNSET))
                 self.assertAlmostEqual(limit[k], expected, places=6)
+
+
+class TestPenaltyFloor(unittest.TestCase):
+    """The adaptive penalties' floor, gamma_n * sigma_n >= h2 * min_sigma_n, for the VBD family and GPU Newton, in
+    dynamic (h2 = dt^2) and static (h2 = 1) problems: two tets far apart, so every contact slot is empty and holds
+    the floor."""
+
+    def test_floor_is_h2_times_stiffness(self):
+        from pbatoolkit import pbat, pypbat
+        from ...state import SimulationState, SolverType, load_params
+        from ..newton import solver as newton_solver
+        from ..vbd import solver as vbd_solver
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float64)
+        X = np.vstack([V, V + [5.0, 0.0, 0.0]])
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.array([[0, 1, 2, 3], [4, 5, 6, 7]]).T)
+        fem_cpu.set_mass_matrix(1e3)
+        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+        fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+        state = SimulationState(fem_cpu, load_params(fem_cpu))
+        state.contact_params.min_sigma_n = 3e4
+        state.contact_params.gamman_adaptive = 2.0
+        state.reset()
+        fem, contact = state.fem, state.contact
+        adapt = {
+            "VBD": lambda: vbd_solver.compute_augmented_lagrangian_penalty(fem, contact, state.params[SolverType.VBD]),
+            "Newton": lambda: newton_solver.adapt_penalty_parameters(fem, contact, state.params[SolverType.Newton]),
+        }
+        for static, h2 in ((False, 1e-4), (True, 1.0)):
+            fem.static = static
+            self.assertAlmostEqual(fem.h2 / h2, 1.0, places=6)  # dt is the float32 0.01
+            self.assertAlmostEqual(contact.penalty_floor(fem.h2) / (3e4 * h2), 1.0, places=6)
+            for name, run in adapt.items():
+                with self.subTest(static=static, solver=name):
+                    contact.data.sigma_n.fill_(-1.0)
+                    run()
+                    sigma_n = float(contact.data.sigma_n.numpy()[0])
+                    self.assertAlmostEqual(2.0 * sigma_n / (3e4 * h2), 1.0, places=6)
+        # The default stiffness at 10 ms (BDF1, no substeps) is exactly the former floor of 1
+        fem.static = False
+        contact.sigma_n_min = Params().min_sigma_n
+        self.assertEqual(contact.penalty_floor(fem.h2), 1.0)
 
 
 if __name__ == "__main__":

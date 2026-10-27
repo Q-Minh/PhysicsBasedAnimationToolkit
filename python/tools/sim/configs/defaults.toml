@@ -1,5 +1,5 @@
 # Every parameter the GPU simulators serialize, with its code default.
-# Generated 2026-10-20 with config.params_dict on a default SimulationState. Regenerate it when
+# Generated 2026-10-26 with config.params_dict on a default SimulationState. Regenerate it when
 # parameters are added (see README.md). Useful as a reference or as an `extends` base.
 
 [Contact.CDType.OGC]
@@ -22,7 +22,7 @@ gammaf = 1000.0
 gammaf_adaptive = 0.01
 gamman = 10000.0
 gamman_adaptive = 1.0
-min_sigma_n = 1.0
+min_sigma_n = 10000.0
 mu_f = 0.2
 penalty_adaptivity = 1
 
