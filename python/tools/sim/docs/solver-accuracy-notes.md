@@ -709,8 +709,9 @@ Hessians' largest contact Rayleigh quotient) is below that floor here was not ch
 
 **Not tested** (ideas only):
 - Hysteresis on the vertex-edge / vertex-face choice, or keeping a carried multiplier when only the feature changed.
-- Whether the floored penalty sets the overshoot threshold: with σ_n = 1, λ_n / σ_n is about |c_n|, a few
-  hundredths of a millimetre.
+- Whether the floor sits above the adaptive value at 10 substeps (h = 1 ms): the stiffness part of the vertex
+  Hessians scales with h², 100x smaller than at one substep. If it does, each dual update takes a larger step than
+  the vertex stiffness supports, and inexact subproblems would then overshoot past the margin.
 - Which non-pillar contacts set the alternating penetration.
 
 **For the paper.** Extra outer iterations don't lose multipliers through the contact set here; the projection
