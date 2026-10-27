@@ -10,6 +10,7 @@
 #   Contact.CDType.VertexSdf.band
 #   Contact.ContactDynamics.gammaf_adaptive
 #   Contact.ContactDynamics.gamman_adaptive
+#   Contact.ContactDynamics.multiplier_step
 #   Contact.ContactDynamics.penalty_stiffness
 #   Solver.AAAVBD.betaup
 #   Solver.AAAVBD.kp
@@ -79,6 +80,7 @@ gamman = 20000.0
 gamman_adaptive = 1.0
 min_sigma_n = 1.0
 mu_f = 0.30000001192092896
+multiplier_step = 1.0
 penalty_adaptivity = 0
 penalty_stiffness = 0
 

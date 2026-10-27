@@ -51,6 +51,7 @@ class MeshDynamicsData:
     dmin: wp.float32
     mu_f: wp.float32  # Friction coefficient
     decay: wp.float32  # Rate of decay for deactivating constraints
+    multiplier_step: wp.float32  # Scale of the full dual update's multiplier steps (1: the standard AL update)
     in_contact: wp.array[
         wp.int32
     ]  # (# surface vertices,) 1 if the vertex's contact gather has any pair, else 0
@@ -95,7 +96,12 @@ def _apply_dual_update(
     request_slack_update: bool,
     request_decay_update: bool,
     request_lagrange_multiplier_update: bool,
+    multiplier_step: wp.float32,
 ):
+    """One contact's dual update: slack, decay weight and multipliers, as requested. ``multiplier_step`` (alpha)
+    scales the multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha
+    sigma_f c_f, projected onto the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++),
+    computed as before: lambda_n - sigma_n c_n while the new slack is 0, else 0."""
     # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
     lambda_n_k = lambda_n[k]
     assert sigma_n > wp.float32(0)
@@ -114,7 +120,17 @@ def _apply_dual_update(
     if request_slack_update:
         s[k] = new_s  # type: ignore
     # --- Lagrange multipliers ---
-    if request_lagrange_multiplier_update:
+    if request_lagrange_multiplier_update and multiplier_step != wp.float32(1):
+        lambda_f_k = lambda_f[k]
+        new_lambda_n = wp.max(wp.float32(0), lambda_n_k - multiplier_step * sigma_n * c_n)
+        new_lambda_f = lambda_f_k - multiplier_step * sigma_f * c_f
+        friction_limit = mu_friction * new_lambda_n
+        lf_sq = wp.dot(new_lambda_f, new_lambda_f)  # type: ignore
+        if lf_sq > friction_limit * friction_limit:  # type: ignore
+            new_lambda_f = new_lambda_f * (friction_limit / wp.sqrt(lf_sq))
+        lambda_n[k] = new_lambda_n  # type: ignore
+        lambda_f[k] = new_lambda_f  # type: ignore
+    elif request_lagrange_multiplier_update:
         if new_s == wp.float32(0):
             lambda_f_k = lambda_f[k]
             new_lambda_n = lambda_n_k - sigma_n * c_n
@@ -214,6 +230,7 @@ def _update_dual_vv(
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
+        contact.multiplier_step,
     )
 
 
@@ -268,6 +285,7 @@ def _update_dual_ve(
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
+        contact.multiplier_step,
     )
 
 
@@ -322,6 +340,7 @@ def _update_dual_vf(
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
+        contact.multiplier_step,
     )
 
 
@@ -381,6 +400,7 @@ def _update_dual_ee(
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
+        contact.multiplier_step,
     )
 
 
@@ -724,6 +744,15 @@ class Params(SerializableMixin):
                       and ``gammaf_adaptive`` are dimensionless multipliers (~1). Adaptive modes
                       also make the vertex solves read other-color contact partners at current
                       positions, which keeps such penalties stable.
+        multiplier_step : Scale alpha of the full dual update's multiplier steps (GPU only):
+                      ``lambda_n <- max(0, lambda_n - alpha sigma_n c_n)``, and ``lambda_f <- lambda_f - alpha
+                      sigma_f c_f`` projected onto the Coulomb cone of the new ``lambda_n``. The penalties of
+                      the subproblem and of the slack refresh are unchanged. 1 (default) is the standard AL
+                      update, C++'s, and keeps its arithmetic bit for bit. Below 1, each update moves the
+                      multipliers part of the way, and a contact that ends a subproblem slightly separated
+                      (lambda_n / sigma_n < c_n < lambda_n / (alpha sigma_n)) keeps part of its multiplier
+                      instead of losing all of it. On DragonImpact, alpha = 0.5 kept AAAVBD at 10 substeps
+                      of 1 x 40 sweeps past the step where the standard update diverges (solver notes).
         penalty_stiffness : With adaptive penalties, one penalty for all contacts or one per contact,
                       C++ ``vbd::Params::ePenaltyStiffness`` (``pbat.sim.algorithm.vbd.SALPenaltyStiffness``).
                       GlobalMaxRayleighQuotient (default): ``sigma_n = sigma_f`` = the largest contact
@@ -772,6 +801,11 @@ class Params(SerializableMixin):
         "CONSTANT: penalties gamman * dt^2 and gammaf * dt^2. TIMESTEP / SUBPROBLEM: sigma_n = sigma_f = the largest "
         "contact Rayleigh quotient of the vertex Hessians, recomputed per time step / per subproblem, times "
         "gamman_adaptive / gammaf_adaptive",
+    )
+    multiplier_step = DocField(
+        1.0,
+        "Scale alpha of the full dual update's multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n), "
+        "and lambda_f's step likewise before the Coulomb cone. 1 is the standard augmented Lagrangian update",
     )
     penalty_stiffness = DocField(
         pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
@@ -836,6 +870,7 @@ class MeshDynamics:
         self._data.dmin = self.params.dmin
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
+        self._data.multiplier_step = self.params.multiplier_step
         self._data.in_contact = wp.zeros(n_verts, dtype=wp.int32)
         self.sigma_n_min = self.params.min_sigma_n
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
@@ -1094,7 +1129,7 @@ def _slack_only_dual_update(
     k = wp.tid()
     _apply_dual_update(
         c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
-        wp.float32(0.5), True, False, False,
+        wp.float32(0.5), True, False, False, wp.float32(1),
     )
 
 
@@ -1121,6 +1156,76 @@ class TestSlackOnlyDualUpdate(unittest.TestCase):
             self.assertEqual(gamma.numpy().tolist(), [0.25] * 4)
             self.assertEqual(lam.numpy().tolist(), lambda_n)
             np.testing.assert_allclose(lam_f.numpy(), [(0.1, 0.2)] * 4, rtol=1e-7)
+
+
+@wp.kernel
+def _full_dual_update(
+    c_n: wp.array[wp.float32],
+    c_f: wp.array[wp.vec2f],
+    s: wp.array[wp.float32],
+    gamma: wp.array[wp.float32],
+    lambda_n: wp.array[wp.float32],
+    lambda_f: wp.array[wp.vec2f],
+    sigma_n: wp.float32,
+    sigma_f: wp.float32,
+    mu_f: wp.float32,
+    multiplier_step: wp.float32,
+):
+    k = wp.tid()
+    _apply_dual_update(
+        c_n[k], c_f[k], k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True, True, True,
+        multiplier_step,
+    )
+
+
+class TestMultiplierStep(unittest.TestCase):
+    """The full dual update's multipliers with Params.multiplier_step (Warp's CPU device): alpha = 1 is the standard
+    update (lambda_n - sigma_n c_n while the new slack is 0, else 0), alpha < 1 lambda_n <- max(0, lambda_n - alpha
+    sigma_n c_n), with lambda_f's step scaled the same and projected onto the Coulomb cone."""
+
+    def _run(self, alpha):
+        sigma_n, sigma_f, mu_f = 100.0, 10.0, 0.5
+        c_n = [-0.01, 0.005, 0.015, 0.03, 0.0]  # gap - dmin: penetrating, inside lambda/sigma, between, beyond, at
+        lam = [0.5, 1.0, 1.0, 1.0, 0.0]
+        c_f = [(0.01, 0.0), (0.0, -0.02), (0.05, 0.05), (0.01, 0.0), (0.0, 0.0)]
+        lam_f = [(0.1, 0.0), (0.0, 0.2), (0.1, 0.1), (0.0, 0.0), (0.0, 0.0)]
+        with wp.ScopedDevice("cpu"):
+            ln = wp.array(lam, dtype=wp.float32)
+            lf = wp.array(lam_f, dtype=wp.vec2f)
+            s = wp.zeros(len(lam), dtype=wp.float32)
+            g = wp.ones(len(lam), dtype=wp.float32)
+            wp.launch(_full_dual_update, dim=len(lam), inputs=[
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, ln, lf, sigma_n, sigma_f, mu_f,
+                alpha])
+            return (np.array(c_n), np.array(lam), np.array(c_f), np.array(lam_f), sigma_n, sigma_f, mu_f,
+                    ln.numpy(), lf.numpy())
+
+    @staticmethod
+    def _cone(lf, ln, mu):
+        out = lf.copy()
+        for k in range(len(ln)):
+            n = np.linalg.norm(out[k])
+            if n > mu * ln[k]:
+                out[k] *= mu * ln[k] / n if n > 0 else 0.0
+        return out
+
+    def test_standard(self):
+        c_n, lam, c_f, lam_f, sn, sf, mu, ln, lf = self._run(1.0)
+        keep = c_n - lam / sn <= 0  # new slack 0
+        expected_n = np.where(keep, lam - sn * c_n, 0.0)
+        expected_f = np.where(keep[:, None], self._cone(lam_f - sf * c_f, expected_n, mu), 0.0)
+        np.testing.assert_allclose(ln, expected_n, rtol=1e-6, atol=1e-7)
+        np.testing.assert_allclose(lf, expected_f, rtol=1e-6, atol=1e-7)
+        self.assertEqual(ln[2], 0.0)  # c_n = 0.015 > lambda / sigma = 0.01: zeroed
+
+    def test_half_step(self):
+        c_n, lam, c_f, lam_f, sn, sf, mu, ln, lf = self._run(0.5)
+        expected_n = np.maximum(0.0, lam - 0.5 * sn * c_n)
+        expected_f = self._cone(lam_f - 0.5 * sf * c_f, expected_n, mu)
+        np.testing.assert_allclose(ln, expected_n, rtol=1e-6, atol=1e-7)
+        np.testing.assert_allclose(lf, expected_f, rtol=1e-6, atol=1e-7)
+        self.assertGreater(ln[2], 0.0)  # 0.01 < c_n = 0.015 < lambda / (alpha sigma) = 0.02: keeps a part
+        self.assertEqual(ln[3], 0.0)  # beyond 0.02: zeroed
 
 
 class TestNewtonFrictionConsistency(unittest.TestCase):

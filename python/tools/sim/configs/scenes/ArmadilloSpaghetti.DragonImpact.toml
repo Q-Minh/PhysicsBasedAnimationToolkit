@@ -72,6 +72,7 @@ gamman = 10000.0
 gamman_adaptive = 1.0
 min_sigma_n = 10000.0
 mu_f = 0.2
+multiplier_step = 1.0
 penalty_adaptivity = 1
 penalty_stiffness = 0
 
