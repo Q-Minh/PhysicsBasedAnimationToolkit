@@ -7,12 +7,12 @@
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
 #   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
 #     Solver.AAAVBD.gammaupS = 0.3 (source 0.5)
-# - Contact for the armadillo spaghetti scenes, the kyogre spaghetti scene's (maintainer, 2026-10-21) with the
-#   source's 5 cm VertexSdf max_dist: band 5 mm and a 1 cm AL margin dmin. The scene file's floor and ceiling
-#   planes sit 2 cm from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report
-#   no contacts. max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex
-#   inside a pillar (10 cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and
-#   saves about 21% of DragonImpact's step at 7.0 s with identical pairs.
+# - Contact for the armadillo spaghetti scene: VertexSdf band 5 mm and a 1 cm AL margin dmin (maintainer,
+#   2026-10-21), with the source's 5 cm VertexSdf max_dist. The scene file's floor and ceiling planes sit 2 cm
+#   from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report no contacts.
+#   max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex inside a pillar
+#   (10 cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of
+#   DragonImpact's step at 7.0 s with identical pairs.
 #     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
 #     Contact.ContactDynamics.dmin = 0.01 (source 0.002)
 # - 10 substeps per 10 ms step for the dragons' impact on the armadillo spaghetti (maintainer, 2026-10-23), each

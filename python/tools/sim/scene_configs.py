@@ -136,8 +136,8 @@ KYOGRE_CONTACT = Rule(
     {"Contact.CDType.VertexSdf.max_dist": 0.2, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
 )
 ARMADILLO_SPAGHETTI_CONTACT = Rule(
-    "Contact for the armadillo spaghetti scenes, the kyogre spaghetti scene's (maintainer, 2026-10-21) with the "
-    "source's 5 cm VertexSdf max_dist: band 5 mm and a 1 cm AL margin dmin. The scene file's floor and ceiling planes "
+    "Contact for the armadillo spaghetti scene: VertexSdf band 5 mm and a 1 cm AL margin dmin (maintainer, "
+    "2026-10-21), with the source's 5 cm VertexSdf max_dist. The scene file's floor and ceiling planes "
     "sit 2 cm from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report no contacts. "
     "max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex inside a pillar (10 "
     "cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of "
