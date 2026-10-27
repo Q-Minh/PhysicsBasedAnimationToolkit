@@ -129,12 +129,6 @@ SPHERE_BAND = Rule(
     {"Contact.CDType.VertexSdf.band": 1e-2},
 )
 TRAMPOLINE = [TRAMPOLINE_DETECTION, SPHERE_BAND]
-KYOGRE_CONTACT = Rule(
-    "Contact for the kyogre spaghetti scene (maintainer, 2026-10-21): VertexSdf max_dist 20 cm and band 5 mm, and a "
-    "1 cm AL margin dmin. The scene file's floor and ceiling planes sit 2 cm from the pillars' ends, beyond the "
-    "detection distance dmin + band = 1.5 cm, so they report no contacts.",
-    {"Contact.CDType.VertexSdf.max_dist": 0.2, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
-)
 ARMADILLO_SPAGHETTI_CONTACT = Rule(
     "Contact for the armadillo spaghetti scene: VertexSdf band 5 mm and a 1 cm AL margin dmin (maintainer, "
     "2026-10-21), with the source's 5 cm VertexSdf max_dist. The scene file's floor and ceiling planes "
@@ -143,14 +137,6 @@ ARMADILLO_SPAGHETTI_CONTACT = Rule(
     "cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of "
     "DragonImpact's step at 7.0 s with identical pairs.",
     {"Contact.CDType.VertexSdf.max_dist": 0.05, "Contact.CDType.VertexSdf.band": 5e-3, "Contact.ContactDynamics.dmin": 1e-2},
-)
-KYOGRE_BUDGET = Rule(
-    "The maintainer's budget for the kyogre spaghetti scene (2026-10-21, tested with AAAVBD): no substeps, 5 x 80 = "
-    "400 sweeps per step for every VBD-family solver; Newton 20 x 2 with a tighter CG (rtol 1e-8, at most 4000 "
-    "iterations), since the energy stiffens as the pillars tangle (maintainer).",
-    {"Integration.substeps": 1, **_per_solver("n_max_iters", 5), **_per_solver("n_subproblem_max_iters", 80),
-     "Solver.Newton.n_max_iters": 20, "Solver.Newton.newton.n_max_iters": 2,
-     "Solver.Newton.LinearSolver.rtol": 1e-8, "Solver.Newton.LinearSolver.n_max_iters": 4000},
 )
 DRAGON_IMPACT_BUDGET = Rule(
     "10 substeps per 10 ms step for the dragons' impact on the armadillo spaghetti (maintainer, 2026-10-23), each of "
@@ -209,13 +195,6 @@ CONTACT_CAPACITIES = Rule(
         "Contact.ContactStorage.n_vv_contact_capacity": 0.17,
         "Contact.ContactStorage.n_ee_contact_capacity": 0.0,
     },
-)
-MULTIMESH_FIX_NOTE = (
-    "Until the MultiMesh fix of 2026-10-22 (ConstructFromTriangleMesh's vertices are the nodes its triangles "
-    "reference), this scene's contact multimesh, built over its plane colliders, listed every FEM node as a vertex: "
-    "VertexSdf also detected from interior nodes, and GPU AAAVBD treated every node as a surface node (surface "
-    "parameters and stencils). AAAVBD results from before it used that classification, and its checkpoints from "
-    "before it don't resume (their per-vertex arrays have the old size)."
 )
 
 SCENES = {
@@ -299,16 +278,6 @@ SCENES = {
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
         [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, CONTACT_CAPACITIES],
-    ),
-    "KyogreSpaghetti": Scene(
-        "defaults",
-        "data/scenarios/KyogreSpaghetti.h5: sessions/kyogre-spaghetti_3.h5 plus a floor and a ceiling plane "
-        "2 cm beyond the four twisted pillars (the pillars span 0.2 x 0.2 x 3.6 m; two Kyogres between them)",
-        [*SOLVERS, PENALTY, KYOGRE_CONTACT, KYOGRE_BUDGET, CONTACT_CAPACITIES],
-        ["It explodes at time step 378: the pillars tangle so much that some surface triangles invert or degenerate, "
-         "and the contact energies and derivatives become unreliable. Simulate at most 377 steps (3.77 s at dt = "
-         "10 ms); going further would need a finer mesh (maintainer, 2026-10-21).",
-         MULTIMESH_FIX_NOTE],
     ),
     "ArmadilloSpaghetti.DragonImpact": Scene(
         "defaults",
