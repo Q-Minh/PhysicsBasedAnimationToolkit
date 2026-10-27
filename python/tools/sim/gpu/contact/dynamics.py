@@ -8,6 +8,8 @@ from ..common import profiling
 import cupy as cp
 import cuda.compute
 import numpy as np
+import warp.sparse
+from pbatoolkit import pbat
 
 from .mesh import pairs
 from .constraints import (
@@ -39,9 +41,12 @@ class MeshDynamicsData:
         wp.float32
     ]  # (cvv capacity + cve capacity + cvf capacity + cee capacity,) constraint Rayleigh quotients w.r.t. dynamics hessian
 
+    Qc_offsets: wp.vec4i  # Offset of each contact type's (vv, ve, vf, ee) slots in Qc
+    local_penalty: wp.int32  # 1: each contact's penalty is its own Qc (LocalMaxRayleighQuotient), 0: sigma_n / sigma_f
+
     gamma_n: wp.float32  # Multiplier of sigma_n
     gamma_f: wp.float32  # Multiplier of sigma_f
-    sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter
+    sigma_n: wp.array[wp.float32]  # (1,) normal contact penalty parameter (with local penalties, the largest Qc)
     sigma_f: wp.array[wp.float32]  # (1,) friction contact penalty parameter
     dmin: wp.float32
     mu_f: wp.float32  # Friction coefficient
@@ -49,6 +54,29 @@ class MeshDynamicsData:
     in_contact: wp.array[
         wp.int32
     ]  # (# surface vertices,) 1 if the vertex's contact gather has any pair, else 0
+
+
+CONTACT_VV = wp.constant(0)
+CONTACT_VE = wp.constant(1)
+CONTACT_VF = wp.constant(2)
+CONTACT_EE = wp.constant(3)
+
+
+@wp.func
+def normal_penalty(contact: MeshDynamicsData, kind: wp.int32, c: wp.int32) -> wp.float32:  # type: ignore
+    """Effective normal penalty of contact ``c`` of type ``kind`` (``CONTACT_*``): ``gamma_n`` times its own
+    floored Rayleigh quotient with per-contact penalties, else times the global ``sigma_n``."""
+    if contact.local_penalty != 0:
+        return contact.gamma_n * contact.Qc[contact.Qc_offsets[kind] + c]
+    return contact.gamma_n * contact.sigma_n[0]
+
+
+@wp.func
+def friction_penalty(contact: MeshDynamicsData, kind: wp.int32, c: wp.int32) -> wp.float32:  # type: ignore
+    """Effective friction penalty of contact ``c``, as :func:`normal_penalty` with ``gamma_f`` and ``sigma_f``."""
+    if contact.local_penalty != 0:
+        return contact.gamma_f * contact.Qc[contact.Qc_offsets[kind] + c]
+    return contact.gamma_f * contact.sigma_f[0]
 
 
 @wp.func
@@ -169,8 +197,8 @@ def _update_dual_vv(
     c_n = wp.dot(xi - xj, n) - contact.dmin  # type: ignore
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VV, c)
+    sigma_f = friction_penalty(contact, CONTACT_VV, c)
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -223,8 +251,8 @@ def _update_dual_ve(
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VE, c)
+    sigma_f = friction_penalty(contact, CONTACT_VE, c)
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -277,8 +305,8 @@ def _update_dual_vf(
     du = (xi - xti) - (xc - xtc)
     c_n = wp.dot(dx, n) - contact.dmin  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_VF, c)
+    sigma_f = friction_penalty(contact, CONTACT_VF, c)
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -336,8 +364,8 @@ def _update_dual_ee(
     du = (xc1 - xtc1) - (xc2 - xtc2)
     c_n = wp.dot(dx, n) - contact.dmin
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
+    sigma_n = normal_penalty(contact, CONTACT_EE, c)
+    sigma_f = friction_penalty(contact, CONTACT_EE, c)
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
@@ -405,7 +433,9 @@ def _compute_rayleigh_vv(
     v = contacts.vv.v[c]
     n = contacts.vv_bases.n[c]
     i, j = meshes.V[u], meshes.V[v]
-    Qc[offset + c] = wp.float32(0.5) * (wp.dot(n, Hi[i] @ n) + wp.dot(n, Hi[j] @ n))  # type: ignore
+    q = wp.float32(0.5) * (wp.dot(n, Hi[i] @ n) + wp.dot(n, Hi[j] @ n))  # type: ignore
+    # Each slot holds at least the floor: a contact's own penalty (local) and the max (global) are floored
+    Qc[offset + c] = wp.max(q, Qcmin)  # type: ignore
 
 
 @wp.kernel
@@ -435,11 +465,13 @@ def _compute_rayleigh_ve(
     i = meshes.V[v]
     j = halfedges.incoming_vertex(meshes.F, he)  # type: ignore
     k = halfedges.outgoing_vertex(meshes.F, he)  # type: ignore
-    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+    q = wp.float32(0.5) * (  # type: ignore
         wp.dot(n, Hi[i] @ n)
         + b0 * b0 * wp.dot(n, Hi[j] @ n)
         + b1 * b1 * wp.dot(n, Hi[k] @ n)
     )
+    # Each slot holds at least the floor: a contact's own penalty (local) and the max (global) are floored
+    Qc[offset + c] = wp.max(q, Qcmin)  # type: ignore
 
 
 @wp.kernel
@@ -471,12 +503,14 @@ def _compute_rayleigh_vf(
     b1 = bary[0]
     b2 = bary[1]
     b0 = wp.float32(1) - b1 - b2
-    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+    q = wp.float32(0.5) * (  # type: ignore
         wp.dot(n, Hi[i] @ n)
         + b0 * b0 * wp.dot(n, Hi[j] @ n)
         + b1 * b1 * wp.dot(n, Hi[k] @ n)
         + b2 * b2 * wp.dot(n, Hi[l] @ n)
     )
+    # Each slot holds at least the floor: a contact's own penalty (local) and the max (global) are floored
+    Qc[offset + c] = wp.max(q, Qcmin)  # type: ignore
 
 
 @wp.kernel
@@ -510,12 +544,14 @@ def _compute_rayleigh_ee(
     t0 = bary[0]
     s1 = wp.float32(1) - bary[1]
     t1 = bary[1]
-    Qc[offset + c] = wp.float32(0.5) * (  # type: ignore
+    q = wp.float32(0.5) * (  # type: ignore
         s0 * s0 * wp.dot(n, Hi[i] @ n)
         + t0 * t0 * wp.dot(n, Hi[j] @ n)
         + s1 * s1 * wp.dot(n, Hi[k] @ n)
         + t1 * t1 * wp.dot(n, Hi[l] @ n)
     )
+    # Each slot holds at least the floor: a contact's own penalty (local) and the max (global) are floored
+    Qc[offset + c] = wp.max(q, Qcmin)  # type: ignore
 
 
 @wp.func
@@ -633,9 +669,11 @@ def _compute_hessian_rayleigh(
         )
         w = wp.vec4f(one - st[0], st[0], st[1] - one, -st[1])
         n_nodes = wp.int32(4)
-    Qc[offset + c] = _bsr_rayleigh_quotient(  # type: ignore
+    q = _bsr_rayleigh_quotient(  # type: ignore
         offsets, columns, values, dmask, nodes, w, n_nodes, n
     )
+    # Each slot holds at least the floor: a contact's own penalty (local) and the max (global) are floored
+    Qc[offset + c] = wp.max(q, Qcmin)  # type: ignore
 
 
 class PenaltyAdaptivity(enum.Enum):
@@ -686,6 +724,18 @@ class Params(SerializableMixin):
                       and ``gammaf_adaptive`` are dimensionless multipliers (~1). Adaptive modes
                       also make the vertex solves read other-color contact partners at current
                       positions, which keeps such penalties stable.
+        penalty_stiffness : With adaptive penalties, one penalty for all contacts or one per contact,
+                      C++ ``vbd::Params::ePenaltyStiffness`` (``pbat.sim.algorithm.vbd.SALPenaltyStiffness``).
+                      GlobalMaxRayleighQuotient (default): ``sigma_n = sigma_f`` = the largest contact
+                      Rayleigh quotient Q_c, floored. LocalMaxRayleighQuotient: each contact's own Q_c,
+                      floored, so ``gamman_adaptive * max(Q_c, floor)`` and ``gammaf_adaptive *
+                      max(Q_c, floor)``, and the global penalty is the max over contacts of the local
+                      ones. Q_c is the GPU's quotient of the contact's stencil (VBD family: the
+                      barycentric-weighted vertex Hessians, ``_compute_rayleigh_*``; Newton: the stencil's
+                      blocks of the assembled Hessian), while C++ VBD's local mode takes the largest of
+                      the stencil's per-vertex quotients. Contact slots change at every re-detection, so
+                      :meth:`MeshDynamics.update_constraint_set` recomputes the local penalties of the new
+                      set from the Hessian of the last adaptation. Ignored with CONSTANT adaptivity.
     """
 
     dmin = DocField(2e-3, "Minimum separation distance margin (contact threshold)")
@@ -722,6 +772,11 @@ class Params(SerializableMixin):
         "CONSTANT: penalties gamman * dt^2 and gammaf * dt^2. TIMESTEP / SUBPROBLEM: sigma_n = sigma_f = the largest "
         "contact Rayleigh quotient of the vertex Hessians, recomputed per time step / per subproblem, times "
         "gamman_adaptive / gammaf_adaptive",
+    )
+    penalty_stiffness = DocField(
+        pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
+        "Adaptive penalties: GlobalMaxRayleighQuotient, one penalty from the largest contact Rayleigh quotient, or "
+        "LocalMaxRayleighQuotient, each contact's own (floored) quotient. Ignored with CONSTANT adaptivity",
     )
 
 
@@ -766,7 +821,14 @@ class MeshDynamics:
         self._data.Qc = wp.zeros(
             vv_capacity + ve_capacity + vf_capacity + ee_capacity, dtype=wp.float32
         )
+        self._qc_offsets = (0, vv_capacity, vv_capacity + ve_capacity, vv_capacity + ve_capacity + vf_capacity)
+        self._data.Qc_offsets = wp.vec4i(*self._qc_offsets)
         adaptive = self.params.penalty_adaptivity != PenaltyAdaptivity.CONSTANT
+        local = self.params.penalty_stiffness == pbat.sim.algorithm.vbd.SALPenaltyStiffness.LocalMaxRayleighQuotient
+        self.local_penalty = adaptive and local
+        self._data.local_penalty = wp.int32(1 if self.local_penalty else 0)
+        # The last adaptation's Hessian, from which update_constraint_set recomputes local penalties
+        self._penalty_hessian = None
         self._data.gamma_n = self.params.gamman_adaptive if adaptive else self.params.gamman  # type: ignore
         self._data.gamma_f = self.params.gammaf_adaptive if adaptive else self.params.gammaf  # type: ignore
         self._data.sigma_n = wp.array([dt * dt], dtype=wp.float32)
@@ -819,6 +881,11 @@ class MeshDynamics:
             cset.store_tangent_bases(bases)
         # Vertex solves skip the contact gather of vertices without any pair.
         wp.launch(_flag_contact_vertices, dim=self.meshes.data.GXV.shape[0], inputs=[self._data])
+        # Local penalties belong to slots, which the update reassigned: recompute them for the new set, and their
+        # max, the global penalty (reported and checkpointed)
+        if self.local_penalty and self._penalty_hessian is not None:
+            self._compute_rayleigh_quotients(*self._penalty_hessian)
+            self._reduce_penalty_parameters(main_stream)
 
     def reset_friction_limits(self):
         """Unfreeze every contact's Coulomb limit for a new time step (GPU Newton; see
@@ -904,58 +971,26 @@ class MeshDynamics:
 
     def adapt_penalty_parameters(self, h2: float):
         """Adapt the penalties to the vertex Hessians ``Hi`` (the VBD family): ``sigma_n = sigma_f`` = the
-        largest contact Rayleigh quotient of ``Hi``, floored at :meth:`penalty_floor` ``(h2) / gamma_n``.
+        largest contact Rayleigh quotient of ``Hi``, floored at :meth:`penalty_floor` ``(h2) / gamma_n``, and,
+        with local penalties (``Params.penalty_stiffness``), each contact's own floored quotient in ``Qc``.
         ``h2`` is the scale of ``Hi``'s elastic part; it is host-side, fixed per capture."""
         if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
             return
-        vv_cap, ve_cap, vf_cap, _ = self.contacts.capacity
-        contacts = self.contacts._data
-        meshes = self.meshes.data
-        main_stream = wp.get_stream()
-        # Fork
-        for stream in self._streams[:4]:
-            stream.wait_stream(main_stream)
-        for kernel, cs, stream, offset in zip(
-            [
-                _compute_rayleigh_vv,
-                _compute_rayleigh_ve,
-                _compute_rayleigh_vf,
-                _compute_rayleigh_ee,
-            ],
-            [self.cvv, self.cve, self.cvf, self.cee],
-            self._streams[:4],
-            [0, vv_cap, vv_cap + ve_cap, vv_cap + ve_cap + vf_cap],
-        ):
-            wp.launch(
-                kernel,
-                dim=cs.capacity,
-                inputs=[
-                    self.Hi,
-                    meshes,
-                    contacts,
-                    cs.n_u,
-                    self._data.Qc,
-                    offset,
-                    self.penalty_floor(h2) / self._data.gamma_n,
-                    int(self.params.penalty_adaptivity.value),  # type: ignore
-                ],
-                stream=stream,
-            )
-        # Join
-        for stream in self._streams[:4]:
-            main_stream.wait_stream(stream)
-        self._reduce_penalty_parameters(main_stream)
+        self._penalty_hessian = (None, None, self.penalty_floor(h2) / self._data.gamma_n)
+        self._compute_rayleigh_quotients(*self._penalty_hessian)
+        self._reduce_penalty_parameters(wp.get_stream())
 
-    # TODO: Per-contact (local) penalties, as C++ ESALPenaltyStiffness's local option: one global sigma_n set
-    # by the stiffest contact's Rayleigh quotient also applies to soft-side contacts, which may worsen CG
-    # conditioning and stiffen soft-on-stiff contact (suspected, unmeasured, for Newton on the
-    # heterogeneous trampoline + sphere and its CG iteration counts).
+    # TODO: Whether local penalties (Params.penalty_stiffness) help is unmeasured: one global sigma_n set by the
+    # stiffest contact also applies to soft-side contacts, which may worsen CG conditioning and stiffen soft-on-stiff
+    # contact (suspected for Newton on the heterogeneous trampoline + sphere and its CG iteration counts), and on
+    # DragonImpact it sat 3.4x above the alternating pillar contacts' median quotient (solver notes entry 13).
     def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array, h2: float):
         """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
         (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
         ``grad c^T H grad c / |grad c|^2`` over the stencil's blocks of ``H``, floored at
         :meth:`penalty_floor` ``(h2) / gamma_n``. :meth:`adapt_penalty_parameters` (the VBD family) uses the vertex
-        Hessians ``Hi`` instead, i.e. only the diagonal blocks.
+        Hessians ``Hi`` instead, i.e. only the diagonal blocks. With local penalties, a copy of ``H`` is kept for
+        the re-detections until the next adaptation (Newton reassembles ``H`` with contact terms in between).
 
         Args:
             H (warp.sparse.BsrMatrix): Hessian with 3x3 blocks, one block row per node, without contact
@@ -965,39 +1000,48 @@ class MeshDynamics:
         """
         if self.params.penalty_adaptivity == PenaltyAdaptivity.CONSTANT:
             return
-        vv_cap, ve_cap, vf_cap, _ = self.contacts.capacity
+        if self.local_penalty:
+            H = warp.sparse.bsr_copy(H)  # Newton is host-driven, never captured: allocating here is fine
+        self._penalty_hessian = (H, dmask, self.penalty_floor(h2) / self._data.gamma_n)
+        self._compute_rayleigh_quotients(*self._penalty_hessian)
+        self._reduce_penalty_parameters(wp.get_stream())
+
+    def _compute_rayleigh_quotients(self, H, dmask: wp.array, Qcmin: float):
+        """Every contact slot's floored Rayleigh quotient into ``Qc`` (empty slots hold ``Qcmin``), from the
+        vertex Hessians ``Hi`` (``H`` None) or from the assembled Hessian ``H``, one stream per contact type."""
         contacts = self.contacts._data
         meshes = self.meshes.data
         main_stream = wp.get_stream()
+        # Fork
         for stream in self._streams[:4]:
             stream.wait_stream(main_stream)
-        for kind, cs, stream, offset in zip(
+        for kind, kernel, cs, stream, offset in zip(
             range(4),
+            [_compute_rayleigh_vv, _compute_rayleigh_ve, _compute_rayleigh_vf, _compute_rayleigh_ee],
             [self.cvv, self.cve, self.cvf, self.cee],
             self._streams[:4],
-            [0, vv_cap, vv_cap + ve_cap, vv_cap + ve_cap + vf_cap],
+            self._qc_offsets,
         ):
-            wp.launch(
-                _compute_hessian_rayleigh,
-                dim=cs.capacity,
-                inputs=[
-                    H.offsets,
-                    H.columns,
-                    H.values,
-                    dmask,
+            if H is None:
+                inputs = [
+                    self.Hi,
                     meshes,
                     contacts,
-                    kind,
                     cs.n_u,
                     self._data.Qc,
                     offset,
-                    self.penalty_floor(h2) / self._data.gamma_n,
-                ],
-                stream=stream,
-            )
+                    Qcmin,
+                    int(self.params.penalty_adaptivity.value),  # type: ignore
+                ]
+            else:
+                kernel = _compute_hessian_rayleigh
+                inputs = [
+                    H.offsets, H.columns, H.values, dmask, meshes, contacts, kind, cs.n_u, self._data.Qc, offset, Qcmin
+                ]
+            wp.launch(kernel, dim=cs.capacity, inputs=inputs, stream=stream)
+        # Join
         for stream in self._streams[:4]:
             main_stream.wait_stream(stream)
-        self._reduce_penalty_parameters(main_stream)
 
     def _reduce_penalty_parameters(self, main_stream: wp.Stream):
         self._normal_penalty_reduction(main_stream)
@@ -1166,6 +1210,68 @@ class TestPenaltyFloor(unittest.TestCase):
         fem.static = False
         contact.sigma_n_min = Params().min_sigma_n
         self.assertEqual(contact.penalty_floor(fem.h2), 1.0)
+
+
+class TestLocalPenalty(unittest.TestCase):
+    """Per-contact penalties (LocalMaxRayleighQuotient) on two cubes resting in contact: each contact's own
+    floored quotient, whose max is the global penalty, recomputed for the slots of every constraint-set update."""
+
+    def _state(self, solver):
+        from pbatoolkit import pypbat
+        from ...state import SimulationState, load_params
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.21, 0.13, 1.002]]).astype(np.float64)
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem.set_mass_matrix(1e3)
+        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+        fem.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+        fem.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        fem.constrain(np.repeat([1, 0], 8))
+        state = SimulationState(fem, load_params(fem))
+        state.contact_params.penalty_stiffness = pbat.sim.algorithm.vbd.SALPenaltyStiffness.LocalMaxRayleighQuotient
+        state.solver = solver
+        state.reset()
+        return state
+
+    def test_local_penalties(self):
+        from ...state import SolverType
+
+        for solver in (SolverType.VBD, SolverType.Newton):
+            with self.subTest(solver=solver.name):
+                state = self._state(solver)
+                for _ in range(3):
+                    state.step()
+                contact = state.contact
+                self.assertTrue(contact.local_penalty)
+                sets = zip(("vv", "ve", "vf", "ee"), (contact.cvv, contact.cve, contact.cvf, contact.cee))
+                n_real = [int(getattr(contact.contacts._data, k).prefix.numpy()[cs.n_u]) for k, cs in sets]
+                self.assertGreater(sum(n_real), 0)
+                Qc = contact.data.Qc.numpy()
+                real = np.concatenate([Qc[o: o + n] for o, n in zip(contact._qc_offsets, n_real)])
+                floor = contact._penalty_hessian[2]
+                self.assertTrue(np.all(real >= np.float32(floor)))
+                self.assertGreater(real.max() / max(real.min(), 1e-12), 1.0)  # not uniform
+                # The global penalty is the max of the local ones
+                self.assertEqual(float(contact.data.sigma_n.numpy()[0]), float(Qc.max()))
+                # Qc matches the current slots: recomputing from the stored Hessian changes nothing
+                contact._compute_rayleigh_quotients(*contact._penalty_hessian)
+                np.testing.assert_array_equal(contact.data.Qc.numpy(), Qc)
+
+    def test_serialized(self):
+        import uuid
+
+        import h5py
+
+        a, b = Params(), Params()
+        a.penalty_stiffness = pbat.sim.algorithm.vbd.SALPenaltyStiffness.LocalMaxRayleighQuotient
+        with h5py.File(f"{uuid.uuid4().hex}.h5", "w", driver="core", backing_store=False) as f:
+            a.serialize(f)
+            self.assertEqual(int(f.attrs["penalty_stiffness"]), 1)
+            b.deserialize(f)
+        self.assertEqual(b.penalty_stiffness, a.penalty_stiffness)
 
 
 if __name__ == "__main__":

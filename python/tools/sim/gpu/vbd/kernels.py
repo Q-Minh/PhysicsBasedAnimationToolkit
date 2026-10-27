@@ -4,7 +4,15 @@ import warp.fem.linalg
 from .. import types
 from ..elasticity.snh import snh_grad_and_hess, snh_hess
 from ..elasticity.chain import gradient_segment_wrt_dofs, hessian_block_wrt_dofs
-from ..contact.dynamics import MeshDynamicsData as ContactDynamicsData
+from ..contact.dynamics import (
+    CONTACT_EE,
+    CONTACT_VE,
+    CONTACT_VF,
+    CONTACT_VV,
+    MeshDynamicsData as ContactDynamicsData,
+    friction_penalty,
+    normal_penalty,
+)
 from ..contact.mesh.pairs import ContactBasesData
 from ..contact import halfedges
 from .params import (
@@ -202,8 +210,6 @@ def local_contact_derivatives(
     fcontacts = contact.contacts
     rcontacts = contact.rcontacts
     dmin = contact.dmin
-    sigma_n = contact.gamma_n * contact.sigma_n[0]
-    sigma_f = contact.gamma_f * contact.sigma_f[0]
     mu_f = contact.mu_f
     cvv, vv_bases = contact.cvv, fcontacts.vv_bases
     cve, ve_bases, ve_bary = contact.cve, fcontacts.ve_bases, fcontacts.ve_bary
@@ -232,8 +238,8 @@ def local_contact_derivatives(
             cvv.gamma,
             cvv.lambda_n,
             cvv.lambda_f,
-            sigma_n,
-            sigma_f,
+            normal_penalty(contact, CONTACT_VV, wp.int32(c)),
+            friction_penalty(contact, CONTACT_VV, wp.int32(c)),
             mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
@@ -266,8 +272,8 @@ def local_contact_derivatives(
             cvv.gamma,
             cvv.lambda_n,
             cvv.lambda_f,
-            sigma_n,
-            sigma_f,
+            normal_penalty(contact, CONTACT_VV, wp.int32(c)),
+            friction_penalty(contact, CONTACT_VV, wp.int32(c)),
             mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
@@ -302,8 +308,8 @@ def local_contact_derivatives(
             cve.gamma,
             cve.lambda_n,
             cve.lambda_f,
-            sigma_n,
-            sigma_f,
+            normal_penalty(contact, CONTACT_VE, wp.int32(c)),
+            friction_penalty(contact, CONTACT_VE, wp.int32(c)),
             mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
@@ -339,8 +345,8 @@ def local_contact_derivatives(
             cvf.gamma,
             cvf.lambda_n,
             cvf.lambda_f,
-            sigma_n,
-            sigma_f,
+            normal_penalty(contact, CONTACT_VF, wp.int32(c)),
+            friction_penalty(contact, CONTACT_VF, wp.int32(c)),
             mu_f,
             xcp1,  # type: ignore
             xtcp1,  # type: ignore
@@ -385,8 +391,8 @@ def local_contact_derivatives(
                 cee.gamma,
                 cee.lambda_n,
                 cee.lambda_f,
-                sigma_n,
-                sigma_f,
+                normal_penalty(contact, CONTACT_EE, wp.int32(c)),
+                friction_penalty(contact, CONTACT_EE, wp.int32(c)),
                 mu_f,
                 xcp1,
                 xtcp1,
@@ -421,8 +427,8 @@ def local_contact_derivatives(
                 cve.gamma,
                 cve.lambda_n,
                 cve.lambda_f,
-                sigma_n,
-                sigma_f,
+                normal_penalty(contact, CONTACT_VE, wp.int32(c)),
+                friction_penalty(contact, CONTACT_VE, wp.int32(c)),
                 mu_f,
                 xcp1,  # type: ignore
                 xtcp1,  # type: ignore
@@ -465,8 +471,8 @@ def local_contact_derivatives(
                 cvf.gamma,
                 cvf.lambda_n,
                 cvf.lambda_f,
-                sigma_n,
-                sigma_f,
+                normal_penalty(contact, CONTACT_VF, wp.int32(c)),
+                friction_penalty(contact, CONTACT_VF, wp.int32(c)),
                 mu_f,
                 xcp1,  # type: ignore
                 xtcp1,  # type: ignore
@@ -505,8 +511,8 @@ def local_contact_derivatives(
                 cee.gamma,
                 cee.lambda_n,
                 cee.lambda_f,
-                sigma_n,
-                sigma_f,
+                normal_penalty(contact, CONTACT_EE, wp.int32(c)),
+                friction_penalty(contact, CONTACT_EE, wp.int32(c)),
                 mu_f,
                 xcp1,
                 xtcp1,

@@ -1,5 +1,5 @@
 # Paper parameters, converted from accelerated-vbd-extras/parameters/gpu/birthday_banner.Params_1_2000.h5
-#   (extras commit 53951d2, sha256 c541f5f88842b4a7), 2026-10-20.
+#   (extras commit 53951d2, sha256 c541f5f88842b4a7), 2026-10-26.
 # Hand-tuned values from the source are unchanged. Edit a copy, not this file (see README.md).
 #
 # Added for the accelerated solvers (not hand-tuned):
@@ -10,6 +10,7 @@
 #   Contact.CDType.VertexSdf.band
 #   Contact.ContactDynamics.gammaf_adaptive
 #   Contact.ContactDynamics.gamman_adaptive
+#   Contact.ContactDynamics.penalty_stiffness
 #   Solver.AAAVBD.betaup
 #   Solver.AAAVBD.kp
 #   Solver.AAAVBD.lipschitz_normalization
@@ -79,6 +80,7 @@ gamman_adaptive = 1.0
 min_sigma_n = 1.0
 mu_f = 0.30000001192092896
 penalty_adaptivity = 0
+penalty_stiffness = 0
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.20000000298023224
