@@ -350,6 +350,10 @@ appears at 6.0 s (substep 1: penetration 0.49, 0.66, 0.44, 0.66, 0.35, 0.62, ...
 recorded, so the cycle is seen in the penetration, not in lambda itself. It is consistent with the contact-set
 flip-flop of entries 2 and 5, here on pillar-on-pillar contact.
 
+**Follow-up (entry 13).** The levels above came from the draft scene's state. Traced with the multipliers from the
+final production run's state at 6.8 s, the mechanism is not the contact set: the dual update's projection zeroes a
+few hundred tiny pillar multipliers every other outer iteration.
+
 **Where.** At each traced step's end, 87-96% of Σ |gᵢ|²/mᵢ is on pillar nodes within 1.5 cm of another pillar, in
 every configuration. The median |M⁻¹g| there is 3.7-5.1 mm with one outer iteration per substep and 8-22 mm with
 2-10.
@@ -640,3 +644,79 @@ with the 100-sweep run: its landing, its dragons' settling and its pillar and ar
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.VBD.MidBudget.From4.4s.h5` (Leg1 up to step 520, then
 Leg2-4) and its merged `.Profile.json`; the 100-sweep runs `ArmadilloSpaghetti.DragonImpact.<VBD|AAAVBD>.h5` and their
 `.Profile.json`.
+
+## 13. Extra outer iterations on DragonImpact: small pillar multipliers zeroed every other update, not dropped pairs
+
+Follows up entry 7, which saw the residual rise and the penetration alternate with more outer iterations but didn't
+record the multipliers. Two candidate mechanisms were told apart: (1) the full dual update
+λ ← max(0, λ − σ c) (`gpu/contact/dynamics.py`, `_apply_dual_update`) zeroes a multiplier when the subproblem ends
+with c_n > λ/σ; (2) a pair passes dmin + band, is dropped at re-detection with its multiplier, and comes back at 0.
+
+**Setup.** One eager step from the final AAAVBD production run's state at 6.8 s
+(`ArmadilloSpaghetti.DragonImpact.AAAVBD.Leg3.checkpoint.h5:680`), with `configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`
+and `--set Contact.CDType.VertexSdf.max_dist=0.2` (the radius entry 7 ran with), early exit off (rstol and astol at
+1e-6 x the defaults; ratios recomputed at the default tolerances): AAAVBD and VBD at 10 outer iterations x 100
+sweeps per substep, and AAAVBD at the production 1 x 100. A scratch tracer wrapped the full dual update, every
+constraint-set update and every outer test, with no solver change (code 505e39d2, 2026-10-26). Pillar-pillar (pp)
+contacts are a pillar vertex against a pillar feature. Each pp contact's key, λ_n before and after each full dual
+update, c_n, slack and gamma were recorded for substeps 0-2, with |g|²/m per pillar node at each outer test.
+
+**Reproduction** (substep 0: the start test, then after each outer iteration's dual update, re-detection and
+constraint-set update):
+
+| | Gradient ratio | Penetration ratio |
+|---|---|---|
+| AAAVBD 10 x 100 | 758, 464, 476, 507, 526, 552, 482, 484, 492, 484, 509 | 0.20, 0.10, 0.15, 0.13, 0.19, 0.22, 0.16, 0.10, 0.15, 0.10, 0.15 |
+| VBD 10 x 100 | 758, 463, 487, 571, 515, 489, 485, 482, 491, 492, 497 | 0.20, 0.10, 0.15, 0.15, 0.18, 0.11, 0.15, 0.10, 0.14, 0.11, 0.15 |
+| AAAVBD 1 x 100 | 758, 464 | 0.20, 0.10 |
+
+The shape is entry 7's: the first outer iteration reaches the plateau, the next nine stay 3-19% above it (AAAVBD;
+VBD 4-23%), and the penetration alternates, strictly with period 2 in AAAVBD's substep 2 (0.18 and 0.11). The levels
+are lower than entry 7's (2091, 1264, ..., 1402), which came from the draft scene's state. At the substeps' ends 10 x
+100 isn't worse than 1 x 100 here (median over the 10 substeps 458 for AAAVBD and 463 for VBD, against 477), but
+the substeps after the first start from different states, so the per-iteration rise is the cleaner comparison.
+
+**Mechanism (2) was not seen.** At each re-detection the about 22.2k pp contacts split into about 21.3k with the
+same key, 700-1250 carried to an adjacent feature (`constraints.carry_across_features`), 0-14 new and 1-8 dropped
+(47-55 at the first re-detection). No dropped pp contact had λ_n > 0, at any re-detection of either solver.
+
+**Mechanism (1), with period 2.**
+- At each full dual update, 140-200 of the about 9.7k pp contacts with λ_n > 0 are zeroed by the projection, and of
+  those zeroed at one update, 106-171 (64-90%) are above 0 again at the next.
+- Over a substep's 10 updates, 327-398 pp contacts are zeroed at least twice, and 195-255 alternate λ_n > 0 and 0 at
+  every update; 91-94% of the zeroings after the first update are on keys unchanged since the previous update.
+- Their multipliers are tiny: median λ_n 4e-6 when positive, against 7.6e-5 for all pp contacts with λ_n > 0. Their
+  c_n flips sign by 0.01-0.05 mm (e.g. +0.04 / −0.03 mm, λ_n 0 / 2.8e-5): a penetrating update sets λ_n = σ |c_n|,
+  the next subproblem pushes the vertex out past λ_n / σ, and the projection zeroes λ_n again.
+- The vertices zeroed at least twice on one key carry 35-38% of Σ |gᵢ|²/mᵢ at the substep's end; all pp vertices
+  carry about 85% (entry 7: 87-96% on pillar nodes near another pillar).
+
+**A variant with feature flips.** 26-49 vertices per substep change key at every re-detection, between a
+vertex-edge and a vertex-face contact with the same pillar, and carry 13-16% of the residual, the top-residual nodes
+among them. Pillar node 161442 (2.5-4.8% of the residual) is a vertex-edge contact at every other update (c_n −0.05
+to −0.09 mm, λ_n 5e-5 to 9e-5) and a vertex-face one in between (c_n +0.22 mm, so the carried λ_n is zeroed), so the
+vertex-edge contact restarts from λ_n = 0 each time; node 62879 does the same. The same vertex at about the same
+position has a negative gap on the edge and a positive one on the face, as at the vertex-edge to vertex-face hand-off
+of entry 8, which is still unexplained.
+
+**The alternating penetration is not on pp contacts.** The deepest pp c_n is about −0.1 mm at every update, while
+the penetration ratios (0.5-1.1 mm into the margin) come from other contacts, which weren't broken down. Part of the
+ratio's rise is also off the pillars: at AAAVBD's substep 0, outer iteration 5, the ratio peaks (552) while the pp
+share of the residual falls to 0.65.
+
+**Penalty.** σ_n was 1.0 at every update, the value of `min_sigma_n`. Whether the adaptive value (the vertex
+Hessians' largest contact Rayleigh quotient) is below that floor here was not checked.
+
+**Not tested** (ideas only):
+- Hysteresis on the vertex-edge / vertex-face choice, or keeping a carried multiplier when only the feature changed.
+- Whether the floor sits above the adaptive value at 10 substeps (h = 1 ms): the stiffness part of the vertex
+  Hessians scales with h², 100x smaller than at one substep. If it does, each dual update takes a larger step than
+  the vertex stiffness supports, and inexact subproblems would then overshoot past the margin.
+- Which non-pillar contacts set the alternating penetration.
+
+**For the paper.** Extra outer iterations don't lose multipliers through the contact set here; the projection
+zeroes a few hundred tiny pillar multipliers every other update, so each outer iteration re-starts them from 0, and
+those contacts hold about a third of the residual.
+
+Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At6.8s.OuterTrace.h5` (10 x 100) and
+`ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.OneOuter.OuterTrace.h5` (1 x 100).
