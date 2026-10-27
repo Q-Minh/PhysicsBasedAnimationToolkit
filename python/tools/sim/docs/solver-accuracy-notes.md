@@ -811,15 +811,15 @@ window's step-490 checkpoint) shows:
   is still finite and the accelerated one isn't, so the NaN arrives there through the stencil gather of neighbours'
   gradients. dragonL's sets follow 10 sweeps later.
 
-A light second record over all nodes (per sweep only the largest node displacement and the first non-finite nodes,
-same checkpoint; a heavier per-vertex readback had been stopped for low host memory) locates the start. Through steps
-491-494 the largest correction per sweep stays at 1.2-1.9 cm. In step 495, substep 5, armadillo node 224006, 1.1 cm
-from pillar surface nodes (in contact), jumps 13-14 cm in single sweeps (kp 17-18), and armadillo node 190021 then
-moves 4-5 cm per sweep (kp 19-20). Then pillar-0 nodes 23645 and 9213 (about 10 cm from the armadillo and 18 cm from
-dragonR's rebounding nodes, which move 3-4 cm per sweep there) move 0.23-0.44 m per sweep (kp 25-35). In substep 6
-the pillars' moves grow from 2.4 m to 1.3e6 m per sweep, and the first non-finite position is pillar node 47226 (kp 16). So the blow-up starts in the contact cluster of the
-pillars, the armadillo and the rebounding dragonR, not in dragonL's tail, and neither the step's ratios nor the
-shrink rule show it coming.
+A light second record over all nodes (per sweep only the largest node displacement and the first non-finite nodes, same
+checkpoint; a heavier per-vertex readback had been stopped for low host memory) locates the start. Through steps 491-494
+the largest correction per sweep stays at 1.2-1.9 cm. In step 495, substep 5, armadillo node 224006, 1.1 cm from pillar
+surface nodes (in contact), jumps 13-14 cm in single sweeps (kp 17-18), and armadillo node 190021 then moves 4-5 cm per
+sweep (kp 19-20). Then pillar-0 nodes 23645 and 9213 (about 10 cm from the armadillo and 18 cm from dragonR's rebounding
+nodes, which move 3-4 cm per sweep there) move 0.23-0.44 m per sweep (kp 25-35). In substep 6 the pillars' moves grow
+from 2.4 m to 1.3e6 m per sweep, and the first non-finite position is pillar node 47226 (kp 16). So the blow-up starts
+in the contact cluster of the pillars, the armadillo and the rebounding dragonR, not in dragonL's tail, and neither the
+step's ratios nor the shrink rule show it coming.
 
 **Full run with the scaled multiplier step.** `Contact.ContactDynamics.multiplier_step = 0.5` (the scratch F, made a
 parameter, default 1), AAAVBD 10 x 1 x 40 from `ArmadilloSpaghetti.DragonImpact.AAAVBD.Leg1.checkpoint.h5:440` to 18 s.
