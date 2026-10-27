@@ -727,3 +727,169 @@ those contacts hold about a third of the residual.
 Data (`data/scenarios/runs/`): `ArmadilloSpaghetti.DragonImpact.<AAAVBD|VBD>.At6.8s.OuterTrace.h5` (10 x 100) and
 `ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.OneOuter.OuterTrace.h5` (1 x 100); the penalty read,
 `ArmadilloSpaghetti.DragonImpact.AAAVBD.At6.8s.RayleighQuotients.npz` (Hi, m, the pairs and the unfloored Qc).
+
+## 14. DragonImpact at 10 x 1 x 40: half the multiplier step keeps AAAVBD finite; penalty changes don't
+
+Follows entries 9, 12 and 13. At 10 substeps of 1 x 40 sweeps (entry 9's MidBudget), AAAVBD diverges at step 494
+from the 4.4 s checkpoint, while VBD reaches 18 s (entry 12). Entry 13's period-2 zeroing of small pillar multipliers
+was first examined at 6.8 s with the production budget, to see whether the penalty or the dual update change it, and
+the candidates were then run at the low budget.
+
+**Setup.** Traces as entry 13's (AAAVBD 10 x 100 per substep, one eager step from
+`ArmadilloSpaghetti.DragonImpact.AAAVBD.Leg3.checkpoint.h5:680`, max_dist 20 cm via `--set`, early exit off, ratios at
+the default tolerances), on dev 2b5d58ba, where the penalty floor is h2 x min_sigma_n = 0.01 at the 1 ms substep
+(2026-10-26), so σ_n is the unfloored global max, about 0.85 (A). The tracer also recorded each contact's own σ_n and,
+per body pair, σ_n and the deepest c_n. Variants:
+- B: per-contact penalties (`penalty_stiffness = LocalMaxRayleighQuotient`).
+- C, C2, D: global, `gamman_adaptive` 0.3, 0.15 and 2.5 (σ_n 0.25, 0.13, 2.1).
+- E: a scratch dual update that halves λ instead of zeroing it when the projection would zero it.
+- F: a scratch dual update with half the multiplier step, λ ← max(0, λ − 0.5 σ c), friction alike.
+
+The low-budget windows ran AAAVBD 10 x 1 x 40 from `ArmadilloSpaghetti.DragonImpact.AAAVBD.Leg1.checkpoint.h5:440` to
+5.1 s, production (graph replay), with a scratch guard that stops at the first non-finite step.
+
+**At 6.8 s** (substeps 0-2; base = entry 13's floor-1.0 trace, σ_n 1.0):
+
+| | σ_n | pp zeroings per substep | alternating (residual share) | VE/VF flip vertices | gradient ratio, substep ends (median) | across outer iterations | deepest pillar-armadillo c_n |
+|---|---|---|---|---|---|---|---|
+| base | 1.0 | 1314-1666 | 199-255 (0.31-0.33) | 35-49 | 458 | flat | (not recorded) |
+| D | 2.1 | 1117-1398 | 176-196 (0.27-0.36) | 27-44 | 421 | flat to falling | −0.75 mm |
+| A | 0.85 | 1511-1952 | 204-294 (0.31-0.35) | 38-63 | 498 | slight rise | −0.38 mm |
+| C | 0.25 | 1688-2991 | 174-403 (0.16-0.22) | 49-118 | 733 | rising | −1.17 mm |
+| C2 | 0.13 | about C's | 153-452 (0.10-0.17) | 61-173 | 870 | rising | −2.61 mm |
+| B (local) | 0.02-0.94 | 6629-8822 | 117-69 (0.05-0.00) | 224-2087 | 1932 | rising | −2.45 mm |
+| E | 0.85 | 2377-7067 | 0 (by construction) | 0 | 464 | flat | −0.36 mm |
+| F | 0.85 | 1235-1513 | 174-216 (0.31-0.35) | 27-41 | 405 | flat | −0.95 mm |
+
+No outer test passed in any run, and no contact went past the −5 mm feasibility tolerance.
+
+**Reading at 6.8 s.**
+- The σ level orders everything in global mode. Lower σ raises the zeroings, makes the residual rise with every
+  outer iteration, and deepens the armadillo's penetration roughly as 1/σ. Higher σ (D) lowers all three. The
+  alternating contacts' ghost region λ/σ shrinks as 1/σ (0.003 mm at D, 0.007 at A, 0.015 at C, 0.020 mm at C2), but
+  their c_n swing between updates stays 0.04-0.08 mm, 4-20x wider. The subproblem moves these vertices farther than
+  λ/σ, so the projection zeroes them at any σ tried.
+- Local penalties (B) degrade the same way as C2, whose σ is about B's soft-contact median (0.165 on pillar-armadillo).
+  What B adds on top is a growth of VE/VF feature switches within a substep (1361 to 4762 switching vertices over
+  updates 3-11) and twice C2's residual. With VBD, B stays near C's level (61-99 flip vertices, ratio 739). So the
+  excess needs AAAVBD and local penalties together. Unexplained. A guess, unverified: AAAVBD's stencil-gradient
+  augmentation sums neighbours' gradients whose contact forces now come from different penalties.
+- No defect was found in the local path. Every kernel reads a contact's penalty through
+  `normal_penalty` / `friction_penalty` with the forward slot index. In a real DragonImpact state, after each of 12
+  constraint-set updates, Qc matched a numpy recomputation from Hi and the current pairs to within 3e-7 in every slot.
+  Carried contacts' σ changes 0.78-1.3x (1%-99%) across a VE/VF switch.
+- E removes the zeroing by construction but leaves about 900 ghost contacts per update (λ_n > 0 with c_n > λ_n/σ_n,
+  gaps up to 1.0 mm), whose nodes hold 36% of the residual (A: 78, 8%).
+- F keeps the alternation (174-216 contacts, same residual share) but lowers the residual most, keeps it flat across
+  outer iterations, and leaves the fewest ghosts (40 per update, 4% of the residual). Its cost is the armadillo
+  contacts' depth, −0.95 against −0.38 mm.
+
+**Low-budget windows** (AAAVBD 10 x 1 x 40, 4.4-5.1 s; inverted elements per body: pillars, armadillo, dragonL,
+dragonR):
+
+| | reached | inverted (max) | peak node speed | steps over 10 m/s (longest streak) | worst feasibility | worst gradient | step time |
+|---|---|---|---|---|---|---|---|
+| A (standard update) | diverged at step 495 | [0, 3, 0, 0] | 31.8 m/s | 15 (15) | 0.49 (to 494) | 685 (to 494) | |
+| D (σ x2.5) | diverged at step 493 | [0, 3, 0, 0] | 33.6 m/s | 12 (6) | 0.64 | 14547 | |
+| E (decay 0.5) | diverged at step 494 | [0, 3, 0, 0] | 30.0 m/s | 14 (14) | 0.39 | 875 | |
+| F (multiplier step 0.5) | 5.1 s | [0, 3, 0, 0] | 29.0 m/s | 31 (31, open) | 0.60 | 776 | 2.47 s |
+| AAAVBD 10 x 100 (production) | | [0, 3, 0, 0] | 29.0 m/s | 26 (26) | 4.00 | 5306 | |
+| VBD 10 x 100 (production) | | [0, 2, 1, 0] | 25.4 m/s | 35 (24) | 0.30 | 1191 | |
+| VBD 10 x 40 (entry 12) | | [0, 3, 0, 4] | 24.2 m/s | 36 (24) | 0.75 | 1233 | |
+
+**The failure at 494.** In window A, frames every step and the solve statuses show the impact rebound (steps
+479-490, up to 1922 nodes over 10 m/s, peak 31.8 m/s in dragonL), then calmer steps. At step 494, 309 of dragonL's 375
+rearmost nodes (its thin trailing feature) move over 10 m/s, more than 33 cm from any other body. Step 495 is
+non-finite. The step's own ratios stay ordinary to the end (gradient 302, feasibility 0.31, 1 inverted element), so
+neither the outer test nor the feasibility test flags it. A per-sweep record of the AAAVBD state on three sets
+(dragonL's tail, its central body, dragonR's tail; scratch debug output in the vertex kernel, steps 491-495 from the
+window's step-490 checkpoint) shows:
+- The tail's solver corrections stay small: median 3-19 µm per sweep, accelerated step 1.4-1.9x the plain VBD step,
+  betaG 0.93-0.97, lam ≤ 0.41. Its 10 m/s at step 494 is coherent inertial motion from the predictor.
+- The shrink rule fires on 33-42% of vertex-sweeps on every set, so it isn't silent.
+- The first non-finite value among the sets is in dragonR's tail (step 495, substep 6, sweep 24): the plain step
+  is still finite and the accelerated one isn't, so the NaN arrives there through the stencil gather of neighbours'
+  gradients. dragonL's sets follow 10 sweeps later.
+
+A light second record over all nodes (per sweep only the largest node displacement and the first non-finite nodes,
+same checkpoint; a heavier per-vertex readback had been stopped for low host memory) locates the start. Through steps
+491-494 the largest correction per sweep stays at 1.2-1.9 cm. In step 495, substep 5, armadillo nodes 224006 and
+190021, 1.1 cm from pillar surface nodes (in contact), jump 13-14 cm in single sweeps (kp 17-20). Then pillar-0 nodes
+23645 and 9213 (about 10 cm from the armadillo and 18 cm from dragonR's rebounding nodes, which move 3-4 cm per sweep
+there) move 0.23-0.44 m per sweep (kp 25-35). In substep 6 the pillars' moves grow from 2.4 m to 1.3e6 m per sweep,
+and the first non-finite position is pillar node 47226 (kp 16). So the blow-up starts in the contact cluster of the
+pillars, the armadillo and the rebounding dragonR, not in dragonL's tail, and neither the step's ratios nor the
+shrink rule show it coming.
+
+**Full run with the scaled multiplier step.** `Contact.ContactDynamics.multiplier_step = 0.5` (the scratch F, made a
+parameter, default 1), AAAVBD 10 x 1 x 40 from `ArmadilloSpaghetti.DragonImpact.AAAVBD.Leg1.checkpoint.h5:440` to 18 s.
+All 1360 steps stayed finite (13,600 solves, all at the budget). Over 4.4-18 s (inverted elements per body, max over
+frames; the steps over 10 m/s are the dragons' rebound after the impact in every run, and none has a longer streak
+than 10 steps after about 5.9 s):
+
+| | AAAVBD 10 x 40, α 0.5 | VBD 10 x 40 (entry 12) | VBD 10 x 100 | AAAVBD 10 x 100 |
+|---|---|---|---|---|
+| inverted (max; at 17-18 s) | [0, 5, 0, 0]; 5 | [0, 3, 0, 4]; 2 | [0, 8, 1, 0]; 8 | [0, 5, 0, 1]; 5 |
+| worst feasibility ratio | 0.60 | 0.75 | 0.69 | 4.00 |
+| worst gradient ratio | 1054 | 2473 | 2664 | 5306 |
+| steps over 10 m/s (longest streak) | 99 (72, steps 479-552) | 111 (56) | 80 (61) | 95 (50) |
+| peak node speed | 29.0 m/s | 31.9 m/s | 25.4 m/s | 29.0 m/s |
+| dragonL / dragonR tilt at 18 s | 111° / 1° | 7° / 0° | 0° / 112° | 117° / 128° |
+| RMS 17-18 s: pillar mid-spans / armadillo | 0.427 / 1.124 m/s | 0.193 / 0.401 | 0.294 / 0.886 | 0.311 / 0.896 |
+| RMS 17-18 s: dragonL / dragonR | 0.010 / 0.010 m/s | 0.013 / 0.009 | 0.004 / 0.008 | 0.010 / 0.011 |
+
+- Tilts as entry 12 (the best-fit rotation from the frame where each dragon is on its feet moves the vertical by that
+  angle); the script reproduces entry 12's values for the other three runs. Renders of the 18 s frame show dragonR on
+  its feet and dragonL on its side and back, legs up, about AAAVBD 10 x 100's dragonL pose.
+- Step time 2.47 s (median, graph replay, 1359 steps). On the same code an AAAVBD 10 x 100 step at 6.8 s takes 5.04 s,
+  so about 0.49x. The other runs' step times (13.2-15.6 s) predate the detection speed-up (2026-10-26) and aren't
+  comparable.
+- It is not at parity with the 100-sweep runs: the pillars and the armadillo move 1.4x and 1.25x as fast as in
+  AAAVBD 10 x 100 at the end, and the landing differs (as it differs among the reference runs).
+
+VBD at 10 x 1 x 40 with multiplier_step 0.5 (from `ArmadilloSpaghetti.DragonImpact.VBD.Leg1.checkpoint.h5:440`, as
+entry 12's run but with α 0.5) also ran to 18 s: worst feasibility 0.54, worst gradient 1192, step time 2.21 s.
+- Inverted elements [0, 5, 1, 8] at most; dragonR's 8 are at steps 499-520 (the rebound), gone by the end; at 18 s,
+  3 in the armadillo.
+- Fast nodes: the rebound streak is 106 steps (482-589, peak 34.0 m/s at step 530 in dragonR) against 56 at α 1; 13
+  steps over 10 m/s after 6 s, all short.
+- It lands as entry 12's run did (dragonL 7°, dragonR 0°; renders of the 18 s frame show both on their feet), with
+  the armadillo at 0.386 m/s at 17-18 s (0.401 at α 1) but the pillar mid-spans at 0.311 m/s (0.193 at α 1).
+So α 0.5 isn't needed for VBD's survival here, and it lengthens the rebound and raises the pillars' late motion.
+
+**Negative results.**
+- A higher global penalty (D, `gamman_adaptive` 2.5) helps at 6.8 s (residual 421 against 498) but not at the low
+  budget: it diverged at step 493, two steps before the standard run (495).
+- Halving λ instead of zeroing it (E) leaves about 900 ghost contacts per update, holding 36% of the residual, and
+  diverged at step 494.
+- Per-contact penalties (B) lower the soft contacts' penalties about tenfold and deepen their penetration (−2.45 mm
+  on pillar-armadillo), and with AAAVBD they multiply VE/VF switches. They weren't run at the low budget.
+
+**Not tested** (ideas only):
+- Which contact pairs in that cluster carry the first jumps: a per-sweep record of the contacts at armadillo nodes
+  224006 and 190021 and pillar nodes 23645 and 9213 (their c_n, λ_n and the vertex steps), from the same checkpoint.
+- multiplier_step between 0.5 and 1 (0.75), or below 0.5, at the low budget; and α 0.5 at the 100-sweep budget over the
+  whole run.
+- Why local penalties multiply VE/VF switches with AAAVBD only (see the 6.8 s reading).
+
+**For the paper.** At 40 sweeps per substep, AAAVBD on this scene diverges with the standard dual update and runs
+to 18 s with half the multiplier step, at about half the 100-sweep step time, with impact gates and worst
+penetration no worse than the 100-sweep runs'. It isn't at parity: at 17-18 s the pillars move 1.4x and the armadillo
+1.25x as fast as in AAAVBD 10 x 100, and the dragons land differently (dragonR on its feet, dragonL on its side and
+back, where AAAVBD 10 x 100 has both on their side or back). The penalty level doesn't explain the
+low-budget failure: a 2.5x higher penalty diverged two steps earlier, and lower ones degrade the residual. Per-contact
+penalties lower the soft contacts' penalties and deepen their penetration about as a global penalty of the same level
+would, so they don't help here.
+
+Data (`data/scenarios/runs/`), all `ArmadilloSpaghetti.DragonImpact.`:
+- 6.8 s traces (10 x 100 unless noted): `AAAVBD.At6.8s.{GlobalFloor0.01,LocalPenalty,Gamman0.3,Gamman0.15,Gamman2.5,
+  Decay0.5,MultiplierStep0.5}.OuterTrace.h5`, `AAAVBD.At6.8s.GlobalFloor0.01.Ghosts.OuterTrace.h5` (A with the ghost
+  records), the 1 x 100 `.OneOuter.OuterTrace.h5` of GlobalFloor0.01, LocalPenalty, Gamman0.3 and Gamman2.5, and
+  `VBD.At6.8s.LocalPenalty.OuterTrace.h5`. Production 6.80-6.86 s: `AAAVBD.From6.8s.{GlobalFloor1,GlobalFloor0.01,
+  LocalPenalty}.h5` and their `.Profile.json`.
+- Low-budget windows: `AAAVBD.MidBudget.{Standard,Gamman2.5,Decay0.5,MultiplierStep0.5}.From4.4s.Window.h5`; the
+  per-sweep records `AAAVBD.MidBudget.Standard.From4.9s.SweepDiag.npz` (three node sets) and
+  `AAAVBD.MidBudget.Standard.From4.9s.NaNOrigin.json` (all nodes, largest move per sweep), and the Standard
+  window's checkpoints `AAAVBD.MidBudget.Standard.From4.4s.Window.checkpoint.h5` (steps 450-490).
+- Full runs: `<AAAVBD|VBD>.MidBudget.MultiplierStep0.5.From4.4s.Leg1.h5`, with their `.Profile.json` and
+  `.checkpoint.h5` (every 50 steps).

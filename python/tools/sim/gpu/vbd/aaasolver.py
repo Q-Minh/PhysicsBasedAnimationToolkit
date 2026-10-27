@@ -215,6 +215,12 @@ def _accelerated_vertex_solve_kernel(
     # previous subproblem, before its dual update and re-detection changed the objective, and betaG adapts only from
     # kp > 0. With it, AAAVBD's error jumped 1.5-5x at those sweeps at CapsulesIntoBowl's impacts
     # (docs/solver-accuracy-notes.md, entry 5). As C++ vbd::detail::ComputeStencilGradientAugmentation.
+    # TODO: On DragonImpact at 10 substeps of 1 x 40 sweeps with the standard dual update, step 495 blows up in the
+    # contact cluster of the pillars, the armadillo and the rebounding dragonR: armadillo nodes in contact jump 13-14 cm
+    # in single sweeps, then pillar nodes 0.2-0.4 m, then the NaN reaches other vertices through this gather (solver
+    # notes, entry 14; half the multiplier step avoids it). Next test: from the Standard window's step-490 checkpoint
+    # (data/scenarios/runs/), record per sweep the contacts at armadillo nodes 224006 and 190021 and pillar nodes 23645
+    # and 9213 (c_n, lambda_n, the accelerated and plain vertex steps) to see which term starts the jump.
     ai = wp.vec3f()
     if kp > 0:  # type: ignore
         ail = compute_thread_local_stencil_gradient_augmentation(
