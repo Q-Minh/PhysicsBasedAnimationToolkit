@@ -153,13 +153,13 @@ DRAGON_IMPACT_BUDGET = Rule(
 )
 DRAGON_IMPACT_FAST_BUDGET = Rule(
     "A lower budget for the dragons' impact, next to ArmadilloSpaghetti.DragonImpact's 100 sweeps (maintainer, "
-    "2026-10-27): 40 sweeps per substep for every VBD-family solver, with half the AL multiplier step. From the "
-    "100-sweep runs' 4.4 s checkpoints: AAAVBD diverged at step 495 with the standard step, and with half of it ran to "
-    "18 s at about 0.49x the 100-sweep step time, its pillars and armadillo moving 1.4x and 1.25x as fast as at 100 "
-    "sweeps at 17-18 s. VBD ran to 18 s with either step; half of it lengthened the rebound and raised the pillars' "
-    "late motion (0.31 against 0.19 m/s), but multiplier_step is a contact parameter, shared by every solver "
-    "(docs/solver-accuracy-notes.md, entries 12 and 14).",
-    {**_per_solver("n_subproblem_max_iters", 40), "Contact.ContactDynamics.multiplier_step": 0.5},
+    "2026-10-27): 40 sweeps per substep for every VBD-family solver, with 0.9 of the AL multiplier step. From t = 0 "
+    "at 40 sweeps, AAAVBD reached 10 s with multiplier_step 0.75 and 0.9 and diverged at the dragons' impact (steps "
+    "479-480) with 0.25, 0.5 and 1. At 0.9, its median gradient ratio over 5.5-10 s was 991 (616 at 100 sweeps), its "
+    "worst feasibility ratio 0.44 (4.0), and its pillars and armadillo moved about half as fast at 9-10 s. "
+    "multiplier_step is a contact parameter, shared by every solver (docs/solver-accuracy-notes.md, entries 12 and "
+    "14; the 40-sweep grid from t = 0 isn't written up there yet).",
+    {**_per_solver("n_subproblem_max_iters", 40), "Contact.ContactDynamics.multiplier_step": 0.9},
 )
 ARMADILLO_GAMMAS = Rule(
     "AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a "
@@ -391,8 +391,8 @@ SCENES["ArmadilloSpaghetti.DragonImpact.Fast"] = Scene(
     _DRAGON_IMPACT.source,
     _DRAGON_IMPACT.scene_files,
     [*_DRAGON_IMPACT.rules, DRAGON_IMPACT_FAST_BUDGET],
-    ["Untested from t = 0: the 40-sweep runs started from the 100-sweep runs' 4.4 s checkpoints, and at 20 sweeps "
-     "both AAAVBD and VBD failed during the twist (solver notes, entry 9). Newton keeps "
+    ["For AAAVBD. VBD fails at this budget from t = 0 with every multiplier step tried: during the twist (step 84) "
+     "with 0.5-0.9, at the rebound (step 579) with 0.25; use ArmadilloSpaghetti.DragonImpact for VBD. Newton keeps "
      "ArmadilloSpaghetti.DragonImpact's budget.",
      *_DRAGON_IMPACT.notes],
 )
