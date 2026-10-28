@@ -159,8 +159,8 @@ DRAGON_IMPACT_FAST_BUDGET = Rule(
     "pairs after 10 s: its median gradient ratio over 10-18 s was 1037 (688 at 100 sweeps), its worst feasibility "
     "ratio 0.38 (0.37), at most 9 inverted armadillo elements (5), and its pillars and armadillo moved about half as "
     "fast at 17-18 s, on a trajectory that differs from the 100-sweep run's since the twist. "
-    "multiplier_step is a contact parameter, shared by every solver (docs/solver-accuracy-notes.md, entries 12 and "
-    "14; the 40-sweep grid from t = 0 isn't written up there yet).",
+    "multiplier_step is a contact parameter, shared by every solver (docs/solver-accuracy-notes.md, entries 12, 14 "
+    "and 15).",
     {**_per_solver("n_subproblem_max_iters", 40), "Contact.ContactDynamics.multiplier_step": 0.9},
 )
 ARMADILLO_GAMMAS = Rule(
