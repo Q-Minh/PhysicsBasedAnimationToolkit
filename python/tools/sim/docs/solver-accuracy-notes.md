@@ -893,3 +893,206 @@ Data (`data/scenarios/runs/`), all `ArmadilloSpaghetti.DragonImpact.`:
   window's checkpoints `AAAVBD.MidBudget.Standard.From4.4s.Window.checkpoint.h5` (steps 450-490).
 - Full runs: `<AAAVBD|VBD>.MidBudget.MultiplierStep0.5.From4.4s.Leg1.h5`, with their `.Profile.json` and
   `.checkpoint.h5` (every 50 steps).
+
+## 15. DragonImpact at 40 sweeps from t = 0: AAAVBD survives at α 0.75-0.9 and keeps converging where VBD stalls
+
+Follows entry 14, whose 40-sweep runs started from the 100-sweep runs' 4.4 s state. Here every run starts at t = 0,
+on `configs/scenes/ArmadilloSpaghetti.DragonImpact.Fast.toml` (10 substeps of 1 x 40 sweeps) with
+`multiplier_step` α and the sweep budget set by `--set`, on dev 603e14f4. A per-sweep trace of single steps then asks
+where the failures come from.
+
+**Setup.** Runs: production (graph replay), a frame every step, checkpoints every 50 steps, 2 h cap each, with entry
+9's stop rules (a scratch guard around `simulate.py`): stop at the first non-finite position, at the first dropped
+contact pair (a detection requesting more pairs than a type's capacity), or after 10 consecutive steps with a
+penetration ratio over 2; nodes over 10 m/s are only logged. Budgets: 20 sweeps per substep (ShortBudget) and 40
+(MidBudget), α in {0.25, 0.5, 0.75, 0.9}, AAAVBD and VBD, plus AAAVBD at 40 with α 1. The α 0.9 AAAVBD run was then
+resumed from its step-1000 checkpoint to 18 s (bit-exact for the VBD family).
+
+**Where the runs end** (steps at 100 per second; every VBD stop is dropped VV pairs, 56k-183k requested against the
+capacity of 28,293; every AAAVBD stop is a non-finite position):
+
+| α | AAAVBD 20 | VBD 20 | AAAVBD 40 | VBD 40 |
+|---|---|---|---|---|
+| 0.25 | 71 (twist) | 66 | 480 (impact) | 579 (rebound) |
+| 0.5 | 485 (impact) | 66 | 479 (impact) | 84 |
+| 0.75 | 70 (twist) | 66 | 10 s | 84 |
+| 0.9 | 480 (impact) | 66 | 10 s | 84 |
+| 1 | | | 479 (impact) | |
+
+- At 40 sweeps AAAVBD survives only at α 0.75 and 0.9, and fails at the impact on both sides (0.25, 0.5, 1). At 20
+  sweeps it fails at the twist (0.25, 0.75) or the impact (0.5, 0.9), not monotonically in α.
+- VBD fails during the twist at every α except 0.25 at 40 sweeps, which fails in the rebound. Its twist stop doesn't
+  move with α (66 at 20 sweeps, 84 at 40).
+- Over the twist steps both solvers ran (from t = 0 to VBD's stop), the median gradient ratio is 59 for AAAVBD against
+  66-68 for VBD at 20 sweeps and 32-33 against 49-51 at 40, for step times of 0.50 against 0.41 s and 0.97 against
+  0.80 s.
+- The leading fast nodes before each failure are on the armadillo, except AAAVBD α 0.5 at 20 sweeps (dragonL's
+  247xxx): 202xxx at the impact (AAAVBD α 0.25, 0.5, 1 at 40 and 0.9 at 20), 186394/186429 at VBD's twist stop at
+  40 sweeps, 201753/201456 at VBD's at 20, and 186488 and 1936xx at AAAVBD's twist stops at 20.
+- The α 1 run also has a burst at armadillo nodes 190742-192039 at steps 145-150 (up to 18.4 m/s), a region no other
+  run shows.
+
+The two survivors against AAAVBD 10 x 100 at 0-10 s (inverted elements, all in the armadillo):
+
+| | AAAVBD 40, α 0.75 | AAAVBD 40, α 0.9 | AAAVBD 10 x 100 |
+|---|---|---|---|
+| gradient ratio, median 5.5-10 s | 918 | 991 | 616 |
+| worst feasibility ratio (step) | 0.65 (486) | 0.44 (484) | 4.00 (481) |
+| inverted elements, max / at 10 s | 9 / 9 | 9 / 1 | 4 (+1 dragonR) / 2 |
+| rebound streak over 10 m/s (from step) | 47 (491) | 38 (491) | 45 (491) |
+| RMS 9-10 s: pillar mid-spans / armadillo | 0.165 / 0.421 m/s | 0.160 / 0.409 m/s | 0.300 / 0.798 m/s |
+| step time after 4.4 s | 2.46 s | 2.46 s | (older code) |
+
+Renders at 4.4 s show the wrap differs: in AAAVBD 10 x 100 only pillar 2 crosses the armadillo's chest, while in VBD
+10 x 100 and in all three low-budget runs rendered, pillars 1 and 2 do. So the 40-sweep runs follow other
+trajectories from the twist on, and their lower speeds aren't an accuracy measure.
+
+**The α 0.9 run to 18 s.** All 1800 steps finite, no guard event after 10 s. Over 10-18 s, against AAAVBD 10 x 100
+(Leg1-5) and entry 14's AAAVBD 40 at α 0.5 from the 100-sweep 4.4 s state, over the same window:
+
+| 10-18 s | AAAVBD 40, α 0.9 | AAAVBD 10 x 100 | AAAVBD 40, α 0.5 from 4.4 s |
+|---|---|---|---|
+| gradient ratio, median / max | 1037 / 1842 | 688 / 1923 | 528 / 1054 |
+| worst feasibility ratio (step) | 0.38 (1130) | 0.37 (1724) | 0.53 (1697) |
+| inverted elements, max / at 18 s | 9 / 4 | 5 / 2 | 5 / 4 |
+| peak node speed | 3.6 m/s (dragonL) | 5.9 m/s (armadillo) | 5.3 m/s (armadillo) |
+| RMS 17-18 s: pillar mid-spans / armadillo | 0.168 / 0.445 m/s | 0.311 / 0.896 m/s | 0.427 / 1.124 m/s |
+
+No step over 10 m/s in any of the three after 10 s. Step time 2.47 s (median, 10-18 s), as the α 0.5 run's. The
+output has 788 frames for 800 steps: single frames are skipped at the frame-time rounding of fps = 1/dt, as in the
+other runs (21 in the 0-10 s file); speeds use consecutive frames only.
+
+**Traces.** A scratch tracer wraps `ConvergenceCheck.start/begin_outer/after_block/end_outer` and the full
+`MeshDynamics.update_dual`, and runs one step eagerly with a check after every sweep and early exit off (rstol and
+astol at 1e-6 x the defaults; ratios recomputed at the default tolerances). It records, after every sweep and after
+each outer iteration's dual update, re-detection and constraint-set update:
+- the production gradient ratio globally and summed over a node patch (same tolerance), and the same for the
+  augmented-Lagrangian (subproblem) gradient, whose frozen Coulomb limits it restores after each evaluation;
+- the largest node displacement since the previous record;
+- per patch, the elastic term h²∇Ψ and the inertial term m(x − x̃) of the gradient (the gradient kernels launched
+  into separate arrays), and the smallest det F and inverted count among the patch's elements;
+- per full dual update, each contact with λ_n > 0 before or after it that is pillar-pillar or near a patch: its key,
+  λ_n before and after, c_n (computed as the kernels do, in float64) and σ_n.
+
+Patches are every free node within r of the leading fast nodes of the failed runs, at the step's start positions:
+VbdTwist (186394, 186429), AaavbdTwist (186488), AaavbdTwistB (193642, 193736, 193891), VbdShortTwist (201753,
+201456), all with r = 5 cm (67-164 nodes), and the impact's six 202xxx nodes with r = 5 cm (AaavbdImpact, 238 nodes)
+and 15 cm (AaavbdImpactWide, 1125-1153 nodes). The radii come from the failed runs' frames before each stop: 98-100%
+of the twist patches' nodes over 10 m/s are within 5 cm of the seeds, but only 21-47% of the impact's (94-100%
+within 15 cm).
+
+States, all from the AAAVBD α 0.9 run at 40 sweeps (a survivor): step 80 (twist; advanced from its step-50
+checkpoint), 478 (impact; advanced from 450) and 650 (calm). Both advances are bit-exact against the run's frames.
+Each state was traced with VBD and AAAVBD, 1 x 40, 2 x 20 and 4 x 10 sweeps per substep (OneOuter, TwoOuter,
+FourOuter), and α 0.5 and 1: 36 traces of 51-62 s each (with loading). Values below are medians over the 10
+substeps of the substep's end (its last sweep, or the final dual update) unless noted.
+
+**The failing patches hold no contacts.** The leading fast nodes are 17-37 cm from every other body in the failed runs
+themselves (the impact's 18-31 cm from dragonR and 21-37 cm from the pillars at steps 470-478; VBD's twist nodes
+17-36 cm from the pillars at steps 80-84). The exception is 186488, 1-5 cm from the pillars in the 20-sweep runs. In
+the traced states every patch is at least 9 cm from the other bodies, so no patch contact has λ_n > 0, and the
+contact records use rings of 10, 20 and 30 cm around the seeds instead.
+
+**Global residual.**
+- VBD reaches 90% of an outer iteration's drop at sweep 2-6, AAAVBD at sweep 5-30 (30 of 40 at 0.8 s).
+- At 4.78 and 6.5 s the final dual update about doubles the global ratio: 78 to 150 and 204 to 440 (VBD OneOuter,
+  α 0.5), and α 1 raises it more (180, 530). At 0.8 s it doesn't (60 to 55).
+- More outer iterations help VBD a little and not AAAVBD. Ratio after the final update, OneOuter / TwoOuter /
+  FourOuter at α 0.5: VBD 150 / 151 / 135 at 4.78 s and 440 / 442 / 373 at 6.5 s; AAAVBD 153 / 156 / 164 and
+  447 / 445 / 465. Both improve at 0.8 s (55 to 36-38).
+- AAAVBD's AL ratio at the substep's end grows with the splits: 10 / 14 / 40 at 4.78 s and 22 / 37 / 117 at 6.5 s
+  (α 0.5), against VBD's 9 / 11 / 14 and 21 / 27 / 36, consistent with entry 5's stale stencil gradients after each
+  outer iteration.
+- After each outer iteration's update the ratio is flat across the outer iterations at 4.78 and 6.5 s (VBD
+  FourOuter α 1: 167, 165, 163, 162; AAAVBD 197, 199, 198, 201) and falls at 0.8 s (VBD 63, 41, 40, 41). The
+  penetration ratio alternates with period 2 (AAAVBD FourOuter α 1 at 4.78 s: 0.17, 0.22, 0.18, 0.22), as in entry 13.
+
+**The impact patch, AAAVBD against VBD** (4.78 s; patch ratio at the substep's end):
+
+| | OneOuter | TwoOuter | FourOuter |
+|---|---|---|---|
+| AaavbdImpact | 0.25 / 0.87 | 0.25 / 0.87 | 0.16 / 0.87 |
+| AaavbdImpactWide | 0.28 / 1.26 | 0.31 / 1.26 | 0.21 / 1.26 |
+
+- AAAVBD keeps converging the patch after its global plateau and VBD stalls: from each solver's own plateau sweep to
+  the last sweep (OneOuter), AAAVBD's patch ratio falls 25x (to 0.04 of its value at the plateau) and VBD's 2x (0.51).
+  The largest per-sweep patch displacement after the plateau is 0.69 of the one before for AAAVBD and 0.26 for VBD.
+- VBD's patch ratio at the substep's end is 0.87 at every split, while AAAVBD's improves at FourOuter.
+- α 0.5 against 1 changes no patch value by more than about 1% within one step.
+- Twist patches at 0.8 s: AAAVBD ends 7-18% lower (VbdTwist 0.775 / 0.785 / 0.804 against VBD's 0.866-0.867;
+  AaavbdTwist 0.266-0.268 against 0.322-0.324). At 4.78 s AaavbdTwist is 0.092-0.106 against 0.195.
+- At 6.5 s every patch is equal between the solvers within 9% (AaavbdImpact 0.115-0.116 for both).
+
+**What drives the far patches.** At these states, elasticity, with no sign of a local instability in the vertex solve:
+- No element of any patch inverts in any trace. The smallest det F is 0.906 (AAAVBD, impact patches, 4.78 s; VBD
+  0.953-0.963); all other patches and states are at 0.967-0.999.
+- At the impact patches, AAAVBD's elastic and inertial terms balance at the substep's end (elastic / inertial
+  0.94-0.98 mass-weighted, 0.91-1.01 for the largest nodes), while VBD's elastic term is unresolved (1.66-2.26 and
+  1.12-1.54). Elsewhere both solvers sit at 1.5-3.4 mass-weighted.
+- The largest per-sweep patch displacement after the global plateau is 0.15-0.98 of the one before (medians per
+  outer iteration), in every trace.
+
+**Secants Δλ/Δc and the sign of c_n.** For ring contacts on one key between consecutive dual updates of a substep
+(TwoOuter and FourOuter):
+- Δλ/Δc is positive in 79-93% of pairs (82-93% at α 1). Across substeps it is mostly noise (45-64% negative at
+  0.8 s).
+- Relative to the contact's σ_n (median 0.82-0.83 at 4.78 and 6.5 s, 0.46 at 0.8 s), the median positive secant
+  k/σ is 0.27-0.31 at α 0.5 and 0.51-0.54 at α 1 at 4.78 and 6.5 s, for both solvers and both splits, and 0.77-0.88
+  at both α at 0.8 s.
+- It carries nothing beyond ρ = c_n(k)/c_n(k−1): on a key that keeps its multiplier and isn't projected,
+  Δλ = −α σ c_n(k−1), so k/σ = α/(1 − ρ) exactly.
+- At 0.8 s, ρ follows linear response: median 0.47-0.48 at α 0.5 and 0.00-0.04 at α 1 (1 − (1 − 0.04)/2 = 0.52).
+- At 4.78 and 6.5 s it doesn't: ρ is −0.72 to −0.90 at α 1 and −0.21 to −0.68 at α 0.5, where linear response
+  predicts 0.05-0.14. The flips sit on the larger gaps:
+
+| FourOuter, 4.78 s | \|c_n\| > 2 µm: ρ, sign flips | \|c_n\| ≤ 0.5 µm: ρ, sign flips |
+|---|---|---|
+| VBD α 0.5 / α 1 | −0.93, 87% / −0.98, 94% | +0.11, 47% / −0.41, 62% |
+| AAAVBD α 0.5 / α 1 | −0.83, 87% / −0.93, 94% | −0.35, 57% / −0.70, 66% |
+
+  At 6.5 s the > 2 µm contacts have ρ −0.85 to −0.98 and 89-96% flips. The flipping contacts' |c_n| is 4-6 µm, at
+  least 8 float32 ulps of coordinates of 0.5-2 m (0.06-0.24 µm), 69-93% of them pillar-pillar, and their λ_n stays
+  positive through the update in 85-91% (zeroed in 5-8%), so this isn't entry 13's zeroing. The median |c_n| over all
+  ring contacts is 0.13-1.74 µm, and 23-67% of the pairs are at ≤ 0.5 µm (2-8 ulps), where the sign is noise
+  (47-57% flips at α 0.5); the α-independent flips are on the larger gaps. A period-2 swing of c_n of a few µm on
+  persistent, pressed contacts, almost independent of α, is what makes k scale with α here.
+
+**Caveats.** One step per state; all states are from the surviving AAAVBD α 0.9 run, so none is failing (patch ratios
+0.02-8 against global ratios 27-890); no failing run's own state was traced. Patch membership is fixed at the step's
+start. The histograms in the trace files are quantized at 10^0.2 per bin; the secant numbers above come from the raw
+rows.
+
+**Not tested** (ideas only):
+- Traces from the failing runs' own states (e.g. AAAVBD 40 α 0.5 advanced from its step-450 checkpoint to 470-478,
+  bit-exact), to see whether the impact patch's growth starts in the elastic balance or in the vertex solve.
+- What drives the α-independent period-2 swing of c_n on pressed pillar-pillar contacts: the subproblem's primal
+  response between updates, or re-detection's bases (entries 8 and 13).
+- Why VBD's impact-patch residual ends at the same value at every split.
+- Whether VBD's stall at the impact patch is the slow spread of the impact's elastic response across the armadillo:
+  a vertex-local sweep carries information about one ring per sweep and the patch is 9-37 cm from any contact, while
+  AAAVBD's stencil coupling reaches further per sweep. A test: the patch ratio per sweep against the patch's graph
+  distance from the contacts, in rings.
+
+**For the paper.** At 40 sweeps per substep from t = 0, AAAVBD runs DragonImpact to 18 s at α 0.9 and to 10 s at
+0.75 (entry 14 measured 0.49x the 100-sweep step time at this budget, on one code version), with a lower worst
+penetration than AAAVBD 10 x 100 (0.44 against 4.00) and up to 9 inverted armadillo elements (4 at 18 s) against
+its 5 (2), while VBD at 40 sweeps fails during the twist at α 0.5, 0.75 and 0.9. Neither is at parity with the
+100-sweep runs: the wrap at 4.4 s already differs, and at 17-18 s the pillars and the armadillo move about half as
+fast. At the patch where the low-budget AAAVBD runs later fail, AAAVBD keeps reducing the residual for the whole
+subproblem after the global residual has plateaued, ending 3.5-6x below VBD, which stalls there. The fast nodes of
+the failures at 40 sweeps are 17-37 cm from any contact, and in the traced states those patches are driven by
+elasticity, with no inversion or local instability. A secant estimate Δλ/Δc of each contact's stiffness, the
+quantity an adaptive dual step would use, is dominated at these states by an α-independent period-2 swing of the
+gaps, so it scales with α itself.
+
+Data (`data/scenarios/runs/`), all `ArmadilloSpaghetti.DragonImpact.`:
+- Grid (0-10 s or to the stop): `<AAAVBD|VBD>.<ShortBudget|MidBudget>.MultiplierStep<0.25|0.5|0.75|0.9>.{h5,
+  checkpoint.h5,Profile.json}` and `AAAVBD.MidBudget.MultiplierStep1.*`; the extra checkpoints of AAAVBD MidBudget
+  α 0.5 at steps 300 and 465 are in its `.checkpoint.h5`.
+- To 18 s: `AAAVBD.MidBudget.MultiplierStep0.9.From10s.Leg2.{h5,checkpoint.h5,Profile.json}`, continuing the 0-10 s
+  files.
+- Traced states: `AAAVBD.MidBudget.MultiplierStep0.9.From0.5s.To0.8s.*` (step 80) and `.From4.5s.To4.78s.*` (step
+  478); step 650 is in the 0-10 s run's `.checkpoint.h5`.
+- Traces: `<AAAVBD|VBD>.At<0.8s|4.78s|6.5s>.<OneOuter|TwoOuter|FourOuter>.MultiplierStep<0.5|1>.SweepTrace.h5` (the
+  attributes give the split, the patches with their seeds and radii, and each dataset's layout), and
+  `AAAVBD.At4.78s.FourOuter.MultiplierStep1.NoRings.SweepTrace.h5` (an earlier version without rings or drivers).
