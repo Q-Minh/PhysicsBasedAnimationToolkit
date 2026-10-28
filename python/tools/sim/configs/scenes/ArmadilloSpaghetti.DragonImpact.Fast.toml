@@ -39,21 +39,21 @@
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.5)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05)
 # - A lower budget for the dragons' impact, next to ArmadilloSpaghetti.DragonImpact's 100 sweeps (maintainer,
-#   2026-10-27): 40 sweeps per substep for every VBD-family solver, with half the AL multiplier step. From the
-#   100-sweep runs' 4.4 s checkpoints: AAAVBD diverged at step 495 with the standard step, and with half of it
-#   ran to 18 s at about 0.49x the 100-sweep step time, its pillars and armadillo moving 1.4x and 1.25x as fast
-#   as at 100 sweeps at 17-18 s. VBD ran to 18 s with either step; half of it lengthened the rebound and raised
-#   the pillars' late motion (0.31 against 0.19 m/s), but multiplier_step is a contact parameter, shared by
-#   every solver (docs/solver-accuracy-notes.md, entries 12 and 14).
-#     Contact.ContactDynamics.multiplier_step = 0.5 (source 1.0)
+#   2026-10-27): 40 sweeps per substep for every VBD-family solver, with 0.9 of the AL multiplier step. From t =
+#   0 at 40 sweeps, AAAVBD reached 10 s with multiplier_step 0.75 and 0.9 and diverged at the dragons' impact
+#   (steps 479-480) with 0.25, 0.5 and 1. At 0.9, its median gradient ratio over 5.5-10 s was 991 (616 at 100
+#   sweeps), its worst feasibility ratio 0.44 (4.0), and its pillars and armadillo moved about half as fast at
+#   9-10 s. multiplier_step is a contact parameter, shared by every solver (docs/solver-accuracy-notes.md,
+#   entries 12 and 14; the 40-sweep grid from t = 0 isn't written up there yet).
+#     Contact.ContactDynamics.multiplier_step = 0.9 (source 1.0)
 #     Solver.AAAVBD.n_subproblem_max_iters = 40 (source 100)
 #     Solver.AndersonSolver.n_subproblem_max_iters = 40 (source 100)
 #     Solver.Chebyshev.n_subproblem_max_iters = 40 (source 100)
 #     Solver.VBD.n_subproblem_max_iters = 40 (source 100)
 #
 # Notes:
-# - Untested from t = 0: the 40-sweep runs started from the 100-sweep runs' 4.4 s checkpoints, and at 20 sweeps
-#   both AAAVBD and VBD failed during the twist (solver notes, entry 9). Newton keeps
+# - For AAAVBD. VBD fails at this budget from t = 0 with every multiplier step tried: during the twist (step 84)
+#   with 0.5-0.9, at the rebound (step 579) with 0.25; use ArmadilloSpaghetti.DragonImpact for VBD. Newton keeps
 #   ArmadilloSpaghetti.DragonImpact's budget.
 # - Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the
 #   scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at
@@ -87,7 +87,7 @@ gamman = 10000.0
 gamman_adaptive = 1.0
 min_sigma_n = 10000.0
 mu_f = 0.2
-multiplier_step = 0.5
+multiplier_step = 0.9
 penalty_adaptivity = 1
 penalty_stiffness = 0
 
