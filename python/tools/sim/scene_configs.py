@@ -155,8 +155,10 @@ DRAGON_IMPACT_FAST_BUDGET = Rule(
     "A lower budget for the dragons' impact, next to ArmadilloSpaghetti.DragonImpact's 100 sweeps (maintainer, "
     "2026-10-27): 40 sweeps per substep for every VBD-family solver, with 0.9 of the AL multiplier step. From t = 0 "
     "at 40 sweeps, AAAVBD reached 10 s with multiplier_step 0.75 and 0.9 and diverged at the dragons' impact (steps "
-    "479-480) with 0.25, 0.5 and 1. At 0.9, its median gradient ratio over 5.5-10 s was 991 (616 at 100 sweeps), its "
-    "worst feasibility ratio 0.44 (4.0), and its pillars and armadillo moved about half as fast at 9-10 s. "
+    "479-480) with 0.25, 0.5 and 1. At 0.9 it then ran on to 18 s with no fast nodes, penetration streak or dropped "
+    "pairs after 10 s: its median gradient ratio over 10-18 s was 1037 (688 at 100 sweeps), its worst feasibility "
+    "ratio 0.38 (0.37), at most 9 inverted armadillo elements (5), and its pillars and armadillo moved about half as "
+    "fast at 17-18 s, on a trajectory that differs from the 100-sweep run's since the twist. "
     "multiplier_step is a contact parameter, shared by every solver (docs/solver-accuracy-notes.md, entries 12 and "
     "14; the 40-sweep grid from t = 0 isn't written up there yet).",
     {**_per_solver("n_subproblem_max_iters", 40), "Contact.ContactDynamics.multiplier_step": 0.9},
