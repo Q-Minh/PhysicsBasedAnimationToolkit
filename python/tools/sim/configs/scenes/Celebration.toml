@@ -1,7 +1,7 @@
 # Scene config: Celebration, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/celebration.h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/Celebration.toml. Keys not listed below have the source's values.
-# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
@@ -18,13 +18,6 @@
 # - Adaptive contact penalty per time step (TIMESTEP, the code default; maintainer: CONSTANT only with a stated
 #   justification), with the code's gamman_adaptive / gammaf_adaptive, instead of the paper's constant gamman.
 #     Contact.ContactDynamics.penalty_adaptivity = 1 (source 0)
-# - Positive AL contact margin dmin = 1 mm (the paper's -1e-4 dates from penetration-only VertexSdf detection):
-#   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
-#   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
-#     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
-# - VertexSdf band 2 mm, close to dmin (maintainer): a 2 cm band made the sphere stick to the trampolines under
-#   Newton, and the 1 mm default once let bodies pass through 10 cm plates. max_dist is kept.
-#     Contact.CDType.VertexSdf.band = 0.002 (source 0.001)
 # - Newton on heterogeneous soft-stiff contact: 30 outer iterations (contact detection passes) x 1 Newton step,
 #   with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG,
 #   the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if
@@ -32,9 +25,11 @@
 #     Solver.Newton.n_max_iters = 30 (source 70)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
-# - max_dist 30 cm, scaled to the geometry (maintainer): the base plate is 10 cm thick and the letters' edges ~4
-#   cm.
-#     Contact.CDType.VertexSdf.max_dist = 0.3 (source 0.05000000074505806)
+# - Contact for the celebration scene (maintainer, 2026-11-01): a 5 mm AL margin dmin and a 3 mm VertexSdf band,
+#   with the source's 5 cm max_dist (was 30 cm): 5 cm still covers any vertex inside the base plate (10.7 cm
+#   thick) or a confetto (about 5 cm thick).
+#     Contact.CDType.VertexSdf.band = 0.003 (source 0.001)
+#     Contact.ContactDynamics.dmin = 0.005 (source -9.999999747378752e-05)
 # - Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the
 #   effective normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with
 #   BDF1 like the former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it
@@ -50,9 +45,6 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
-#
-# Notes:
-# - The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's.
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -62,14 +54,14 @@ r = 0.003
 truncation_strategy = 0
 
 [Contact.CDType.VertexSdf]
-band = 0.002
+band = 0.003
 deactivate = 0
-max_dist = 0.3
+max_dist = 0.05000000074505806
 use_step_filter = 0
 
 [Contact.ContactDynamics]
 decay = 0.5
-dmin = 0.001
+dmin = 0.005
 gammaf = 10000.0
 gammaf_adaptive = 0.01
 gamman = 20000.0

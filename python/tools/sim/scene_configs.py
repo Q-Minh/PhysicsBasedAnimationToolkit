@@ -232,14 +232,15 @@ SCENES = {
             *SOLVERS,
             *HET_CONTACT,
             Rule(
-                "max_dist 30 cm, scaled to the geometry (maintainer): the base plate is 10 cm thick and the "
-                "letters' edges ~4 cm.",
-                {"Contact.CDType.VertexSdf.max_dist": 0.3},
+                "Contact for the celebration scene (maintainer, 2026-11-01): a 5 mm AL margin dmin and a 3 mm "
+                "VertexSdf band, with the source's 5 cm max_dist (was 30 cm): 5 cm still covers any vertex inside "
+                "the base plate (10.7 cm thick) or a confetto (about 5 cm thick).",
+                {"Contact.CDType.VertexSdf.max_dist": 0.05, "Contact.CDType.VertexSdf.band": 3e-3,
+                 "Contact.ContactDynamics.dmin": 5e-3},
             ),
             PENALTY_FLOOR,
             CONTACT_CAPACITIES,
         ],
-        ["The previous scene config's 1 cm band (for the 10 cm base plate) is now 2 mm, like every scene's."],
     ),
     # TODO: With this config (AAAVBD), the mat penetrates about 2 cm after its 2 s release, loses contact by about
     # 3.5 s and falls (z -26 m at 5 s), at dmin 1e-3 and -1e-4 and with the TIMESTEP penalty (2026-10-20). Next:
