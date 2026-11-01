@@ -215,6 +215,13 @@ PENALTY_FLOOR = Rule(
     "penalty at 1e-4 at 10 ms.",
     {"Contact.ContactDynamics.min_sigma_n": 1e4},
 )
+FIXED_BUDGET = Rule(
+    "Fixed compute budgets, no early exit for the VBD family (maintainer, 2026-11-01): the scene shows qualitative "
+    "differences between the solvers at equal compute. rstol = astol = 0 turns the relative stationarity test off and "
+    "gtol = 0 the absolute one. Newton then tests its absolute gtol2, which it doesn't reach on Celebration (gradient "
+    "ratios 70 to 20000 in its budget tests), so it also runs its full budget.",
+    {"Solver.Convergence.rstol": 0.0, "Solver.Convergence.astol": 0.0, **_per_solver("gtol", 0.0)},
+)
 
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
@@ -240,6 +247,7 @@ SCENES = {
             ),
             PENALTY_FLOOR,
             CONTACT_CAPACITIES,
+            FIXED_BUDGET,
         ],
     ),
     # TODO: With this config (AAAVBD), the mat penetrates about 2 cm after its 2 s release, loses contact by about

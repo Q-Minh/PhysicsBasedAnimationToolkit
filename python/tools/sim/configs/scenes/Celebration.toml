@@ -45,6 +45,16 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+# - Fixed compute budgets, no early exit for the VBD family (maintainer, 2026-11-01): the scene shows
+#   qualitative differences between the solvers at equal compute. rstol = astol = 0 turns the relative
+#   stationarity test off and gtol = 0 the absolute one. Newton then tests its absolute gtol2, which it doesn't
+#   reach on Celebration (gradient ratios 70 to 20000 in its budget tests), so it also runs its full budget.
+#     Solver.AAAVBD.gtol = 0.0 (source 0.0010000000474974513)
+#     Solver.AndersonSolver.gtol = 0.0 (source 0.0010000000474974513)
+#     Solver.Chebyshev.gtol = 0.0 (source 0.0010000000474974513)
+#     Solver.Convergence.astol = 0.0 (source 0.5)
+#     Solver.Convergence.rstol = 0.0 (source 0.01)
+#     Solver.VBD.gtol = 0.0 (source 0.0010000000474974513)
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -93,7 +103,7 @@ gammadown = 0.9900000095367432
 gammadownS = 0.949999988079071
 gammaup = 0.5
 gammaupS = 0.30000001192092896
-gtol = 0.0010000000474974513
+gtol = 0.0
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
@@ -113,7 +123,7 @@ beta = 1.0
 betaR = 0.0
 cod_numerical_zero = 1.000000013351432e-10
 e_penalty_stiffness = 0
-gtol = 0.0010000000474974513
+gtol = 0.0
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
@@ -129,7 +139,7 @@ vls_max_iters = 25
 [Solver.Chebyshev]
 betaR = 0.0
 e_penalty_stiffness = 0
-gtol = 0.0010000000474974513
+gtol = 0.0
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
@@ -141,10 +151,10 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.5
+astol = 0.0
 check_interval = 20
 ftol = 0.5
-rstol = 0.01
+rstol = 0.0
 
 [Solver.Newton]
 init_strategy = 0
@@ -170,7 +180,7 @@ tau = 0.5
 [Solver.VBD]
 betaR = 0.0
 e_penalty_stiffness = 0
-gtol = 0.0010000000474974513
+gtol = 0.0
 hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
