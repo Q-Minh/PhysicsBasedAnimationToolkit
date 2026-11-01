@@ -217,10 +217,10 @@ PENALTY_FLOOR = Rule(
 )
 FIXED_BUDGET = Rule(
     "Fixed compute budgets, no early exit for the VBD family (maintainer, 2026-11-01): the scene shows qualitative "
-    "differences between the solvers at equal compute. rstol = astol = 0 turns the relative stationarity test off and "
-    "gtol = 0 the absolute one. Newton then tests its absolute gtol2, which it doesn't reach on Celebration (gradient "
-    "ratios 70 to 20000 in its budget tests), so it also runs its full budget.",
-    {"Solver.Convergence.rstol": 0.0, "Solver.Convergence.astol": 0.0, **_per_solver("gtol", 0.0)},
+    "differences between the solvers at equal compute. early_exit = 0 runs every solve's full budget, Newton's "
+    "included, while the usual tests still run and record their ratios (zero tolerances, used before, made them "
+    "infinite).",
+    {"Solver.Convergence.early_exit": 0},
 )
 
 SCENES = {
