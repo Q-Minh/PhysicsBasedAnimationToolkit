@@ -456,8 +456,13 @@ def build(name: str) -> tuple[dict, list[str]]:
     """The scene's full config and its header."""
     scene = SCENES[name]
     source_path = CONFIGS / "defaults.toml" if scene.source == "defaults" else CONFIGS / "paper" / f"{scene.source}.toml"
-    source = _flatten(config.read(source_path))
-    keys = set(_flatten(_read(CONFIGS / "defaults.toml")))
+    defaults = _flatten(_read(CONFIGS / "defaults.toml"))
+    paper = _flatten(config.read(source_path))
+    # Parameters added since the paper configs were generated keep their code defaults (the paper configs
+    # aren't regenerated: they'll be replaced by these)
+    from_defaults = sorted(defaults.keys() - paper.keys())
+    source = {**{k: defaults[k] for k in from_defaults}, **paper}
+    keys = set(defaults)
     cfg, why = dict(source), {}
     for rule in scene.rules:
         for key, value in rule.values.items():
@@ -479,13 +484,12 @@ def build(name: str) -> tuple[dict, list[str]]:
     for rule in rules:
         header += textwrap.wrap(rule.reason, 110, initial_indent="- ", subsequent_indent="  ", break_on_hyphens=False)
         header += [f"    {k} = {cfg[k]!r} (source {source[k]!r})" for k in changed if why[k] is rule]
+    if from_defaults:
+        header += ["", "Not in the source, code defaults (configs/defaults.toml):"] + [f"  {k}" for k in from_defaults]
     if scene.notes:
         header += ["", "Notes:"]
         for note in scene.notes:
             header += textwrap.wrap(note, 110, initial_indent="- ", subsequent_indent="  ", break_on_hyphens=False)
-    missing = keys - set(cfg)
-    if missing:
-        raise KeyError(f"{name}: source lacks {sorted(missing)}; rerun paper_configs make")
     return _nest({k: cfg[k] for k in sorted(cfg)}), header
 
 

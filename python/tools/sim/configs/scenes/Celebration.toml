@@ -55,6 +55,9 @@
 #   at half the cost, about 11 s per step; 3 x 1 penetrates (feasibility ratio 1.4) and 30 x 1 with strict CG
 #   took 116 s per step.
 #     Solver.Newton.n_max_iters = 5 (source 70)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Solver.Convergence.early_exit
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -153,6 +156,7 @@ vls_max_iters = 25
 [Solver.Convergence]
 astol = 0.0
 check_interval = 20
+early_exit = 1
 ftol = 0.5
 rstol = 0.0
 

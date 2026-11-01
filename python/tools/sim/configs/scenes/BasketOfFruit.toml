@@ -1,7 +1,7 @@
 # Scene config: BasketOfFruit, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
 # Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
-# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
@@ -52,6 +52,9 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Solver.Convergence.early_exit
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -150,6 +153,7 @@ vls_max_iters = 25
 [Solver.Convergence]
 astol = 0.5
 check_interval = 20
+early_exit = 1
 ftol = 0.5
 rstol = 0.01
 

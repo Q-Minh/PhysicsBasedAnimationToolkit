@@ -1,7 +1,7 @@
 # Scene config: BendingBeam.Heterogeneous, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beam_het.h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/BendingBeam.Heterogeneous.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -13,6 +13,9 @@
 #   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
 #     Solver.AAAVBD.gammaup = 0.5 (source 0.8999999761581421)
 #     Solver.AAAVBD.gammaupS = 0.3 (source 0.8500000238418579)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Solver.Convergence.early_exit
 #
 # Notes:
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
@@ -116,6 +119,7 @@ vls_max_iters = 25
 [Solver.Convergence]
 astol = 0.5
 check_interval = 20
+early_exit = 1
 ftol = 0.5
 rstol = 0.01
 
