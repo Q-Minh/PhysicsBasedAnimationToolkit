@@ -64,6 +64,10 @@ class ConvergenceParams(SerializableMixin):
     hasn't moved can't pass with astol < 1, with or without substeps. The default 0.5 matches the former
     astol * L = 0.57 mm of the 5.66 m trampolines at h = 1e-2. Static problems have no inertial displacement
     and use the absolute ``gtol``.
+
+    ``early_exit`` (default on) lets passing the tests end a solve. Off, solves run their full budgets (fixed
+    compute) while the tests still run and the status still records their ratios to the tolerances, unlike
+    zero tolerances, whose ratios are infinite.
     """
 
     check_interval = DocField(
@@ -90,6 +94,12 @@ class ConvergenceParams(SerializableMixin):
         "so it's time-step and scene-size invariant, and with astol < 1 a step that hasn't moved can't pass. "
         "Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
         "file's astol = 1e-4 is now extremely strict",
+    )
+    early_exit = DocField(
+        True,
+        "End a solve (or a subproblem) once it passes its tests. Off, every solve runs its full budget of outer "
+        "iterations and sweeps, at fixed compute, and still tests and records its gradient and feasibility ratios "
+        "against the usual tolerances",
     )
 
     def deserialize(self, grp) -> None:
@@ -440,6 +450,7 @@ def _start_kernel(
     gm2: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
+    early_exit: wp.int32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -452,7 +463,7 @@ def _start_kernel(
     k[0] = 0
     converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
-    done = converged and feasible
+    done = converged and feasible and early_exit != 0
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
     # A new solve: advance the counter and start its status row
     n = solves[0]
@@ -491,6 +502,7 @@ def _after_block_kernel(
     gm2: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
+    early_exit: wp.int32,
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     inner_keep: wp.array[wp.int32],
@@ -498,9 +510,9 @@ def _after_block_kernel(
 ):
     b = blocks[0] + 1
     blocks[0] = b
-    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
-    subproblem_keep[0] = wp.where(converged, 0, 1)
-    inner_keep[0] = wp.where(not converged and b < n_blocks, 1, 0)
+    stop = _is_converged(gnorm2, gtol2, gm2, stol2, relative) and early_exit != 0
+    subproblem_keep[0] = wp.where(stop, 0, 1)
+    inner_keep[0] = wp.where(not stop and b < n_blocks, 1, 0)
 
 
 @wp.kernel
@@ -510,6 +522,7 @@ def _end_outer_kernel(
     gm2: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
+    early_exit: wp.int32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -529,7 +542,7 @@ def _end_outer_kernel(
     k[0] = kk
     converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
-    done = converged and feasible
+    done = converged and feasible and early_exit != 0
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
     # Update the solve's status row with the subproblem that just ended (see SweepLayout)
     idx = (solves[0] - 1) % status.shape[0]
@@ -550,7 +563,8 @@ class ConvergenceCheck:
 
     Flags (each a (1,) int32 array, read by conditional graph nodes):
 
-    - ``keep``: the step goes on (not both optimal and feasible, and outer iterations left).
+    - ``keep``: the step goes on (not both optimal and feasible, or ``early_exit`` off, and outer iterations
+      left).
     - ``active``: the current outer iteration runs (``keep`` when it started).
     - ``inner_keep``: the current subproblem's sweep blocks go on.
     - ``subproblem_keep``: the current subproblem's remaining sweeps run (not converged inside it).
@@ -689,6 +703,7 @@ class ConvergenceCheck:
             self.residual_m2,
             self.stationarity_tol2,
             int(self.relative),
+            int(bool(self.params.early_exit)),
         ]
 
     def _measure_penetration(self) -> None:
@@ -712,7 +727,8 @@ class ConvergenceCheck:
         ]
 
     def start(self, gtol: float, n_max_iters: int) -> None:
-        """Test the initial positions: ``k = 0``, ``keep`` = not (optimal and feasible).
+        """Test the initial positions: ``k = 0``, ``keep`` = not (optimal and feasible), or always with
+        ``early_exit`` off.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute; used when the relative test is off).
@@ -744,7 +760,8 @@ class ConvergenceCheck:
         )
 
     def after_block(self, gtol: float, n_blocks: int) -> None:
-        """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps.
+        """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps (unless
+        ``early_exit`` is off).
 
         Only the gradient is tested here; feasibility is tested between outer iterations.
 
