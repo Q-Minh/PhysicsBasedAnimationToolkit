@@ -248,6 +248,16 @@ SCENES = {
             PENALTY_FLOOR,
             CONTACT_CAPACITIES,
             FIXED_BUDGET,
+            Rule(
+                "Newton, the reference, at 5 outer iterations x 1 Newton step with the source's CG (rtol 1e-6, at most "
+                "2000 iterations) (maintainer, 2026-11-01): its gradient ratio plateaus after the second outer "
+                "iteration (about 15 before contact, 125-170 during the confetti impacts), and on 6 impact steps 5 x 1 "
+                "lands within its run-to-run noise of 10 x 1 (confetti 4.9 mm RMS from it, against 4.1 mm between two "
+                "identical 10 x 1 runs) at half the cost, about 11 s per step; 3 x 1 penetrates (feasibility ratio 1.4) "
+                "and 30 x 1 with strict CG took 116 s per step.",
+                {"Solver.Newton.n_max_iters": 5, "Solver.Newton.LinearSolver.rtol": 1e-6,
+                 "Solver.Newton.LinearSolver.n_max_iters": 2000},
+            ),
         ],
     ),
     # TODO: With this config (AAAVBD), the mat penetrates about 2 cm after its 2 s release, loses contact by about
