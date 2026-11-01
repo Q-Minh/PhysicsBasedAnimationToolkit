@@ -1043,6 +1043,12 @@ def _relative_check(params: Params):
     return check if check is not None and check.relative else None
 
 
+def _early_exit(params: Params) -> bool:
+    """Whether passing a test ends the solve or subproblem (``Solver.Convergence.early_exit``; on without
+    the shared convergence check)."""
+    return params.convergence is None or bool(params.convergence.params.early_exit)
+
+
 @profiling.scoped("solve.initialize")
 def initialize_solve(
     fem: FemElastoDynamics,
@@ -1370,7 +1376,8 @@ def solve_subproblem(
     """Take up to ``n_subproblem_max_iters`` damped Newton steps on the current subproblem.
 
     The subproblem converges when its augmented-Lagrangian gradient passes the shared stationarity test
-    (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``. Each
+    (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``; with
+    ``Solver.Convergence.early_exit`` off, it takes all its steps anyway. Each
     gradient (the subproblem's start and after each accepted step) first refreshes the contact slack
     at the iterate (:func:`_subproblem_gradient`).
 
@@ -1383,6 +1390,7 @@ def solve_subproblem(
     n_nodes = fem.data.x.shape[0]
     h2 = wp.float32(fem.h2)  # type: ignore
     check = _relative_check(params)
+    early_exit = _early_exit(params)
     n_lin_max_iters = int(params.data.n_lin_max_iters)
     steps, max_cg, cg_capped, backtracks = 0, 0, False, 0
     cg_residual, cg_tolerance = float("nan"), float("nan")
@@ -1396,12 +1404,12 @@ def solve_subproblem(
     _subproblem_gradient(fem, contact, params, main_stream)
     for _ in range(int(params.data.n_subproblem_max_iters)):
         if check is not None:
-            if check.relative_test(params._g):
+            if check.relative_test(params._g) and early_exit:
                 return done(SubproblemStatus.CONVERGED)
         else:
             params._gradient_norm.reduce(main_stream)
             gnorm2 = float(params._gnorm2.numpy()[0])
-            if gnorm2 <= float(params.data.gtol2):
+            if gnorm2 <= float(params.data.gtol2) and early_exit:
                 return done(SubproblemStatus.CONVERGED)
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
@@ -1556,19 +1564,21 @@ class NewtonSolver:
         cd: ContactDetection,
         params: Params,
     ) -> bool:
-        converged = False
+        converged, stopped = False, False
+        early_exit = _early_exit(params)
         subproblems, outer_tests = [], []
         initialize_solve(fem, contact, cd, params)
         for _ in range(int(params.data.n_max_iters)):
             converged = check_convergence(fem, contact, params)
             outer_tests.append(params.last_outer_ratios)
-            if converged:
+            if converged and early_exit:
+                stopped = True
                 break
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(fem, contact, params)
             subproblems.append(params.last_subproblem)
             finalize_subproblem(fem, contact, cd, params)
-        if not converged:
+        if not stopped:
             # As C++ newton::Solve: test the last subproblem's result too (a test, not a step)
             converged = check_convergence(fem, contact, params)
             outer_tests.append(params.last_outer_ratios)

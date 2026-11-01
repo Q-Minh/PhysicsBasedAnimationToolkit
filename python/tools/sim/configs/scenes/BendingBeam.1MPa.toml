@@ -1,7 +1,7 @@
 # Scene config: BendingBeam.1MPa, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beamY1e6.h5 (homogeneous, Young's modulus 1e6).
 # Source: configs/paper/BendingBeam.1MPa.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-10-26 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -9,6 +9,9 @@
 #     Solver.AndersonSolver.vlinsolve = 0 (source 3)
 #     Solver.Chebyshev.vlinsolve = 0 (source 3)
 #     Solver.VBD.vlinsolve = 0 (source 3)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Solver.Convergence.early_exit
 #
 # Notes:
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
@@ -112,6 +115,7 @@ vls_max_iters = 25
 [Solver.Convergence]
 astol = 0.5
 check_interval = 20
+early_exit = 1
 ftol = 0.5
 rstol = 0.01
 
