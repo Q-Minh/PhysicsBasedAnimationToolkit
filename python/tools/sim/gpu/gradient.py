@@ -13,6 +13,7 @@ from .contact.dynamics import (
     CONTACT_VV,
     MeshDynamics as ContactDynamics,
     MeshDynamicsData,
+    augmented_normal_derivative,
     capped_friction_scale,
     friction_penalty,
     normal_penalty,
@@ -100,6 +101,7 @@ def _vv_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    one_sided: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -114,8 +116,7 @@ def _vv_gradient(
     j = contact.meshes.V[v]
     xi, xj = x[i], x[j]
     xti, xtj = xt[i], xt[j]
-    sk = contact.cvv.s[c]
-    c_n = wp.dot(xi - xj, n) - contact.dmin - sk
+    g_n = wp.dot(xi - xj, n) - contact.dmin
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_VV, c)
@@ -124,7 +125,7 @@ def _vv_gradient(
     dEn = -contact.cvv.lambda_n[c]
     dEf = -contact.cvv.lambda_f[c]
     if augmented != 0:
-        dEn += sigma_n * c_n
+        dEn = augmented_normal_derivative(g_n, contact.cvv.s[c], contact.cvv.lambda_n[c], sigma_n, one_sided)
         dEf += sigma_f * c_f
         # Coulomb limit at the contact's first normal force of the time step, frozen for the step
         C = frozen_friction_limit(contact.cvv.friction_limit, c, contact.mu_f * wp.max(-dEn, wp.float32(0)))
@@ -144,6 +145,7 @@ def _ve_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    one_sided: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -163,7 +165,7 @@ def _ve_gradient(
     xti = xt[i]
     xcp2 = b0 * x[ea] + b1 * x[eb]
     xtcp2 = b0 * xt[ea] + b1 * xt[eb]
-    c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cve.s[c]
+    g_n = wp.dot(xi - xcp2, n) - contact.dmin
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_VE, c)
@@ -172,7 +174,7 @@ def _ve_gradient(
     dEn = -contact.cve.lambda_n[c]
     dEf = -contact.cve.lambda_f[c]
     if augmented != 0:
-        dEn += sigma_n * c_n
+        dEn = augmented_normal_derivative(g_n, contact.cve.s[c], contact.cve.lambda_n[c], sigma_n, one_sided)
         dEf += sigma_f * c_f
         # Coulomb limit at the contact's first normal force of the time step, frozen for the step
         C = frozen_friction_limit(contact.cve.friction_limit, c, contact.mu_f * wp.max(-dEn, wp.float32(0)))
@@ -194,6 +196,7 @@ def _vf_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    one_sided: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -214,7 +217,7 @@ def _vf_gradient(
     xti = xt[i]
     xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
     xtcp2 = b0 * xt[finds[0]] + b1 * xt[finds[1]] + b2 * xt[finds[2]]
-    c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cvf.s[c]
+    g_n = wp.dot(xi - xcp2, n) - contact.dmin
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_VF, c)
@@ -223,7 +226,7 @@ def _vf_gradient(
     dEn = -contact.cvf.lambda_n[c]
     dEf = -contact.cvf.lambda_f[c]
     if augmented != 0:
-        dEn += sigma_n * c_n
+        dEn = augmented_normal_derivative(g_n, contact.cvf.s[c], contact.cvf.lambda_n[c], sigma_n, one_sided)
         dEf += sigma_f * c_f
         # Coulomb limit at the contact's first normal force of the time step, frozen for the step
         C = frozen_friction_limit(contact.cvf.friction_limit, c, contact.mu_f * wp.max(-dEn, wp.float32(0)))
@@ -247,6 +250,7 @@ def _ee_gradient(
     contact: MeshDynamicsData,
     n_u: wp.int32,
     augmented: wp.int32,
+    one_sided: wp.int32,
     g: wp.array[wp.vec3f],
 ):
     c = wp.tid()
@@ -270,7 +274,7 @@ def _ee_gradient(
     xtcp1 = b0 * xt[ia] + b1 * xt[ib]
     xcp2 = b2 * x[ic] + b3 * x[id]
     xtcp2 = b2 * xt[ic] + b3 * xt[id]
-    c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
+    g_n = wp.dot(xcp1 - xcp2, n) - contact.dmin
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_EE, c)
@@ -279,7 +283,7 @@ def _ee_gradient(
     dEn = -contact.cee.lambda_n[c]
     dEf = -contact.cee.lambda_f[c]
     if augmented != 0:
-        dEn += sigma_n * c_n
+        dEn = augmented_normal_derivative(g_n, contact.cee.s[c], contact.cee.lambda_n[c], sigma_n, one_sided)
         dEf += sigma_f * c_f
         # Coulomb limit at the contact's first normal force of the time step, frozen for the step
         C = frozen_friction_limit(contact.cee.friction_limit, c, contact.mu_f * wp.max(-dEn, wp.float32(0)))
@@ -330,6 +334,9 @@ class Gradient:
         self._contact = contact
         self._g = g
         self._augmented = 1 if augmented_lagrangian else 0
+        # Augmented normal terms with the slack eliminated (see contact.dynamics.augmented_normal_energy), GPU
+        # Newton's Solver.Newton.one_sided_contact; ignored by the Lagrangian gradient
+        self.one_sided = False
         # Only the augmented kernels freeze the limits
         self.friction_limits = FrictionLimits(
             *(cs.friction_limit.current for cs in (contact.cvv, contact.cve, contact.cvf, contact.cee))
@@ -373,7 +380,7 @@ class Gradient:
             wp.launch(
                 kernel,
                 dim=cs.capacity,
-                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, g],
+                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, int(self.one_sided), g],
                 stream=stream,
             )
         for stream in self._streams:
@@ -409,6 +416,15 @@ class GradientNorm:
     def friction_limits(self) -> FrictionLimits:
         """The Coulomb limits frozen for the time step by the augmented :meth:`compute_gradient`."""
         return self._gradient.friction_limits
+
+    @property
+    def one_sided(self) -> bool:
+        """Whether the augmented normal terms eliminate the slack (see :class:`Gradient`)."""
+        return self._gradient.one_sided
+
+    @one_sided.setter
+    def one_sided(self, value: bool) -> None:
+        self._gradient.one_sided = bool(value)
 
     def compute_gradient(self, main_stream: wp.Stream) -> None:
         """Recompute ``g`` at the current positions."""
