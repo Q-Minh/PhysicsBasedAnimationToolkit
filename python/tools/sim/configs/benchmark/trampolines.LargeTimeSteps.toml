@@ -33,8 +33,12 @@ video_seconds = 5.0
 fps = 24.0
 memory_mb = 32.0
 
-# Newton's CG per case: h = 1e-2's per-case winners (trampolines.toml), not re-tuned for these time steps: rtol 1e-2
-# at cap 4000, except Y1e8 at rtol 1e-6, cap 500.
+# Newton's CG per case: the winners of a Newton-only CG sweep on samples 0-1 (benchmark_cg_sweep.py; rtol 1e-2,
+# 1e-4, 1e-6 at caps 1000 and 4000, plus rtol 1e-6 at cap 500), ranked by mean time to the highest level every setting
+# reached on every solve, h = 1e-2's setting (trampolines.toml) kept within 10%. Most stiff cases stall at about 2x
+# the reference's own error bound under every setting (a reference floor, not CG), so they rank at 99.9%. h = 1/30's
+# Y1e7 and het switch to rtol 1e-6 at cap 500, confirmed on samples 2-9 (mean time to 99.9%: Y1e7 2.55 vs 2.88 s,
+# het 2.36 vs 3.55 s); the others keep h = 1e-2's setting.
 
 [case."dynamic_h0.0333333/Y1e5".Solver.Newton.LinearSolver]
 n_max_iters = 4000
@@ -45,12 +49,12 @@ n_max_iters = 4000
 rtol = 1e-2
 
 [case."dynamic_h0.0333333/Y1e7".Solver.Newton.LinearSolver]
-n_max_iters = 4000
-rtol = 1e-2
+n_max_iters = 500
+rtol = 1e-6
 
 [case."dynamic_h0.0333333/het".Solver.Newton.LinearSolver]
-n_max_iters = 4000
-rtol = 1e-2
+n_max_iters = 500
+rtol = 1e-6
 
 [case."dynamic_h0.0333333/Y1e8".Solver.Newton.LinearSolver]
 n_max_iters = 500
