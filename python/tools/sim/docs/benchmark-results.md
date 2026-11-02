@@ -30,7 +30,18 @@ shared as files. The scripts are in this repository and run from its root as mod
   - **dynamic (h):** one implicit-Euler step of size h from a state (x, v), with gravity. The solution x\* is a
     full-order Newton reference, `x_ref`.
 - **Error.** e = ‖x − x\*‖_M is the lumped-mass norm over free nodes, logged after every solver iteration. The
-  benchmark scores the relative error e/e0.
+  benchmark scores the relative error e/e0, where e0 is the error of the problem's start state.
+- **Initial guess.** Every solver, Newton included, starts a dynamic problem from the guess of the case's
+  `Integration.init_strategy`, computed from the start state (x_t, v_t) as the simulator starts a time step:
+  - 0 Position: x_t itself. The run files set it (`configs/benchmark/shared.toml`), and every result so far used it;
+  - 1 FreeTrajectory: x_t + h v_t on the free nodes;
+  - 2 TrajectoryWithExternalLoad: the inertial target x_t + h v_t + h² a_ext, the simulator's default, and the
+    code default a benchmark run without a run file gets;
+  - 3 and 4 need the previous step's velocity, which one-step problems don't have, and are refused.
+
+  `Solver.Newton.init_strategy` doesn't apply in the benchmark. e0 stays the start state's error whatever the
+  strategy, so a better guess crosses levels at time 0 (`start_relative_error` < 1, zero increments) and a worse one
+  starts above e/e0 = 1. Static problems always start from their sample.
 - **Accuracy levels.** Error reductions 1 − e/e0, in decades:
   - static: 50, 90, 99, 99.9, 99.99 and 99.999%;
   - dynamic: up to 99.99%.
@@ -87,8 +98,9 @@ Iterate cases in file order through the `benchmarks` and `cases` attributes (`be
 
 `benchmark`, `scene`, `label` (the scene's display name), `set` (the dataset set, e.g. `het/dynamic_h0.01/E10000`),
 `problem` (`static` or `dynamic`), `h`, `energy` (J), `budget_source` (how budgets were set), `max_seconds` (Newton's
-cap), the case's Newton CG settings (`newton_cg_rtol`, `newton_cg_n_max_iters`, `newton_cg_atol`), and
-`sim_params_toml`, every solver parameter the case ran with.
+cap), the case's Newton CG settings (`newton_cg_rtol`, `newton_cg_n_max_iters`, `newton_cg_atol`), `init_strategy`
+(the initial guess, also on each solver group, and on the root for the whole run), and `sim_params_toml`, every
+solver parameter the case ran with.
 
 ### 2.3 Per-solver arrays
 
@@ -97,7 +109,8 @@ S = 32 problems; L = 6 levels (static) or 5 (dynamic). Row i of every array is p
 | Dataset | Shape | Meaning |
 |---|---|---|
 | `sample` | (S,) | the problem's index in the dataset set |
-| `e0` | (S,) | initial error ‖x0 − x\*‖_M |
+| `e0` | (S,) | initial error ‖x_t − x\*‖_M, the problem's start state's (the same for every solver) |
+| `start_relative_error` | (S,) | the solver's first iterate's e/e0: 1 at Position, else its initial guess's (absent from files written before it) |
 | `final_relative_error` | (S,) | e/e0 at the end of the solve |
 | `iterations`, `sweeps` | (S,) | solver iterations (log entries − 1) and VBD sweeps (0 for Newton) |
 | `solver_time`, `host_time` | (S,) | timed solve (s); wall-clock time around it (s) |
@@ -115,11 +128,11 @@ S = 32 problems; L = 6 levels (static) or 5 (dynamic). Row i of every array is p
 
 ### 2.4 Logs
 
-`logs/<sample>/` holds one entry per iterate, entry 0 being the start state:
+`logs/<sample>/` holds one entry per iterate, entry 0 being the solver's initial guess (the start state at Position):
 
 | Dataset | Meaning |
 |---|---|
-| `error` | e after each iteration (absolute; divide by `error[0]` for e/e0) |
+| `error` | e after each iteration (absolute; divide by the solve's `e0` for e/e0, which is `error[0]` at Position) |
 | `time` | cumulative solver time (s) |
 | `sweeps` | cumulative VBD sweeps (an Anderson step counts its 2 sweeps; 0 for Newton) |
 
@@ -213,7 +226,7 @@ with h5py.File("data/benchmarks/results/trampolines.h5", "r") as f:
     print("problems reaching each level within T_N:", within.sum(axis=0))
 
     log = g["logs/000000"]                                # one solve's full log
-    e = log["error"][()] / log["error"][0]                # e/e0 per iterate
+    e = log["error"][()] / g["e0"][0]                     # e/e0 per iterate (row 0: sample 0)
     t = log["time"][()] / t_n[0]                          # solver time over T_N
     sweeps = log["sweeps"][()]
     j = g["crossing_iteration"][0, 3]                     # full-log entry of the 99.9% crossing (-1: not reached)
