@@ -40,6 +40,7 @@
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
+#   Solver.Newton.one_sided_contact
 #
 # Notes:
 # - Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for Young's
@@ -150,6 +151,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 1
 n_max_iters = 5
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]

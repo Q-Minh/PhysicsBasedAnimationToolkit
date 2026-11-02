@@ -373,6 +373,7 @@ class SimulationState:
             self.params_cpu[SolverType.Newton], self.newton_linear_solver_params
         )
         newton_params.construct(self.fem, self.contact)
+        newton_params.gpu = self.newton_gpu_params
         self.params[SolverType.Newton] = newton_params
         # Per-solve statuses, recorded by step() (see status.py)
         self.status_log = StatusLog()
@@ -596,6 +597,7 @@ class SimulationState:
             self.params_cpu[SolverType.Newton], self.newton_linear_solver_params
         )
         newton_params.construct(self.fem, self.contact)
+        newton_params.gpu = self.newton_gpu_params
         self.params[SolverType.Newton] = newton_params
         self._construct_convergence_check()
         self.detector = self._make_contact_detector(contact_pair_storage)

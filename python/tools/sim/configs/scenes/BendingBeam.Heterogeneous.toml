@@ -16,6 +16,7 @@
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
+#   Solver.Newton.one_sided_contact
 #
 # Notes:
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
@@ -127,6 +128,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 1
 n_max_iters = 70
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]

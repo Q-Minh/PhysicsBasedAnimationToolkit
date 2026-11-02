@@ -48,6 +48,7 @@
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
+#   Solver.Newton.one_sided_contact
 #
 # Notes:
 # - Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per substep.
@@ -158,6 +159,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 1
 n_max_iters = 30
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]

@@ -155,6 +155,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 0
 n_max_iters = 2
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]

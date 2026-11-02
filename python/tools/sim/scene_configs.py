@@ -249,14 +249,18 @@ SCENES = {
             CONTACT_CAPACITIES,
             FIXED_BUDGET,
             Rule(
-                "Newton, the reference, at 5 outer iterations x 1 Newton step with the source's CG (rtol 1e-6, at most "
-                "2000 iterations) (maintainer, 2026-11-01): its gradient ratio plateaus after the second outer "
-                "iteration (about 15 before contact, 125-170 during the confetti impacts), and on 6 impact steps 5 x 1 "
-                "lands within its run-to-run noise of 10 x 1 (confetti 4.9 mm RMS from it, against 4.1 mm between two "
-                "identical 10 x 1 runs) at half the cost, about 11 s per step; 3 x 1 penetrates (feasibility ratio 1.4) "
-                "and 30 x 1 with strict CG took 116 s per step.",
-                {"Solver.Newton.n_max_iters": 5, "Solver.Newton.LinearSolver.rtol": 1e-6,
-                 "Solver.Newton.LinearSolver.n_max_iters": 2000},
+                "Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 "
+                "at most 6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed "
+                "contacts were stiff two-sided springs that held confetti on the letters' vertical faces (5 x 1: none "
+                "of the 7 on walls moved 5 cm in 0.2 s from 2 s); one-sided, 4 of 7 fall, one at free-fall speed. "
+                "A second Newton step per subproblem brought the worst feasibility ratio from 3.06 back to 0.86 (a "
+                "third: 0.24, the same confetti motion). At 2000 iterations CG stopped at its cap in 86-95% of the "
+                "subproblems; it reaches rtol 1e-6 within 3910 iterations and 1e-7 within 4690 (2 steps from 2 s). "
+                "About 65 s per step. Before (5 x 1, rtol 1e-6, 2000): 3 x 1 penetrates (feasibility ratio 1.4), and "
+                "5 x 1 landed within the run-to-run noise of 10 x 1 on 6 impact steps.",
+                {"Solver.Newton.one_sided_contact": 1, "Solver.Newton.n_max_iters": 10,
+                 "Solver.Newton.newton.n_max_iters": 2, "Solver.Newton.LinearSolver.rtol": 1e-7,
+                 "Solver.Newton.LinearSolver.n_max_iters": 6000},
             ),
         ],
     ),

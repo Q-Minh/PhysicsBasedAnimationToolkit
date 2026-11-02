@@ -187,6 +187,44 @@ def capped_friction_energy(
     return wp.float32(0.5) * sigma_f * wp.dot(c_f, c_f) - wp.dot(lambda_f, c_f)  # type: ignore
 
 
+# Augmented normal contact terms of GPU Newton, as functions of the gap past the margin g = (xi - xcp) . n - dmin.
+# With a fixed slack s (one_sided = 0, as C++), E = 1/2 sigma (g - s)^2 - lambda (g - s): within a Newton step, a
+# contact detected but not pressed is a two-sided spring of stiffness sigma that holds its gap. With the slack
+# eliminated (one_sided = 1), min over s >= 0 gives E = (max(0, lambda - sigma g)^2 - lambda^2) / (2 sigma), C^1,
+# which only pushes, and only while pressed (lambda - sigma g > 0). Both agree, value and gradient, at the slack
+# max(0, g - lambda / sigma) the solver refreshes at each accepted iterate.
+
+
+@wp.func
+def augmented_normal_energy(
+    g: wp.float32, s: wp.float32, lambda_n: wp.float32, sigma_n: wp.float32, one_sided: wp.int32
+):
+    """Augmented normal contact energy at the gap past the margin ``g`` (see above)."""
+    if one_sided != 0 and sigma_n > wp.float32(0):
+        p = wp.max(lambda_n - sigma_n * g, wp.float32(0))
+        return (p * p - lambda_n * lambda_n) / (wp.float32(2) * sigma_n)
+    c_n = g - s
+    return wp.float32(0.5) * sigma_n * c_n * c_n - lambda_n * c_n
+
+
+@wp.func
+def augmented_normal_derivative(
+    g: wp.float32, s: wp.float32, lambda_n: wp.float32, sigma_n: wp.float32, one_sided: wp.int32
+):
+    """dE/dg of :func:`augmented_normal_energy`, minus the contact's normal force."""
+    if one_sided != 0 and sigma_n > wp.float32(0):
+        return -wp.max(lambda_n - sigma_n * g, wp.float32(0))
+    return sigma_n * (g - s) - lambda_n
+
+
+@wp.func
+def augmented_normal_curvature(g: wp.float32, lambda_n: wp.float32, sigma_n: wp.float32, one_sided: wp.int32):
+    """d^2E/dg^2 of :func:`augmented_normal_energy`: sigma_n, or with ``one_sided`` 0 on contacts not pressed."""
+    if one_sided != 0 and lambda_n - sigma_n * g <= wp.float32(0):
+        return wp.float32(0)
+    return sigma_n
+
+
 @wp.kernel
 def _update_dual_vv(
     x: wp.array[wp.vec3f],
@@ -1272,6 +1310,64 @@ class TestNewtonFrictionConsistency(unittest.TestCase):
                 # Only the gradient stores, and only a positive estimate into an unset limit
                 expected = before if before >= 0 else (estimate if estimate > 0 else float(FRICTION_LIMIT_UNSET))
                 self.assertAlmostEqual(limit[k], expected, places=6)
+
+
+@wp.kernel
+def _augmented_normal_terms(
+    g: wp.array[wp.float32],
+    lam: wp.array[wp.float32],
+    sigma: wp.float32,
+    eps: wp.float32,
+    one_sided: wp.int32,
+    out: wp.array2d[wp.float32],
+):
+    i = wp.tid()
+    s = wp.max(g[i] - lam[i] / sigma, wp.float32(0))  # the slack refreshed at the iterate
+    out[i, 0] = augmented_normal_energy(g[i], s, lam[i], sigma, one_sided)
+    out[i, 1] = augmented_normal_derivative(g[i], s, lam[i], sigma, one_sided)
+    out[i, 2] = augmented_normal_curvature(g[i], lam[i], sigma, one_sided)
+    # Central differences at fixed slack (the slack is held within a Newton step)
+    ep = augmented_normal_energy(g[i] + eps, s, lam[i], sigma, one_sided)
+    em = augmented_normal_energy(g[i] - eps, s, lam[i], sigma, one_sided)
+    out[i, 3] = (ep - em) / (wp.float32(2) * eps)
+    dp = augmented_normal_derivative(g[i] + eps, s, lam[i], sigma, one_sided)
+    dm = augmented_normal_derivative(g[i] - eps, s, lam[i], sigma, one_sided)
+    out[i, 4] = (dp - dm) / (wp.float32(2) * eps)
+
+
+class TestAugmentedNormalTerms(unittest.TestCase):
+    """GPU Newton's augmented normal contact terms, with a fixed slack and slack-eliminated (one-sided)."""
+
+    def test_terms(self):
+        sigma, eps = 100.0, 1e-4
+        # (g, lambda): pressed (lambda - sigma g > 0) or not, inside the margin (g < 0) or past it
+        cases = [(-0.01, 0.0), (-0.01, 2.0), (0.005, 2.0), (0.03, 2.0), (0.01, 0.0), (0.02, 0.5)]
+        g = np.array([c[0] for c in cases], dtype=np.float32)
+        lam = np.array([c[1] for c in cases], dtype=np.float32)
+        with wp.ScopedDevice("cpu"):
+            res = {}
+            for one_sided in (0, 1):
+                out = wp.zeros((len(cases), 5), dtype=wp.float32)
+                wp.launch(
+                    _augmented_normal_terms,
+                    dim=len(cases),
+                    inputs=[wp.array(g), wp.array(lam), sigma, eps, one_sided, out],
+                )
+                res[one_sided] = out.numpy()
+        pressed = lam - sigma * g > 0
+        for one_sided, r in res.items():
+            with self.subTest(one_sided=one_sided):
+                # The derivative is the energy's slope, and the curvature the derivative's slope (away from the kink)
+                self.assertTrue(np.all(np.abs(r[:, 3] - r[:, 1]) <= 1e-2 * np.maximum(np.abs(r[:, 1]), 1.0)), r[:, [1, 3]])
+                far = np.abs(lam - sigma * g) > sigma * eps * 10
+                np.testing.assert_allclose(r[far, 4], r[far, 2], rtol=1e-2)
+        # Same value and gradient at the refreshed slack, so the outer test and the friction limit don't change
+        np.testing.assert_allclose(res[1][:, 0], res[0][:, 0], rtol=1e-5, atol=1e-7)
+        np.testing.assert_allclose(res[1][:, 1], res[0][:, 1], rtol=1e-5, atol=1e-7)
+        # Fixed slack: always the spring sigma. One-sided: sigma only while pressed, and no force otherwise
+        np.testing.assert_array_equal(res[0][:, 2], np.full(len(cases), sigma, dtype=np.float32))
+        np.testing.assert_array_equal(res[1][:, 2], np.where(pressed, sigma, 0.0).astype(np.float32))
+        np.testing.assert_array_equal(res[1][~pressed, 1], np.zeros((~pressed).sum(), dtype=np.float32))
 
 
 class TestPenaltyFloor(unittest.TestCase):

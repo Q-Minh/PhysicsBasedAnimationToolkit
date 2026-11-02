@@ -32,6 +32,8 @@ from ..contact.dynamics import (
     MeshDynamics as ContactDynamics,
     MeshDynamicsData as ContactDynamicsData,
     PenaltyAdaptivity,
+    augmented_normal_curvature,
+    augmented_normal_energy,
     capped_friction_energy,
     capped_friction_scale,
     friction_penalty,
@@ -69,6 +71,9 @@ class ParamsData:
     ls_tau: wp.float32  # step shrink factor
     ls_c: wp.float32  # Armijo slope constant
     ls_alpha: wp.float32  # initial step size
+
+    # Augmented normal contact terms with the slack eliminated (NewtonGpuParams.one_sided_contact)
+    one_sided_contact: wp.int32
 
     # BSR Hessian 3x3 block triplets
     Hrows: wp.array[wp.int32]
@@ -129,6 +134,7 @@ def _energy_vv(
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     friction_limit: wp.array[wp.float32],
+    one_sided: wp.int32,
     f_obj_partial: wp.array[wp.float32],
 ):
     c = wp.tid()
@@ -142,14 +148,13 @@ def _energy_vv(
     )
     i, j = contact.meshes.V[u], contact.meshes.V[v]
     xi, xj, xti, xtj = x[i], x[j], xt[i], xt[j]
-    c_n = wp.dot(xi - xj, n) - contact.dmin - contact.cvv.s[c]  # type: ignore
+    g_n = wp.dot(xi - xj, n) - contact.dmin
     du = (xi - xti) - (xj - xtj)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     sigma_n = normal_penalty(contact, CONTACT_VV, c)
     sigma_f = friction_penalty(contact, CONTACT_VV, c)
     E = contact.cvv.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
-        - contact.cvv.lambda_n[c] * c_n
+        augmented_normal_energy(g_n, contact.cvv.s[c], contact.cvv.lambda_n[c], sigma_n, one_sided)
         + capped_friction_energy(c_f, contact.cvv.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
@@ -162,6 +167,7 @@ def _energy_ve(
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     friction_limit: wp.array[wp.float32],
+    one_sided: wp.int32,
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -182,14 +188,13 @@ def _energy_ve(
     xi, xti = x[i], xt[i]
     xcp2 = b0 * x[ea] + b1 * x[eb]
     xtcp2 = b0 * xt[ea] + b1 * xt[eb]
-    c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cve.s[c]
+    g_n = wp.dot(xi - xcp2, n) - contact.dmin
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_VE, c)
     sigma_f = friction_penalty(contact, CONTACT_VE, c)
     E = contact.cve.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
-        - contact.cve.lambda_n[c] * c_n
+        augmented_normal_energy(g_n, contact.cve.s[c], contact.cve.lambda_n[c], sigma_n, one_sided)
         + capped_friction_energy(c_f, contact.cve.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
@@ -202,6 +207,7 @@ def _energy_vf(
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     friction_limit: wp.array[wp.float32],
+    one_sided: wp.int32,
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -222,14 +228,13 @@ def _energy_vf(
     xi, xti = x[i], xt[i]
     xcp2 = b0 * x[finds[0]] + b1 * x[finds[1]] + b2 * x[finds[2]]
     xtcp2 = b0 * xt[finds[0]] + b1 * xt[finds[1]] + b2 * xt[finds[2]]
-    c_n = wp.dot(xi - xcp2, n) - contact.dmin - contact.cvf.s[c]
+    g_n = wp.dot(xi - xcp2, n) - contact.dmin
     du = (xi - xti) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_VF, c)
     sigma_f = friction_penalty(contact, CONTACT_VF, c)
     E = contact.cvf.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
-        - contact.cvf.lambda_n[c] * c_n
+        augmented_normal_energy(g_n, contact.cvf.s[c], contact.cvf.lambda_n[c], sigma_n, one_sided)
         + capped_friction_energy(c_f, contact.cvf.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
@@ -242,6 +247,7 @@ def _energy_ee(
     contact: ContactDynamicsData,  # type: ignore
     n_u: wp.int32,
     friction_limit: wp.array[wp.float32],
+    one_sided: wp.int32,
     f_obj_partial: wp.array[wp.float32],  # type: ignore
 ):
     c = wp.tid()
@@ -265,14 +271,13 @@ def _energy_ee(
     xtcp1 = b0 * xt[ia] + b1 * xt[ib]
     xcp2 = b2 * x[ic] + b3 * x[id]
     xtcp2 = b2 * xt[ic] + b3 * xt[id]
-    c_n = wp.dot(xcp1 - xcp2, n) - contact.dmin - contact.cee.s[c]
+    g_n = wp.dot(xcp1 - xcp2, n) - contact.dmin
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))
     sigma_n = normal_penalty(contact, CONTACT_EE, c)
     sigma_f = friction_penalty(contact, CONTACT_EE, c)
     E = contact.cee.gamma[c] * (
-        wp.float32(0.5) * sigma_n * c_n * c_n  # type: ignore
-        - contact.cee.lambda_n[c] * c_n
+        augmented_normal_energy(g_n, contact.cee.s[c], contact.cee.lambda_n[c], sigma_n, one_sided)
         + capped_friction_energy(c_f, contact.cee.lambda_f[c], sigma_f, stored_friction_limit(friction_limit, c))
     )
     f_obj_partial[c] = E  # type: ignore
@@ -405,6 +410,9 @@ def _compute_vv_contact_hessian_triplets(
     bases = contact.contacts.vv_bases
     n, t, b = bases.n[c], bases.t[c], bases.b[c]
     gamma = contact.cvv.gamma[c]
+    sigma_n = augmented_normal_curvature(
+        wp.dot(x[i] - x[j], n) - contact.dmin, contact.cvv.lambda_n[c], sigma_n, params.one_sided_contact
+    )
     du = (x[i] - xt[i]) - (x[j] - xt[j])
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
@@ -470,6 +478,10 @@ def _compute_ve_contact_hessian_triplets(
     eb = halfedges.outgoing_vertex(contact.meshes.F, he)
     sigma_n = normal_penalty(contact, CONTACT_VE, c)
     sigma_f = friction_penalty(contact, CONTACT_VE, c)
+    sigma_n = augmented_normal_curvature(
+        wp.dot(x[i] - (b0 * x[ea] + b1 * x[eb]), n) - contact.dmin, contact.cve.lambda_n[c], sigma_n,
+        params.one_sided_contact,
+    )
     du = (x[i] - xt[i]) - ((b0 * x[ea] + b1 * x[eb]) - (b0 * xt[ea] + b1 * xt[eb]))
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
     friction_scale = capped_friction_scale(
@@ -558,6 +570,10 @@ def _compute_vf_contact_hessian_triplets(
     j, k, l = finds[0], finds[1], finds[2]
     sigma_n = normal_penalty(contact, CONTACT_VF, c)
     sigma_f = friction_penalty(contact, CONTACT_VF, c)
+    sigma_n = augmented_normal_curvature(
+        wp.dot(x[i] - (b0 * x[j] + b1 * x[k] + b2 * x[l]), n) - contact.dmin, contact.cvf.lambda_n[c], sigma_n,
+        params.one_sided_contact,
+    )
     du = (x[i] - xt[i]) - (
         (b0 * x[j] + b1 * x[k] + b2 * x[l]) - (b0 * xt[j] + b1 * xt[k] + b2 * xt[l])
     )
@@ -679,6 +695,10 @@ def _compute_ee_contact_hessian_triplets(
     gamma = contact.cee.gamma[c]
     sigma_n = normal_penalty(contact, CONTACT_EE, c)
     sigma_f = friction_penalty(contact, CONTACT_EE, c)
+    sigma_n = augmented_normal_curvature(
+        wp.dot((b0 * x[ia] + b1 * x[ib]) - (b2 * x[ic] + b3 * x[id]), n) - contact.dmin, contact.cee.lambda_n[c],
+        sigma_n, params.one_sided_contact,
+    )
     du = ((b0 * x[ia] + b1 * x[ib]) - (b0 * xt[ia] + b1 * xt[ib])) - (
         (b2 * x[ic] + b3 * x[id]) - (b2 * xt[ic] + b3 * xt[id])
     )
@@ -839,6 +859,14 @@ class NewtonGpuParams(SerializableMixin):
         "deep inside a contact partner at an impact, where that linearization is poor (Newton went unstable at the "
         "sphere's impact on the soft-stiff trampoline)",
     )
+    one_sided_contact = DocField(
+        False,
+        "Eliminate the contact slack from Newton's augmented normal terms: E = (max(0, lambda - sigma g)^2 - "
+        "lambda^2) / (2 sigma) for the gap past the margin g, so a contact only pushes, and only while pressed, and "
+        "its Hessian block is 0 otherwise. Off (as C++), the slack is fixed within each Newton step, and a contact "
+        "detected but not pressed is a stiff two-sided spring that holds its gap: on Celebration, confetti stayed on "
+        "vertical letter faces with friction off. Takes effect at the next time step",
+    )
 
 
 # Safety factor on the float32 roundoff of the elastic energy, eps * h^2 sum_e w_e mu_e, that the
@@ -902,10 +930,13 @@ class Params:
         self._data.ls_tau = line_search.tau if line_search else 0.5
         self._data.ls_c = line_search.c if line_search else 1e-4
         self._data.ls_alpha = line_search.alpha if line_search else 1.0
+        self._data.one_sided_contact = 0
         self._streams = [wp.Stream() for _ in range(6)]
         # Shared device-side convergence test (gpu.vbd.convergence.ConvergenceCheck), set by
         # SimulationState. With its relative test on, it replaces gtol2 (see check_convergence).
         self.convergence = None
+        # GPU-only settings (NewtonGpuParams), set by SimulationState; read at each time step
+        self.gpu: NewtonGpuParams | None = None
         # Host-side solve statuses: the last solve_subproblem's record, and one NewtonSolveRecord per
         # NewtonSolver.solve until a consumer (SimulationState.step) drains them
         self.last_subproblem: NewtonSubproblemRecord | None = None
@@ -1060,6 +1091,9 @@ def initialize_solve(
     Coulomb limits (each is frozen again at its first positive estimate of the step, see
     :class:`gpu.gradient.Gradient`), adapt the contact penalties once per step (``TIMESTEP``
     adaptivity, as the VBD family) and measure the relative gradient test's scale."""
+    one_sided = params.gpu is not None and bool(params.gpu.one_sided_contact)
+    params._data.one_sided_contact = int(one_sided)
+    params._gradient_norm.one_sided = one_sided
     cd.on_time_step_started()
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
@@ -1117,25 +1151,25 @@ def _compute_energy(
     wp.launch(
         _energy_vv,
         dim=contact.cvv.capacity,
-        inputs=[x, xt, cd, contact.cvv.n_u, limits.vv, f_vv],
+        inputs=[x, xt, cd, contact.cvv.n_u, limits.vv, params._data.one_sided_contact, f_vv],
         stream=params._streams[2],
     )
     wp.launch(
         _energy_ve,
         dim=contact.cve.capacity,
-        inputs=[x, xt, cd, contact.cve.n_u, limits.ve, f_ve],
+        inputs=[x, xt, cd, contact.cve.n_u, limits.ve, params._data.one_sided_contact, f_ve],
         stream=params._streams[3],
     )
     wp.launch(
         _energy_vf,
         dim=contact.cvf.capacity,
-        inputs=[x, xt, cd, contact.cvf.n_u, limits.vf, f_vf],
+        inputs=[x, xt, cd, contact.cvf.n_u, limits.vf, params._data.one_sided_contact, f_vf],
         stream=params._streams[4],
     )
     wp.launch(
         _energy_ee,
         dim=contact.cee.capacity,
-        inputs=[x, xt, cd, contact.cee.n_u, limits.ee, f_ee],
+        inputs=[x, xt, cd, contact.cee.n_u, limits.ee, params._data.one_sided_contact, f_ee],
         stream=params._streams[5],
     )
     for stream in params._streams:
@@ -1336,14 +1370,16 @@ def _assemble_hessian(
     )
 
 
-# TODO: One-sided (slack-eliminated) AL contact terms with a semismooth Newton. With s fixed within a Newton
-# step, a contact inside the detection band but not pressed is a two-sided spring of stiffness sigma_n
-# (adapted to the stiffest partner) that holds its gap for the step. Eliminating s gives
-# E = (max(0, lambda - sigma c)^2 - lambda^2) / (2 sigma), C^1, with the Hessian block sigma n n^T only on
-# active contacts (lambda - sigma c > 0). Evidence: after the slack refresh, the soft-stiff trampoline +
-# sphere (steps 253-256) still has a contact-region roughness p95 of ~0.065, against AAAVBD's 0.033. A
-# GPU-only deviation from C++ (which fixes s per step); risk: active-set switching between Newton steps
-# and within the line search (energy only C^1, Hessian discontinuous) can cost backtracks or chatter.
+# One-sided (slack-eliminated) AL contact terms: Solver.Newton.one_sided_contact (NewtonGpuParams, off by default
+# as C++, which fixes s per step; contact.dynamics.augmented_normal_energy). With s fixed within a Newton step, a
+# contact inside the detection band but not pressed is a two-sided spring of stiffness sigma_n (adapted to the
+# stiffest partner) that holds its gap for the step: on Celebration (2026-11-01), 7 confetti stayed on vertical
+# letter faces at ~0 velocity with friction off (mu_f = 0; 20-step resume from 2 s). Eliminating s gives
+# E = (max(0, lambda - sigma g)^2 - lambda^2) / (2 sigma), C^1, with the Hessian block sigma n n^T only on pressed
+# contacts (lambda - sigma g > 0). Risk: active-set switching between Newton steps and within the line search
+# (energy only C^1, Hessian discontinuous) can cost backtracks or chatter. TODO: also measure it on the soft-stiff
+# trampoline + sphere, whose contact-region roughness p95 after the slack refresh is ~0.065 (steps 253-256),
+# against AAAVBD's 0.033.
 def _subproblem_gradient(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
