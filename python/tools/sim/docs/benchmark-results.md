@@ -33,10 +33,9 @@ shared as files. The scripts are in this repository and run from its root as mod
   benchmark scores the relative error e/e0, where e0 is the error of the problem's start state.
 - **Initial guess.** Every solver, Newton included, starts a dynamic problem from the guess of the case's
   `Integration.init_strategy`, computed from the start state (x_t, v_t) as the simulator starts a time step:
-  - 0 Position: x_t itself. The run files set it (`configs/benchmark/shared.toml`), and every result so far used it;
+  - 0 Position: x_t itself, the benchmark's default (every result so far used it), whatever the code default;
   - 1 FreeTrajectory: x_t + h v_t on the free nodes;
-  - 2 TrajectoryWithExternalLoad: the inertial target x_t + h v_t + h² a_ext, the simulator's default, and the
-    code default a benchmark run without a run file gets;
+  - 2 TrajectoryWithExternalLoad: the inertial target x_t + h v_t + h² a_ext, the simulator's default;
   - 3 and 4 need the previous step's velocity, which one-step problems don't have, and are refused.
 
   `Solver.Newton.init_strategy` doesn't apply in the benchmark. e0 stays the start state's error whatever the

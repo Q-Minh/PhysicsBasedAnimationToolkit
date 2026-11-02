@@ -34,8 +34,9 @@ Initial guess (dynamic problems): every solver, Newton included, starts from the
 (``FemElastoDynamics.setup_time_integration_optimization``): 0 Position keeps x_t; 1 FreeTrajectory moves the
 free nodes to x_t + h v_t; 2 TrajectoryWithExternalLoad to the inertial target x_t + h v_t + h^2 aext. 3 and 4
 (finite-difference loads) need the previous step's velocity, which one-step problems don't have, and are
-refused. ``Solver.Newton.init_strategy`` doesn't apply (a warning says so where it differs). The run files set
-Position (``configs/benchmark/shared.toml``); without one, the code default, 2, applies. e0 is the start
+refused. ``Solver.Newton.init_strategy`` doesn't apply (a warning says so where it differs). The benchmark's
+default is Position (``BASE_PARAMETERS``, under every other source; the simulator's code default is 2), so
+results start from x_t unless a run file, parameter file or --set picks another. e0 is the start
 state's error |x_t - x*|_M whatever the strategy, so the levels mean the same for all of them: a better guess
 crosses levels at time 0 (zero increments, ``start_relative_error`` < 1), a worse one starts above
 e/e0 = 1. If Newton's guess already crosses its highest level, T_N falls back to its first step's time. Static
@@ -139,8 +140,8 @@ Pitfalls:
     - The problems are posed on the dataset's FEM (its ``fem`` group, or the set's ``fem`` attribute): its
       Dirichlet nodes stay fixed at rest. Solver parameters come only from the run file (shared, then its
       cases), then --sim-params, then the scene's --scene-params (``SCENE=``, then ``BENCHMARK/SCENE=``,
-      e.g. ``static/Y1e8=``), then --set (otherwise the code defaults, configs/defaults.toml). Unknown keys
-      stop the run.
+      e.g. ``static/Y1e8=``), then --set, over the benchmark's own layer (``BASE_PARAMETERS``: the Position
+      initial guess) and the code defaults (configs/defaults.toml). Unknown keys stop the run.
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
       order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
@@ -149,6 +150,8 @@ Pitfalls:
     - The stall test measures the error, not the energy: Newton's damped steps on large deformations can
       reduce e by only a few percent per step (static het: 4-9% for ~60 steps), so a large delta stops it
       early and loses levels (plans/MASTER.md, the floor check).
+    - Dynamic problems start from x_t (Integration.init_strategy = Position, the benchmark's default, unlike the
+      simulator's 2) unless the parameters pick another initial guess; see "Initial guess" above.
     - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
       ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
       subproblem). Newton's CG keeps its relative tolerance, but its absolute one (``atol``) is set
@@ -400,11 +403,17 @@ def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
     return cases
 
 
+# The benchmark's own parameter layer, over the code defaults and under everything else: dynamic problems start
+# from x_t (Position) unless a run file, parameter file or --set picks another Integration.init_strategy
+BASE_PARAMETERS = {"Integration": {"init_strategy": 0}}
+
+
 def case_config(args, run_file, benchmark: str, scene: str, scene_params: dict) -> dict:
-    """A case's solver parameters: the run file's (shared, case.SCENE, case.BENCHMARK/SCENE), then
-    --sim-params and the case's --scene-params files, then --set."""
+    """A case's solver parameters: ``BASE_PARAMETERS``, then the run file's (shared, case.SCENE,
+    case.BENCHMARK/SCENE), then --sim-params and the case's --scene-params files, then --set."""
     sources = args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
-    return config.merge(benchmark_run.case_parameters(run_file, benchmark, scene), config.resolve(sources, args.overrides))
+    out = config.merge(BASE_PARAMETERS, benchmark_run.case_parameters(run_file, benchmark, scene))
+    return config.merge(out, config.resolve(sources, args.overrides))
 
 
 def _short(v: float) -> str:
@@ -996,6 +1005,33 @@ class TestRecords(unittest.TestCase):
         self.assertEqual(v["version_warp"], wp.__version__)
         self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
         self.assertTrue(all(isinstance(x, str) for x in v.values()))
+
+
+class TestInitStrategy(unittest.TestCase):
+    def test_resolution(self):
+        """Without a run file or parameters, dynamic problems start at Position (not the code default, 2);
+        parameters can pick another guess; static problems always start at Position; 3 and 4 are refused."""
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        def case(problem):
+            return SimpleNamespace(benchmark=f"{problem}_b", case="S", scene="S", batch=SimpleNamespace(problem=problem))
+
+        cases = [case("dynamic"), case("static")]
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            plain = init_strategies(SimpleNamespace(sim_params=[], overrides=[]), None, cases, {}, [SolverType.Newton])
+        self.assertEqual(plain, {("dynamic_b", "S"): "Position", ("static_b", "S"): "Position"})
+        self.assertEqual(out.getvalue(), "")  # Newton's own default (Position) agrees: no warning
+        self.assertEqual(int(config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs",
+                                                       "defaults.toml"))["Integration"]["init_strategy"]), 2)
+        args = SimpleNamespace(sim_params=[], overrides=["Integration.init_strategy=2"])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            picked = init_strategies(args, None, cases, {}, [SolverType.Newton])
+        self.assertEqual(picked, {("dynamic_b", "S"): "TrajectoryWithExternalLoad", ("static_b", "S"): "Position"})
+        self.assertIn("Solver.Newton.init_strategy Position doesn't apply", out.getvalue())
+        with self.assertRaises(SystemExit):
+            init_strategies(SimpleNamespace(sim_params=[], overrides=["Integration.init_strategy=3"]), None, cases, {}, [])
 
 
 class TestListSets(unittest.TestCase):

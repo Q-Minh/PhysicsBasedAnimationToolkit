@@ -9,8 +9,9 @@
 #   acceleration is used for soft bodies.
 # Sweep budgets and convergence tests don't apply: benchmark solves stop on the error and the time budget.
 # - Dynamic problems start every solver, Newton included, from Integration.init_strategy's guess (benchmark.py):
-#   Position (0), the sample's start state x_t, as every result so far. Set here because the code default is 2
-#   (TrajectoryWithExternalLoad, the inertial target x_t + h v_t + h^2 aext), the simulator's own.
+#   Position (0), the sample's start state x_t, as every result so far. It is also the benchmark's own default
+#   (benchmark.BASE_PARAMETERS; the simulator's code default is 2, the inertial target x_t + h v_t + h^2 aext):
+#   written out so the run files show it, and the place to change it.
 
 [Integration]
 init_strategy = 0
