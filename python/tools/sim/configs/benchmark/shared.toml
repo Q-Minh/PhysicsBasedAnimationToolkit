@@ -8,6 +8,12 @@
 #   it bounds the float32-floor outliers of 1 sweep per step and is closer to how periodic Anderson
 #   acceleration is used for soft bodies.
 # Sweep budgets and convergence tests don't apply: benchmark solves stop on the error and the time budget.
+# - Dynamic problems start every solver, Newton included, from Integration.init_strategy's guess (benchmark.py):
+#   Position (0), the sample's start state x_t, as every result so far. Set here because the code default is 2
+#   (TrajectoryWithExternalLoad, the inertial target x_t + h v_t + h^2 aext), the simulator's own.
+
+[Integration]
+init_strategy = 0
 
 [Solver.AAAVBD]
 vlinsolve = 0
