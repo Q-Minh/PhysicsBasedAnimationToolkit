@@ -9,7 +9,8 @@ Per case, the winner is the setting with the smallest mean time to the benchmark
 solves; a setting that misses that level on any solve is out. A reference setting within ``--tie`` (default
 10%) of the winner's time wins instead: the reference is the case's scene's setting at ``--reference-benchmark``
 in the ``--reference`` run file (default: trampolines.toml at h = 1e-2, the tuned table). If no setting reaches
-the level on every solve, the case keeps the reference and is flagged.
+the level on every solve, the same rules rank the settings at the highest level every setting reached on every
+solve, named in the printed line and the written comment; if there is none, the case keeps the reference.
 
 It prints a table per case (each setting's mean time to the highest level, its per-solve times, Newton steps,
 CG iterations per step and terminations) and the run file's ``[case]`` tables, and with ``--write RUN.toml``
@@ -28,7 +29,7 @@ import argparse
 import glob
 import os
 import unittest
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import h5py
 import numpy as np
@@ -49,6 +50,7 @@ class Timing:
     steps: list = field(default_factory=list)  # Newton steps per solve
     cg_per_step: list = field(default_factory=list)  # mean CG iterations per Newton step, per solve
     terminations: list = field(default_factory=list)
+    crossings: list = field(default_factory=list)  # time to each level per solve
 
     @property
     def complete(self) -> bool:
@@ -63,6 +65,7 @@ class Timing:
 class Case:
     scene: str
     level: float  # the benchmark's highest level
+    levels: tuple = ()  # all its levels
     settings: dict = field(default_factory=dict)  # (rtol, cap) -> Timing
 
 
@@ -99,12 +102,14 @@ def read_sweep(paths: list[str]) -> dict:
                     continue
                 n = g["Newton"]
                 level = float(results.benchmark_levels(f, benchmark)[-1])
-                case = cases.setdefault((benchmark, name), Case(scene=str(g.attrs.get("scene", name)), level=level))
+                case = cases.setdefault((benchmark, name), Case(scene=str(g.attrs.get("scene", name)), level=level,
+                                                                          levels=tuple(results.benchmark_levels(f, benchmark))))
                 if level != case.level:
                     raise ValueError(f"{path}: {benchmark}/{name}'s highest level {level} != {case.level} in other files")
                 key = setting_key(g.attrs["newton_cg_rtol"], g.attrs["newton_cg_n_max_iters"])
                 t = case.settings.setdefault(key, Timing())
                 t.times += [float(x) for x in n["crossing_time"][:, -1]]
+                t.crossings += n["crossing_time"][()].tolist()
                 t.steps += [int(x) for x in n["iterations"][()]]
                 t.terminations += [str(x) for x in n["termination"].asstr()[()]]
                 for sample in n["sample"][()]:
@@ -113,9 +118,17 @@ def read_sweep(paths: list[str]) -> dict:
     return cases
 
 
-def pick(settings: dict, reference: tuple | None, tie: float) -> tuple[tuple, str]:
-    """The winning setting and why: the fastest complete setting, or the reference within ``tie`` of it."""
+def pick(settings: dict, reference: tuple | None, tie: float, levels=()) -> tuple[tuple, str]:
+    """The winning setting and why: the fastest complete setting, or the reference within ``tie`` of it; if
+    none is complete, the same at the highest of ``levels`` every setting reached on every solve."""
     complete = {k: t.mean for k, t in settings.items() if t.complete}
+    common = [j for j in range(len(levels) - 1)
+              if all(t.crossings and np.all(np.isfinite(np.asarray(t.crossings)[:, j])) for t in settings.values())]
+    if not complete and common:
+        at = {k: replace(t, times=[c[common[-1]] for c in t.crossings]) for k, t in settings.items()}
+        winner, why = pick(at, reference, tie)
+        return winner, (f"at {format_level(levels[common[-1]])} (no setting reached {format_level(levels[-1])} on "
+                        f"every solve): {at[winner].mean:.3f} s mean; {why}")
     if not complete:
         return reference, "no setting reached the highest level on every solve: kept the reference"
     best = min(complete, key=complete.get)
@@ -151,7 +164,7 @@ def format_level(level: float) -> str:
 
 
 def table(name: str, setting: tuple, comment: str) -> list[str]:
-    return ["", f"# {comment}", f'[case."{name}".Solver.Newton.LinearSolver]', f"n_max_iters = {setting[1]}",
+    return ["", wrap_comment(f"# {comment}"), f'[case."{name}".Solver.Newton.LinearSolver]', f"n_max_iters = {setting[1]}",
             f"rtol = {format_rtol(setting[0])}"]
 
 
@@ -167,7 +180,8 @@ def case_tables(cases: dict, winners: dict, tie: float, reference_label: str, ke
         f"{TABLES_MARKER}: the winners of a Newton-only CG sweep on these problems (benchmark_cg_sweep.py; "
         f"settings {', '.join(setting_name(k) for k in settings)}; {'/'.join(map(str, solves))} "
         f"solve{'' if solves == [1] else 's'} per case and setting): the smallest mean time to "
-        f"{'/'.join(map(format_level, levels))}, a setting missing it on any solve out; {reference_label}'s "
+        f"{'/'.join(map(format_level, levels))}, a setting missing it on any solve out (if every setting misses "
+        f"it, at the highest level every setting reaches on every solve, named below); {reference_label}'s "
         f"setting when within {tie:.0%} of it.",
     ]
     swept = {f"{b}/{c}": (b, c) for b, c in winners}
@@ -231,7 +245,7 @@ def main():
     winners = {}
     for key, case in cases.items():
         reference = reference_setting(run_file, args.reference_benchmark, case.scene)
-        winners[key] = pick(case.settings, reference, args.tie)
+        winners[key] = pick(case.settings, reference, args.tie, case.levels)
         print(report(key, case, *winners[key], reference) + "\n")
     label = f"{os.path.basename(args.reference)} {args.reference_benchmark}"
     tables = case_tables(cases, winners, args.tie, label, run_file_settings(args.write) if args.write else None)
@@ -247,9 +261,11 @@ def main():
 
 class TestPick(unittest.TestCase):
     @staticmethod
-    def _timing(*times):
+    def _timing(*times, below=()):
+        """``below``: per solve, the times to the lower levels."""
         return Timing(times=list(times), steps=[1] * len(times), cg_per_step=[1.0] * len(times),
-                      terminations=["target"] * len(times))
+                      terminations=["target"] * len(times),
+                      crossings=[list(b) + [t] for b, t in zip(below, times)] if below else [])
 
     def test_pick(self):
         a, b, c = (1e-2, 4000), (1e-4, 1000), (1e-6, 500)
@@ -261,6 +277,20 @@ class TestPick(unittest.TestCase):
         winner, why = pick({c: self._timing(np.nan)}, a, 0.1)
         self.assertEqual(winner, a)
         self.assertIn("kept the reference", why)
+        # Nobody reaches the top level on every solve: ranked at the highest level every setting reached
+        levels = (0.5, 0.9, 0.99)
+        settings = {a: self._timing(1.0, np.nan, below=[(0.1, 0.5), (0.1, 0.5)]),
+                    b: self._timing(np.nan, np.nan, below=[(0.1, 0.3), (0.1, 0.4)]),
+                    c: self._timing(np.nan, 2.0, below=[(0.1, np.nan), (0.1, 0.9)])}  # c misses 90% once
+        winner, why = pick(settings, a, 0.1, levels)
+        self.assertEqual(winner, a)  # every setting reaches only 50%, all equally fast there
+        self.assertEqual(why, "at 50% (no setting reached 99% on every solve): 0.100 s mean; fastest")
+        settings[c] = self._timing(np.nan, 2.0, below=[(0.1, 0.6), (0.1, 0.9)])
+        winner, why = pick(settings, a, 0.1, levels)
+        self.assertEqual(winner, b)
+        self.assertTrue(why.startswith("at 90% (no setting reached 99% on every solve): 0.350 s mean"))
+        settings[b] = self._timing(np.nan, np.nan, below=[(0.1, 0.45), (0.1, 0.48)])
+        self.assertIn("0.500 s mean; reference, +8%", pick(settings, a, 0.1, levels)[1])  # 0.5 vs 0.465
 
     def test_format(self):
         self.assertEqual([format_rtol(x) for x in (0.01, 1e-4, 1e-6, 2.5e-3)], ["1e-2", "1e-4", "1e-6", "2.5e-3"])
