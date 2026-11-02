@@ -1,0 +1,77 @@
+# The convergence benchmark's dynamic problems at game frame rates, h = 1/30 and 1/60 s, on the 30 kJ trampolines
+# (benchmark.py --run, from the repo root):
+#   python -m python.tools.sim.benchmark --run python/tools/sim/configs/benchmark/trampolines.LargeTimeSteps.toml \
+#     -o data/benchmarks/results/trampolines.30kJ.LargeTimeSteps.h5
+# The dataset holds only these two time steps (and the static sets make_benchmark always writes, left out by
+# [run] sets), so this file doesn't extend trampolines.toml, whose cases name its other time steps. Generated from
+# python/examples with trampolines.30kJ.h5's settings and seed, so its problems start from that dataset's states:
+#   python make_benchmark.py -i Y1e5=../../data/scenarios/TrampolineCircle.100kPa.h5 \
+#     -i Y1e6=../../data/scenarios/TrampolineCircle.1MPa.h5 -i Y1e7=../../data/scenarios/TrampolineCircle.10MPa.h5 \
+#     -i Y1e8=../../data/scenarios/TrampolineCircle.100MPa.h5 -i het=../../data/scenarios/TrampolineCircle.Heterogeneous.h5 \
+#     --label "Y1e5=Y = 1e5" --label "Y1e6=Y = 1e6" --label "Y1e7=Y = 1e7" --label "Y1e8=Y = 1e8" \
+#     --label "het=heterogeneous" --energies 30000 --problems 32 --pool 200 --chains 4 --burn-in 300 --pilot 3000 \
+#     --dt 0.03333333333333333 0.016666666666666666 -o ../../data/benchmarks/trampolines.30kJ.LargeTimeSteps.h5
+# Run it on a quiet GPU and a quiet CPU (see trampolines.toml). The run options match trampolines.toml's.
+extends = ["shared.toml"]
+
+[run]
+dataset = "data/benchmarks/trampolines.30kJ.LargeTimeSteps.h5"  # relative to the current directory (the repo root)
+sets = ["*/dynamic_h0.0333333/*", "*/dynamic_h0.0166667/*"]
+solvers = ["VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton"]
+max_seconds = 60.0  # Newton's cap per problem (a practical cap); T_N sets every other solver's budget
+budget_factor = 2.0
+newton_stall_iterations = 2
+newton_stall_reduction = 0.02
+
+[run.levels]
+all = [0.5, 0.9, 0.99, 0.999, 0.9999]
+
+[run.snapshots]
+enabled = true
+fraction = 0.25
+video_seconds = 5.0
+fps = 24.0
+memory_mb = 32.0
+
+# Newton's CG per case: h = 1e-2's per-case winners (trampolines.toml), not re-tuned for these time steps: rtol 1e-2
+# at cap 4000, except Y1e8 at rtol 1e-6, cap 500.
+
+[case."dynamic_h0.0333333/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0333333/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0333333/Y1e7".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0333333/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0333333/Y1e8".Solver.Newton.LinearSolver]
+n_max_iters = 500
+rtol = 1e-6
+
+[case."dynamic_h0.0166667/Y1e5".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0166667/Y1e6".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0166667/Y1e7".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0166667/het".Solver.Newton.LinearSolver]
+n_max_iters = 4000
+rtol = 1e-2
+
+[case."dynamic_h0.0166667/Y1e8".Solver.Newton.LinearSolver]
+n_max_iters = 500
+rtol = 1e-6
