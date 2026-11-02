@@ -1096,3 +1096,50 @@ Data (`data/scenarios/runs/`), all `ArmadilloSpaghetti.DragonImpact.`:
 - Traces: `<AAAVBD|VBD>.At<0.8s|4.78s|6.5s>.<OneOuter|TwoOuter|FourOuter>.MultiplierStep<0.5|1>.SweepTrace.h5` (the
   attributes give the split, the patches with their seeds and radii, and each dataset's layout), and
   `AAAVBD.At4.78s.FourOuter.MultiplierStep1.NoRings.SweepTrace.h5` (an earlier version without rings or drivers).
+
+## 16. Celebration's GPU Newton residual spikes: a period-2 multiplier cycle at the global penalty, not the test
+
+**Setup.** Celebration (`configs/scenes/Celebration.toml` at dev 3bd157ff: one-sided contact, 10 outer iterations x 2
+Newton steps, CG rtol 1e-7 at most 6000 iterations), resumed from the previous production run's checkpoints at 0.5 s
+(the confetti impacts) and 2 s. A scratch tracer wrapped `newton.solver.finalize_subproblem`, with no solver change,
+and measured the residual as a ratio to the stationarity tolerance at three points of every outer iteration: (a) the
+subproblem's augmented-Lagrangian gradient at its last iterate, (b) the outer test's Lagrangian gradient right after
+the full dual update, on the same contact set, and (c) the same after re-detection and the constraint-set update,
+the value the status records (2026-11-01, scratch diagnostic).
+
+**The test isn't out of sync with the solve.** With the same set and bases, the full dual update makes the
+Lagrangian force equal the force the one-sided AL term exerted, so (b) equals (a) up to friction: at every outer
+iteration of 7 impact steps, |b - a| was 0-190 against residuals of 18-10,000 (exactly 0 with `mu_f = 0`), and
+re-detection added at most a few percent at a step's end (|c - b| <= 43; 184 once). Friction isn't the cause:
+without it the step-end ratios were as large (154-1495).
+
+**It's the subproblems.** 86-100% of the residual at a step's end sits on <= 10 nodes, mostly confetti. Their
+contacts are pressed (0.04-0.9 mm into the margin) with lambda_n = 0 before the update, or vertex-edge contacts.
+Across outer iterations the ratio alternates with period 2 (step 50: 10033, 5418, 10428, 745, 5913, 484, 6591, 361,
+5854, 405), as in entry 13 on DragonImpact: an update after a penetrating subproblem sets lambda_n = sigma_n |c_n|,
+the next subproblem pushes the vertex out past lambda_n / sigma_n, and the projection zeroes lambda_n again. The
+global penalty, the largest contact Rayleigh quotient (sigma_n ~ 1680, set by the stiff letters), is far above these
+light confetti contacts' own stiffness.
+
+**Per-contact penalties remove most of it.** Same states, step-end ratios of the outer test:
+
+| Variant | Impact steps 50-52 (from 0.5 s) | 10 steps from 2 s (median) | Worst feasibility (from 2 s) | Backtracks (from 2 s) |
+|---|---|---|---|---|
+| As configured (GlobalMaxRayleighQuotient) | 426, 102, 378 | 302 | 0.54 | 34 |
+| `penalty_stiffness = 1` (LocalMaxRayleighQuotient) | 32, 19, 241 | 20 | 0.20 | 2 |
+| `multiplier_step = 0.5` | 1792, 101, 145 | | | |
+| `multiplier_step = 0.5` + local | 26, 23, 73 | | | |
+| 10 x 4 Newton steps | 135, 216, 597 | | | |
+
+With local penalties the per-outer cycle damps out (step 51: 2639, 424, 87, 29, 37, 15, 36, 15, 36, 15), the step
+costs about the same (61 s against ~65 s), and the confetti still fall (mean drop over 0.1 s 14.2 mm against
+12.4). Halving the multiplier step alone doesn't help Newton here, and more Newton steps per subproblem cost 2x
+without lowering the ratio. Three to ten steps per variant, and GPU Newton isn't reproducible run to run, so the
+table ranks the variants, not their exact levels.
+
+**Not done.** Hysteresis on the contact features (tabled, TODO at `constraints.carry_across_features`); whether the
+VBD family's Celebration residuals have the same cause.
+
+Data (`data/profiling/runs/Celebration/Scratch/`): `Celebration.Newton.From0.5s.Trace.<Friction|NoFriction|
+LocalPenalty|Steps4|Alpha0.5|Alpha0.5Local>.h5` and `Celebration.Newton.From0.5s.Trace2.h5` (top nodes),
+`Celebration.Newton.From2s.<Final|LocalPenalty>.h5`.

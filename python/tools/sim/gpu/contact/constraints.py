@@ -504,6 +504,12 @@ class ConstraintSet:
         return self._data
 
 
+# TODO: Hysteresis by tracking contacts across detections (maintainer, 2026-11-01: wanted, tabled as future work since
+# it needs a persistent contact identity rather than per-detection keys). A vertex that flips between a vertex-edge
+# and a vertex-face contact with the same body at every re-detection restarts its multiplier from 0 each time
+# (DragonImpact's pillars, docs/solver-accuracy-notes.md entry 13: the top-residual nodes), and contacts that leave
+# and re-enter the band lose their state; a tracked contact would keep its multipliers and feature choice until it
+# clearly leaves. Celebration's Newton residual spikes come mostly from a period-2 multiplier cycle instead (entry 16).
 def carry_across_features(
     meshes: MultiMeshData,  # type: ignore
     sets: tuple[FeatureTransitionData, FeatureTransitionData, FeatureTransitionData],  # type: ignore
