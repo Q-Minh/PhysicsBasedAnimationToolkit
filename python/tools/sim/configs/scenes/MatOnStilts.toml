@@ -57,6 +57,7 @@
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
+#   Solver.Newton.one_sided_contact
 #
 # Notes:
 # - The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in substeps, which
@@ -167,6 +168,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 1
 n_max_iters = 30
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]

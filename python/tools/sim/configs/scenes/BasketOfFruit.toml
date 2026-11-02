@@ -55,6 +55,7 @@
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
+#   Solver.Newton.one_sided_contact
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -161,6 +162,7 @@ rstol = 0.01
 init_strategy = 0
 linear_solver = 1
 n_max_iters = 30
+one_sided_contact = 0
 spd_correction = 2
 
 [Solver.Newton.LinearSolver]
