@@ -10,7 +10,10 @@ loads, so the equilibrium is exactly the rest shape X. The same machinery runs d
 one BDF1 step (:func:`prepare_dynamic_problem`) measured against the problem's reference solution.
 
 Error: e = sqrt((x - x*)^T M (x - x*)) over free nodes (lumped mass M), with x* = X for static
-problems and the reference x_ref for dynamic ones.
+problems and the reference x_ref for dynamic ones. Every solver starts a dynamic problem from the initial
+guess of the parameters' ``Integration.init_strategy``, as the simulator starts a time step from the
+problem's (x_t, v_t): Position keeps x_t, the others predict a trajectory. e0 is x_t's error either way, so
+the levels mean the same for every strategy.
 
 Timing: VBD-family solves run as one captured CUDA graph. The distinct first iterations are
 recorded once, then a block of identical iterations is replayed inside ``wp.capture_while`` until
@@ -46,6 +49,7 @@ import cuda.compute
 import cupy as cp
 import h5py
 import numpy as np
+from pbatoolkit import pbat
 import warp as wp
 
 from .common.fields import DocField, SerializableMixin
@@ -309,13 +313,13 @@ def _stamp_kernel(t_a: wp.array[wp.int64], count: wp.array[wp.int32]):
 
 @wp.kernel
 def _error_terms_kernel(
-    fem: FemElastoDynamicsData, reference: wp.array[wp.vec3f], w: wp.array[wp.float32]
+    fem: FemElastoDynamicsData, x: wp.array[wp.vec3f], reference: wp.array[wp.vec3f], w: wp.array[wp.float32]
 ):
     i = wp.tid()
     if is_dirichlet_node(fem.dmask, i):
         w[i] = wp.float32(0)
         return
-    d = fem.x[i] - reference[i]
+    d = x[i] - reference[i]
     w[i] = fem.m[i] * wp.dot(d, d)
 
 
@@ -338,8 +342,13 @@ def _commit_kernel(
     first_stop: wp.array[wp.int32],
     solver_ns: wp.array[wp.int64],
     e2_best: wp.array[wp.float32],
+    e2_0: wp.array[wp.float32],
+    e0_fixed: wp.array[wp.int32],
 ):
     c = count[0]
+    # e0, which the target is relative to: entry 0's error, unless fixed beforehand (ErrorLog.set_initial_error)
+    if c == 0 and e0_fixed[0] == 0:
+        e2_0[0] = e2_new[0]
     capacity = e2.shape[0]
     if c < capacity:
         e2[c] = e2_new[0]
@@ -367,7 +376,7 @@ def _commit_kernel(
     reason = wp.int32(0)
     if not wp.isfinite(e2c):
         reason = wp.int32(4)
-    elif e2c <= target_ratio2 * e2[0]:
+    elif e2c <= target_ratio2 * e2_0[0]:
         reason = wp.int32(1)
     elif stalled:
         reason = wp.int32(8)
@@ -407,6 +416,9 @@ class ErrorLog:
     (the :class:`StopReason`, ``RUNNING`` while ``keep`` is 1). It doesn't
     synchronize, so it can be captured, including in ``wp.capture_while`` bodies.
 
+    The target is relative to e0, entry 0's error, unless :meth:`set_initial_error` fixed it at other
+    positions beforehand (a dynamic problem's start state, when the solver starts from its inertial target).
+
     ``wp.capture_while`` tests ``keep`` only between replayed blocks, so a block's remaining iterations
     still run and log entries after a stop. ``first_stop`` holds the entry and reason of the first stop,
     and :meth:`read` drops the entries after it.
@@ -443,6 +455,8 @@ class ErrorLog:
         )
         self.snapshots: "SnapshotRing | None" = None  # position snapshots, see attach_snapshots
         self._e2_best = wp.zeros(1, dtype=wp.float32)  # running min of e2; capacity-sized once the stall test is on
+        self.e2_0 = wp.zeros(1, dtype=wp.float32)  # e0^2, which the target and snapshot levels are relative to
+        self.e0_fixed = wp.zeros(1, dtype=wp.int32)  # 1: e2_0 set by set_initial_error; 0: entry 0 sets it
         self.configure(target_reduction=0.95, max_entries=self.capacity, max_seconds=math.inf)
 
     def attach_snapshots(self, snapshots: "SnapshotRing | None") -> None:
@@ -486,6 +500,26 @@ class ErrorLog:
         ns = int(min(max_seconds * 1e9, 2**62)) if math.isfinite(max_seconds) else 2**62
         self.max_ns.fill_(ns)
 
+    def set_initial_error(self, x: wp.array | None) -> None:
+        """Fix e0 at the error of positions ``x``, or with None, let each solve's entry 0 set it (the default).
+        Device work outside any capture, as :meth:`set_max_seconds`: captured graphs read it when they run.
+
+        Args:
+            x (wp.array | None): (N,) positions e0 is measured at, e.g. a dynamic problem's start state
+                x_t when the solver starts elsewhere; it must hold them now (they may change afterwards).
+        """
+        if x is None:
+            self.e0_fixed.zero_()
+            return
+        self._reduce_error(x)
+        wp.copy(self.e2_0, self._e2_new)
+        self.e0_fixed.fill_(1)
+
+    def _reduce_error(self, x: wp.array) -> None:
+        """The squared error of ``x`` into ``_e2_new``. Capturable."""
+        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[self._fem.data, x, self.reference, self._w])
+        self._reduce(wp.get_stream())
+
     def reset(self) -> None:
         """Empty the log, set ``keep`` to 1 and ``stop`` to ``RUNNING``. Capturable."""
         wp.launch(
@@ -504,8 +538,7 @@ class ErrorLog:
         """
         fem = self._fem
         wp.launch(_stamp_kernel, dim=1, inputs=[self.t_a, self.count])
-        wp.launch(_error_terms_kernel, dim=self._w.shape[0], inputs=[fem.data, self.reference, self._w])
-        self._reduce(wp.get_stream())
+        self._reduce_error(fem.data.x)
         if self.snapshots is not None:
             self.snapshots.record(self, fem.data.x)
         wp.launch(
@@ -529,6 +562,8 @@ class ErrorLog:
                 self.first_stop,
                 self.solver_ns,
                 self._e2_best,
+                self.e2_0,
+                self.e0_fixed,
             ],
         )
 
@@ -537,7 +572,7 @@ class ErrorLog:
 
         Returns:
             StaticSolveLog: Errors, cumulative solver times and cumulative sweeps per entry up to the
-            first stop, and its reason.
+            first stop, its reason, and e0.
         """
         n = min(int(self.count.numpy()[0]), self.capacity)
         first, reason = (int(v) for v in self.first_stop.numpy())
@@ -556,6 +591,7 @@ class ErrorLog:
             time=np.cumsum(dt),
             sweeps=self.sweeps.numpy()[:n].astype(np.int64),
             termination=StopReason(reason).name.lower(),
+            e0=float(np.sqrt(max(float(self.e2_0.numpy()[0]), 0.0))) if n > 0 else math.nan,
         )
 
 
@@ -567,11 +603,14 @@ class StaticSolveLog:
     time: np.ndarray  # (n,) cumulative solver wall-clock time (s), logging excluded
     sweeps: np.ndarray  # (n,) cumulative VBD sweeps (0 for Newton)
     termination: str = "running"  # why the solve stopped: a StopReason name, lowercase
+    # The error the levels are relative to: error[0], or the problem's start state's error when the solver
+    # started elsewhere (ErrorLog.set_initial_error); NaN means error[0]
+    e0: float = math.nan
 
     @property
     def relative_error(self) -> np.ndarray:
-        """(n,) error relative to the initial one, e / e0 (zeros if e0 is 0)."""
-        e0 = self.error[0] if self.error.size else 1.0
+        """(n,) error relative to e0, e / e0 (zeros if e0 is 0)."""
+        e0 = self.e0 if math.isfinite(self.e0) else (self.error[0] if self.error.size else 1.0)
         return self.error / e0 if e0 > 0 else np.zeros_like(self.error)
 
     def time_to_reduction(self, p: float) -> float:
@@ -617,7 +656,8 @@ def _snap_schedule_kernel(
     count: wp.array[wp.int32],
     capacity: wp.int32,
     e2_new: wp.array[wp.float32],
-    e2: wp.array[wp.float32],
+    e2_0: wp.array[wp.float32],
+    e0_fixed: wp.array[wp.int32],
     ratio2: wp.array[wp.float32],
     tags: wp.array[wp.int32],
     free_list: wp.array[wp.int32],
@@ -653,9 +693,10 @@ def _snap_schedule_kernel(
         tags[slot] = c
         state[2] = slot
     # The first entry at or below each level, e^2 <= (1 - level)^2 e0^2, compared as the stop test does
-    e0 = e2_new[0]
-    if c > 0:
-        e0 = e2[0]
+    # (the commit, after this, sets e2_0 at entry 0 unless e0 is fixed)
+    e0 = e2_0[0]
+    if c == 0 and e0_fixed[0] == 0:
+        e0 = e2_new[0]
     for l in range(ratio2.shape[0]):
         if level_entry[l] < 0 and e2_new[0] <= ratio2[l] * e0:
             level_entry[l] = c
@@ -744,7 +785,8 @@ class SnapshotRing:
                 log.count,
                 log.capacity,
                 log._e2_new,
-                log.e2,
+                log.e2_0,
+                log.e0_fixed,
                 self.ratio2,
                 self.tags,
                 self.free_list,
@@ -827,12 +869,23 @@ def prepare_dynamic_problem(state: SimulationState, h: float) -> None:
     state.reset()
 
 
+InitStrategy = pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization
+# The initial guesses one-step problems define: TrajectoryWithFdLoad and TrajectoryWithProjectedFdLoad estimate the
+# load from the previous step's velocity, which a problem's (x_t, v_t) doesn't have (nor does the GPU implement them)
+BENCHMARK_INIT_STRATEGIES = (InitStrategy.Position, InitStrategy.FreeTrajectory, InitStrategy.TrajectoryWithExternalLoad)
+
+
 class BenchmarkSolver:
     """Runs logged benchmark solves of one solver on one ``SimulationState``, one problem at a time.
 
     A problem is static (``fem.static``: release ``x0``, error to the rest shape) or dynamic (one BDF1
     step from ``x0`` with velocity ``v0`` and inertial target ``xtilde``, error to a reference
-    solution). For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`)
+    solution). A dynamic solve's initial iterate is the state's ``Integration.init_strategy`` guess from
+    (``x0``, ``v0``), for every solver (``Solver.Newton.init_strategy`` doesn't apply): Position keeps ``x0``,
+    FreeTrajectory moves the free nodes to x0 + h v0, TrajectoryWithExternalLoad to x0 + h v0 + h^2 aext, as
+    the simulator's :meth:`FemElastoDynamics.setup_time_integration_optimization`. Either way, e0 is the
+    error of ``x0``, so a better start is credited with the levels it already crosses and a worse one starts
+    at e/e0 > 1. For VBD-family solvers, the whole solve is captured once (on the first :meth:`solve`)
     and replayed for every problem; the state must not be reset in between. The solver's own outer
     loop and tests aren't used: a solve is one subproblem of iterations driven by ``spec``'s budgets
     and stopped by the benchmark's error, so ``gtol``, ``ftol``, ``n_max_iters`` and
@@ -859,6 +912,13 @@ class BenchmarkSolver:
         self.state = state
         self.solver = solver
         self.spec = spec
+        # Every solver's initial guess on dynamic problems; static ones always start from their sample
+        self.init_strategy = InitStrategy.Position if state.fem.static else state.init_strategy
+        if self.init_strategy not in BENCHMARK_INIT_STRATEGIES:
+            raise ValueError(
+                f"Integration.init_strategy {self.init_strategy.name} needs the previous time step's velocity, which "
+                f"one-step benchmark problems don't have; use one of {', '.join(s.name for s in BENCHMARK_INIT_STRATEGIES)}"
+            )
         schedule = (
             None
             if solver == SolverType.Newton
@@ -889,7 +949,7 @@ class BenchmarkSolver:
 
         Static problems run the problem's setup, which prescribes the Dirichlet nodes (kinematic
         constraints at their frozen time). Dynamic problems skip it: their inertial target comes from
-        the problem file (:meth:`solve`), and their Dirichlet nodes are fixed at rest.
+        the problem file and their initial guess from :meth:`_load`, and their Dirichlet nodes are fixed at rest.
         """
         state, params = self.state, self.state.params[self.solver]
         if state.fem.static:
@@ -960,16 +1020,22 @@ class BenchmarkSolver:
         fem = self.state.fem
         fem.data.x.assign(np.asarray(x0, dtype=np.float32))
         self.log.reference.assign(fem.data.X if reference is None else np.asarray(reference, dtype=np.float32))
+        self.log.set_initial_error(None)
         if fem.static:
             fem.data.v.zero_()
             return
         if v0 is None or xtilde is None:
             raise ValueError("Dynamic problems need v0 and xtilde")
         fem.data.v.assign(np.asarray(v0, dtype=np.float32))
-        fem.data.xtilde.assign(np.asarray(xtilde, dtype=np.float32))
         # The step starts from (x0, v0): write the BDF history in place (detection holds xt handles).
         fem.bdf.xt[0, :] = cp.asarray(np.asarray(x0, dtype=np.float32).ravel())[cp.newaxis, :]
         fem.bdf.xt[1, :] = cp.asarray(np.asarray(v0, dtype=np.float32).ravel())[cp.newaxis, :]
+        if self.init_strategy != InitStrategy.Position:
+            # e0 stays the start state's error. The simulator's initial guess from that history: it also writes
+            # its own xtilde, which the problem's replaces below
+            self.log.set_initial_error(fem.data.x)
+            fem.setup_time_integration_optimization(self.init_strategy)
+        fem.data.xtilde.assign(np.asarray(xtilde, dtype=np.float32))
 
     def solve(
         self,
@@ -979,10 +1045,11 @@ class BenchmarkSolver:
         xtilde: np.ndarray | None = None,
         max_seconds: float | None = None,
     ) -> StaticSolveLog:
-        """Solve one problem from ``x0`` and log until a stop criterion.
+        """Solve one problem from ``x0`` (or the init strategy's guess, see the class) and log until a stop criterion.
 
         Args:
-            x0 (np.ndarray): (N, 3) initial positions, e.g. ``batch.x[s]``.
+            x0 (np.ndarray): (N, 3) the problem's start positions, e.g. ``batch.x[s]``: static problems'
+                initial iterate, dynamic ones' x_t.
             reference (np.ndarray | None): (N, 3) solution the error is measured against, e.g.
                 ``batch.reference(s)``; the rest shape X if None.
             v0 (np.ndarray | None): (N, 3) initial velocities (dynamic problems).
@@ -1199,6 +1266,45 @@ class TestErrorLog(unittest.TestCase):
         e = log.read().error[0]
         expected = np.sqrt(np.sum(m[1:, None] * (x[1:].astype(np.float64) - ref[1:]) ** 2))
         self.assertAlmostEqual(e / expected, 1.0, places=5)
+
+    def test_fixed_initial_error(self):
+        """With e0 fixed at a problem's start state, a solve from a better iterate starts below e/e0 = 1 and
+        reaches the target sooner, in the captured loop; without, entry 0 sets e0 again."""
+        fem = self._make_fem()
+        X = fem.data.X.numpy()
+        u = np.random.default_rng(2).standard_normal(X.shape).astype(np.float32)
+        u[0] = 0
+        log = ErrorLog(fem, capacity=64)
+        log.configure(target_reduction=0.99, max_entries=64, max_seconds=math.inf)
+
+        def block():
+            for _ in range(4):
+                wp.launch(_halve_displacement_kernel, dim=X.shape[0], inputs=[fem.data])
+                log.record(1)
+
+        fem.data.x.assign(X + u)
+        with wp.ScopedCapture() as capture:
+            log.reset()
+            log.record(0)
+            wp.capture_while(log.keep, while_body=block)
+        # The start state X + u fixes e0; the solve starts from X + u / 4, at e/e0 = 1/4
+        log.set_initial_error(fem.data.x)
+        fem.data.x.assign(X + u / 4)
+        wp.capture_launch(capture.graph)
+        fixed = log.read()
+        e0 = np.sqrt(np.sum(fem.data.m.numpy()[:, None] * u.astype(np.float64) ** 2))
+        self.assertAlmostEqual(fixed.e0 / e0, 1.0, places=5)
+        self.assertAlmostEqual(fixed.relative_error[0], 0.25, places=5)
+        # 0.25 x 0.5^5 <= 0.01 < 0.25 x 0.5^4: the target at entry 5 instead of 7
+        self.assertEqual(fixed.termination, "target")
+        self.assertEqual(fixed.error.size, 6)
+        # Back to the default: entry 0 sets e0
+        log.set_initial_error(None)
+        fem.data.x.assign(X + u / 4)
+        wp.capture_launch(capture.graph)
+        default = log.read()
+        self.assertAlmostEqual(default.e0, default.error[0], places=6)
+        self.assertEqual(default.error.size, 8)
 
 
 class TestSampleBatches(unittest.TestCase):

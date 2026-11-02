@@ -29,6 +29,19 @@ float32 references resolve about that much at best). Only that error stops a sol
 highest level), at its time budget or iteration cap, or for Newton at its stall test; the solvers' own
 convergence and feasibility tests are bypassed.
 
+Initial guess (dynamic problems): every solver, Newton included, starts from the case parameters'
+``Integration.init_strategy`` guess from the sample's (x_t, v_t), computed as the simulator starts a time step
+(``FemElastoDynamics.setup_time_integration_optimization``): 0 Position keeps x_t; 1 FreeTrajectory moves the
+free nodes to x_t + h v_t; 2 TrajectoryWithExternalLoad to the inertial target x_t + h v_t + h^2 aext. 3 and 4
+(finite-difference loads) need the previous step's velocity, which one-step problems don't have, and are
+refused. ``Solver.Newton.init_strategy`` doesn't apply (a warning says so where it differs). The benchmark's
+default is Position (``BASE_PARAMETERS``, under every other source; the simulator's code default is 2), so
+results start from x_t unless a run file, parameter file or --set picks another. e0 is the start
+state's error |x_t - x*|_M whatever the strategy, so the levels mean the same for all of them: a better guess
+crosses levels at time 0 (zero increments, ``start_relative_error`` < 1), a worse one starts above
+e/e0 = 1. If Newton's guess already crosses its highest level, T_N falls back to its first step's time. Static
+problems always start from their sample.
+
 Time budgets, per sample (Newton normalization, the default): Newton solves each problem first, to the
 target, until its stall test stops it (``--newton-stall-iterations`` K, ``--newton-stall-reduction`` delta:
 the last K iterations improved the best error by less than delta per iteration on average,
@@ -95,7 +108,7 @@ Representative commands (from the repo root; datasets live in the main checkout'
 Output: one HDF5 results file (layout in ``benchmark_results.py``'s docstring): the spec, levels per
 benchmark, budget options, dataset, device, commit and parameter sources; per benchmark, case and solver,
 each sample's budget and normalization time (T_N), crossing times, increments (also over T_N), reached and
-skipped flags, e0, iterations, sweeps, solver time, host time (the solve's wall-clock time, including
+skipped flags, e0 (the start state's error) and the first iterate's e/e0 (``start_relative_error``), iterations, sweeps, solver time, host time (the solve's wall-clock time, including
 loading and reading back), final relative error, termination and full per-iteration log; and per level,
 the mean, std, min, max, median, quartiles and count of the increments, normalized increments and
 crossing times over the samples that reached it. A solve's ``termination`` is ``target`` (reached
@@ -127,8 +140,8 @@ Pitfalls:
     - The problems are posed on the dataset's FEM (its ``fem`` group, or the set's ``fem`` attribute): its
       Dirichlet nodes stay fixed at rest. Solver parameters come only from the run file (shared, then its
       cases), then --sim-params, then the scene's --scene-params (``SCENE=``, then ``BENCHMARK/SCENE=``,
-      e.g. ``static/Y1e8=``), then --set (otherwise the code defaults, configs/defaults.toml). Unknown keys
-      stop the run.
+      e.g. ``static/Y1e8=``), then --set, over the benchmark's own layer (``BASE_PARAMETERS``: the Position
+      initial guess) and the code defaults (configs/defaults.toml). Unknown keys stop the run.
     - Dynamic problems take their time step from the set: ``Integration.dt``, ``substeps`` and the BDF
       order from the parameters are overridden (one BDF1 step of size h).
     - At small h (e.g. 1e-4) a step starts close to its solution (e0 ~ 1e-3), so float32 rounding
@@ -137,6 +150,8 @@ Pitfalls:
     - The stall test measures the error, not the energy: Newton's damped steps on large deformations can
       reduce e by only a few percent per step (static het: 4-9% for ~60 steps), so a large delta stops it
       early and loses levels (plans/MASTER.md, the floor check).
+    - Dynamic problems start from x_t (Integration.init_strategy = Position, the benchmark's default, unlike the
+      simulator's 2) unless the parameters pick another initial guess; see "Initial guess" above.
     - Solves run to the target reduction or the caps, not to a solver tolerance: ``Solver.<solver>.gtol``,
       ``n_max_iters`` and ``n_subproblem_max_iters`` don't stop them (a static solve is one long
       subproblem). Newton's CG keeps its relative tolerance, but its absolute one (``atol``) is set
@@ -388,11 +403,17 @@ def make_cases(dataset: str, set_names: list[str]) -> list[Case]:
     return cases
 
 
+# The benchmark's own parameter layer, over the code defaults and under everything else: dynamic problems start
+# from x_t (Position) unless a run file, parameter file or --set picks another Integration.init_strategy
+BASE_PARAMETERS = {"Integration": {"init_strategy": 0}}
+
+
 def case_config(args, run_file, benchmark: str, scene: str, scene_params: dict) -> dict:
-    """A case's solver parameters: the run file's (shared, case.SCENE, case.BENCHMARK/SCENE), then
-    --sim-params and the case's --scene-params files, then --set."""
+    """A case's solver parameters: ``BASE_PARAMETERS``, then the run file's (shared, case.SCENE,
+    case.BENCHMARK/SCENE), then --sim-params and the case's --scene-params files, then --set."""
     sources = args.sim_params + results.scene_params_for(scene_params, benchmark, scene)
-    return config.merge(benchmark_run.case_parameters(run_file, benchmark, scene), config.resolve(sources, args.overrides))
+    out = config.merge(BASE_PARAMETERS, benchmark_run.case_parameters(run_file, benchmark, scene))
+    return config.merge(out, config.resolve(sources, args.overrides))
 
 
 def _short(v: float) -> str:
@@ -524,10 +545,39 @@ def make_state(dataset: str, fem: str, h: float | None, cfg: dict, source: str =
     return state
 
 
-def dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params) -> None:
+def code_defaults() -> dict:
+    """configs/defaults.toml: the code defaults under every case's parameters."""
+    return config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "defaults.toml"))
+
+
+def init_strategies(args, run_file, cases, scene_params, solvers) -> dict:
+    """Each case's initial guess, {(benchmark, case): strategy name}: its parameters' Integration.init_strategy
+    for dynamic problems, Position for static ones. Fails for strategies one-step problems don't define, and
+    warns where Solver.Newton.init_strategy differs: Newton starts from Integration.init_strategy too."""
+    defaults = code_defaults()
+    out = {}
+    for c in cases:
+        if c.batch.problem != "dynamic":
+            out[(c.benchmark, c.case)] = static.InitStrategy.Position.name
+            continue
+        merged = config.merge(defaults, case_config(args, run_file, c.benchmark, c.scene, scene_params))
+        strategy = static.InitStrategy(int(merged["Integration"]["init_strategy"]))
+        if strategy not in static.BENCHMARK_INIT_STRATEGIES:
+            raise SystemExit(f"{c.benchmark}/{c.case}: Integration.init_strategy {strategy.name} needs the previous "
+                             "time step's velocity, which one-step problems don't have; use one of "
+                             f"{', '.join(s.name for s in static.BENCHMARK_INIT_STRATEGIES)}")
+        newton = static.InitStrategy(int(merged["Solver"]["Newton"]["init_strategy"]))
+        if SolverType.Newton in solvers and newton != strategy:
+            print(f"Warning: {c.benchmark}/{c.case}: Solver.Newton.init_strategy {newton.name} doesn't apply in the "
+                  f"benchmark: every solver, Newton included, starts from Integration.init_strategy {strategy.name}")
+        out[(c.benchmark, c.case)] = strategy.name
+    return out
+
+
+def dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params, strategies) -> None:
     """Print each case's sets, levels, budget and effective Newton CG settings (the case's parameters over
     configs/defaults.toml), checking its parameters against those defaults. No GPU."""
-    defaults = config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "defaults.toml"))
+    defaults = code_defaults()
     print(f"Solvers {args.solvers}; budget factor {args.budget_factor:g}; Newton cap {spec.max_seconds:g} s; "
           f"stall K = {args.newton_stall_iterations}, delta = {args.newton_stall_reduction:g}; snapshots "
           + (f"{args.snapshot_fraction:g} of the samples" if args.snapshots else "off"))
@@ -541,21 +591,25 @@ def dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params) ->
         budget = f"fixed {seconds:g} s" if seconds is not None else "Newton's T_N"
         levels = ",".join(f"{v:g}" for v in results.levels_for(levels_table, c.benchmark))
         print(f"{c.benchmark + '/' + c.case:28s} {c.set_name:30s} {c.batch.n_samples:3d} samples, levels {levels}, "
-              f"budget {budget}; Newton CG n_max_iters {cg['n_max_iters']}, rtol {cg['rtol']:g}"
+              f"budget {budget}; initial guess {strategies[(c.benchmark, c.case)]}; Newton CG n_max_iters "
+              f"{cg['n_max_iters']}, rtol {cg['rtol']:g}"
               + (f"; UNKNOWN KEYS {', '.join(unknown)}" if unknown else ""))
     if failed:
         raise SystemExit("Unknown solver parameters (see above)")
 
 
 def summarize(log: static.StaticSolveLog, levels, budget: float) -> dict:
+    relative = log.relative_error
     return {
-        "e0": float(log.error[0]),
+        # The problem's initial error (its start state's), and the solver's first iterate's e/e0
+        "e0": float(log.e0) if math.isfinite(log.e0) else float(log.error[0]),
+        "start_relative_error": float(relative[0]) if relative.size else math.nan,
         "iterations": int(log.error.size - 1),
         "sweeps": int(log.sweeps[-1]),
         "solver_time": float(log.time[-1]),
-        "final_relative_error": float(log.relative_error[-1]),
+        "final_relative_error": float(relative[-1]),
         "termination": log.termination,
-        "crossings": results.level_crossings(log.relative_error, log.time, levels, budget),
+        "crossings": results.level_crossings(relative, log.time, levels, budget),
     }
 
 
@@ -742,8 +796,9 @@ def main():
     if newton_cases and SolverType.Newton not in solvers:
         raise SystemExit(f"Budgets come from Newton's solves, but Newton isn't in --solvers: add it, or give "
                          f"{', '.join(newton_cases)} a fixed --budget")
+    strategies = init_strategies(args, run_file, cases, scene_params, solvers)
     if args.dry_run:
-        dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params)
+        dry_run(args, spec, run_file, cases, levels_table, budgets, scene_params, strategies)
         return
     wp.init()
     with h5py.File(spec.dataset, "r") as f:
@@ -774,6 +829,8 @@ def main():
             budget_options=" ".join(f"--budget {b}" for b in args.budget),
             newton_stall_iterations=spec.newton_stall_iterations,
             newton_stall_reduction=spec.newton_stall_reduction,
+            # Every case's initial guess (one name when they agree)
+            init_strategy=",".join(dict.fromkeys(strategies.values())),
             dataset=spec.dataset,
             device=wp.get_device().name,
             git_commit=_git_commit(),
@@ -810,6 +867,7 @@ def main():
                 "budget_source": source,
                 "max_seconds": spec.max_seconds,
                 "scene_params": ",".join(results.scene_params_for(scene_params, c.benchmark, c.scene)),
+                "init_strategy": strategies[(c.benchmark, c.case)],
             }, levels=results.levels_for(levels_table, c.benchmark))
         # One simulation per (scene, time step) at a time, reused across its sets
         keys = list(dict.fromkeys((c.scene, c.fem, c.batch.h, c.benchmark) for c in cases))
@@ -878,6 +936,12 @@ def main():
                                 tn = spec.max_seconds
                                 print(f"Warning: {c.benchmark}/{c.case} sample {s}: Newton reached no level within "
                                       f"{spec.max_seconds:g} s; T_N = {tn:g} s")
+                            elif tn <= 0:
+                                # Started from a predicted trajectory, Newton crossed its highest level at entry 0:
+                                # a zero T_N would give every other solver a zero budget
+                                tn = float(log.time[1]) if log.time.size > 1 else spec.max_seconds
+                                print(f"Warning: {c.benchmark}/{c.case} sample {s}: Newton's initial guess crosses "
+                                      f"its highest level; T_N = {tn:g} s (its first step's time, else the cap)")
                             newton_time[s] = tn
                         normalization = fixed_seconds if fixed_seconds is not None else newton_time[s]
                         summary["budget"] = budget
@@ -906,7 +970,8 @@ def main():
                         pbar.set_postfix(case=f"{c.benchmark}/{c.case}", solver=solver.name,
                                          e=f"{summary['final_relative_error']:.2e}")
                         pbar.update(1)
-                    results.write_solver(group, solver.name, levels, summaries, logs, trajectories)
+                    results.write_solver(group, solver.name, levels, summaries, logs, trajectories).attrs[
+                        "init_strategy"] = runner.init_strategy.name
                     h5f.flush()
                     del runner, ring
             del state
@@ -940,6 +1005,33 @@ class TestRecords(unittest.TestCase):
         self.assertEqual(v["version_warp"], wp.__version__)
         self.assertRegex(v["version_cuda_driver"], r"^\d+\.\d+$")
         self.assertTrue(all(isinstance(x, str) for x in v.values()))
+
+
+class TestInitStrategy(unittest.TestCase):
+    def test_resolution(self):
+        """Without a run file or parameters, dynamic problems start at Position (not the code default, 2);
+        parameters can pick another guess; static problems always start at Position; 3 and 4 are refused."""
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        def case(problem):
+            return SimpleNamespace(benchmark=f"{problem}_b", case="S", scene="S", batch=SimpleNamespace(problem=problem))
+
+        cases = [case("dynamic"), case("static")]
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            plain = init_strategies(SimpleNamespace(sim_params=[], overrides=[]), None, cases, {}, [SolverType.Newton])
+        self.assertEqual(plain, {("dynamic_b", "S"): "Position", ("static_b", "S"): "Position"})
+        self.assertEqual(out.getvalue(), "")  # Newton's own default (Position) agrees: no warning
+        self.assertEqual(int(config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs",
+                                                       "defaults.toml"))["Integration"]["init_strategy"]), 2)
+        args = SimpleNamespace(sim_params=[], overrides=["Integration.init_strategy=2"])
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            picked = init_strategies(args, None, cases, {}, [SolverType.Newton])
+        self.assertEqual(picked, {("dynamic_b", "S"): "TrajectoryWithExternalLoad", ("static_b", "S"): "Position"})
+        self.assertIn("Solver.Newton.init_strategy Position doesn't apply", out.getvalue())
+        with self.assertRaises(SystemExit):
+            init_strategies(SimpleNamespace(sim_params=[], overrides=["Integration.init_strategy=3"]), None, cases, {}, [])
 
 
 class TestListSets(unittest.TestCase):

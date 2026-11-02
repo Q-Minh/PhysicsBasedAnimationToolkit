@@ -39,15 +39,18 @@ from . import benchmark_results as results
 COMPRESSION = dict(compression="gzip", compression_opts=4, shuffle=True)
 
 
-def kept_entries(error: np.ndarray, time: np.ndarray, levels, max_entries: int) -> np.ndarray:
+def kept_entries(
+    error: np.ndarray, time: np.ndarray, levels, max_entries: int, e0: float | None = None
+) -> np.ndarray:
     """Sorted indices of the log entries a thin log keeps: all of them for a log of at most ``max_entries``
     entries, else the first, the last, each level's first crossing, and the entries nearest to ``max_entries``
-    times evenly spaced on a log axis between the first positive time and the last."""
+    times evenly spaced on a log axis between the first positive time and the last. ``e0`` is the solve's
+    stored e0 (``error[0]`` if None)."""
     n = len(error)
     if n <= max_entries:
         return np.arange(n)
     keep = [np.array([0, n - 1])]
-    c = results.level_crossings(results.relative_error(error), time, levels)
+    c = results.level_crossings(results.relative_error(error, e0), time, levels)
     keep.append(c.iteration[c.reached])
     positive = time[time > 0]
     if positive.size:
@@ -72,9 +75,11 @@ def copy_solver(src: h5py.Group, dst: h5py.Group, levels, max_entries: int) -> i
         if name in ("logs", "trajectories"):
             continue
         src.copy(item, dst, name=name)
+    rows = {f"{int(s):06d}": row for row, s in enumerate(np.asarray(src["sample"]))} if "sample" in src else {}
     for sample, log in src["logs"].items():
         error, time = log["error"][()], log["time"][()]
-        entry = kept_entries(error, time, levels, max_entries)
+        row = rows.get(sample)
+        entry = kept_entries(error, time, levels, max_entries, results.solver_e0(src, row) if row is not None else None)
         lg = dst.create_group(f"logs/{sample}")
         lg.create_dataset("entry", data=entry, **COMPRESSION)
         for key in ("error", "time", "sweeps"):
