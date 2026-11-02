@@ -44,7 +44,7 @@ from .benchmark_plot import (
 
 def crossing_counts(
     error: np.ndarray, time: np.ndarray, sweeps: np.ndarray, levels, limit: float,
-    cg_iterations: np.ndarray | None = None, status: np.ndarray | None = None,
+    cg_iterations: np.ndarray | None = None, status: np.ndarray | None = None, e0: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray | None]:
     """Work done until each level's first crossing within ``limit`` seconds of solver time.
 
@@ -57,12 +57,13 @@ def crossing_counts(
         cg_iterations (np.ndarray | None): Newton's CG iterations per step attempted.
         status (np.ndarray | None): Newton's status per step attempted; log entry j + 1 follows the j-th
             ``stepped`` one.
+        e0 (float | None): The solve's stored e0 (``error[0]`` if None).
 
     Returns:
         tuple: (L,) counts, -1 where not reached: sweeps, or Newton's steps when ``cg_iterations`` is
         given; and for Newton, (L,) cumulative CG iterations (else None).
     """
-    c = results.level_crossings(results.relative_error(error), time, levels, limit)
+    c = results.level_crossings(results.relative_error(error, e0), time, levels, limit)
     if cg_iterations is None:
         return np.where(c.reached, np.asarray(sweeps)[np.maximum(c.iteration, 0)], -1), None
     stepped = np.nonzero(np.asarray(status) == "stepped")[0]
@@ -87,6 +88,7 @@ def solver_counts(g: h5py.Group, solver: str, levels, factor: float) -> tuple[np
             log["error"][()], log["time"][()], log["sweeps"][()], levels, budget[row],
             newton["cg_iterations"][()] if newton is not None else None,
             newton["status"].asstr()[()] if newton is not None else None,
+            results.solver_e0(sg, row),
         )
         counts[row] = count
         if cg is not None:

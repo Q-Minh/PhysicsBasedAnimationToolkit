@@ -64,7 +64,7 @@ def solve_curve(g: h5py.Group, solver: str, sample: int) -> tuple[np.ndarray, np
     normalization = float(sg["normalization"][row]) if "normalization" in sg else float(g.attrs["budget"])
     log = sg[f"logs/{sample:06d}"]
     e, t = np.asarray(log["error"], dtype=np.float64), np.asarray(log["time"], dtype=np.float64)
-    return t / normalization, results.relative_error(e)
+    return t / normalization, results.relative_error(e, results.solver_e0(sg, row))
 
 
 def error_reached(x: np.ndarray, e: np.ndarray, grid: np.ndarray) -> np.ndarray:
@@ -89,6 +89,8 @@ def plot_problem(
     first = [x[1] for runs in curves.values() for x, _ in runs if x.size > 1]
     t_start = min([1.0] + first)  # the earliest first iterate, for the log axis
     t_end = max([1.0] + [float(x[-1]) for runs in curves.values() for x, _ in runs])
+    # Up to 1.5, or past the highest e/e0: a solve started from the inertial target can start above 1
+    top = max([1.5] + [1.2 * float(np.nanmax(e)) for runs in curves.values() for _, e in runs if e.size])
     for solver, runs in curves.items():
         color = solver_color(solver, solvers)
         if sample is not None:
@@ -126,7 +128,7 @@ def plot_problem(
     reference_bound = float(bounds.min()) if bounds is not None else None
     floor = min(1.0 - levels[-1], reference_bound or 1.0) * 0.1
     ax.set_yscale("log")
-    ax.set_ylim(floor, 1.5)
+    ax.set_ylim(floor, top)
     if xscale == "log":
         ax.set_xscale("log")
         ax.set_xlim(0.7 * t_start, x_end)

@@ -8,6 +8,9 @@ runs this module's tests.
 Accuracy levels are error reductions 1 - e/e0 (0.5 = half the initial error removed). For one solve's
 per-iteration log (entry j is the state after j iterations, with cumulative solver time t_j):
 
+- e0 is the problem's initial error, the error of its start state; a dynamic solve started from a predicted
+  trajectory (``Integration.init_strategy`` other than Position, see ``benchmark.py``) logs that guess as entry
+  0, so its e_0/e0 (``start_relative_error``) is below 1 for a better guess, crossing levels at time 0, or above 1;
 - level l is **crossed** at the first entry j with 1 - e_j/e0 >= l, at time t_j;
 - the **increment** of a level is the time from the previous crossing to its own, but an iteration's
   time goes only to the **highest** level it crosses: levels it jumps over are reached with a zero
@@ -22,7 +25,7 @@ per-iteration log (entry j is the state after j iterations, with cumulative solv
 Results file layout (HDF5, ``FORMAT``):
 
     /                                attrs: format, version, levels_options, budget_factor, budget_options,
-                                     newton_stall_iterations, newton_stall_reduction, dataset, device,
+                                     newton_stall_iterations, newton_stall_reduction, init_strategy, dataset, device,
                                      git_commit, git_dirty, date, sim_params, solvers, version_* (warp,
                                      cuda_driver, cuda_toolkit, pbatoolkit)
     /StaticSolveSpec                 the run's spec (static.StaticSolveSpec), attributes
@@ -31,10 +34,11 @@ Results file layout (HDF5, ``FORMAT``):
     /<benchmark>/<case>              attrs: benchmark, problem, h, scene, label, energy, set, [budget] (a
                                      fixed --budget), budget_source, max_seconds (Newton's cap),
                                      scene_params, sim_params_toml (every solver parameter of the
-                                     case's simulation, TOML), newton_cg_* (Newton's CG limits)
-    /<benchmark>/<case>/<solver>     attrs: solver, n_samples
-        sample, e0, iterations, sweeps, solver_time, host_time, final_relative_error, termination,
-        deformation_energy, budget, normalization, [min_J],
+                                     case's simulation, TOML), newton_cg_* (Newton's CG limits),
+                                     init_strategy (the initial guess)
+    /<benchmark>/<case>/<solver>     attrs: solver, n_samples, init_strategy
+        sample, e0, [start_relative_error], iterations, sweeps, solver_time, host_time, final_relative_error,
+        termination, deformation_energy, budget, normalization, [min_J],
         [reference_error_bound, reference_relative_error_bound]                                 (S,)
         crossing_time, crossing_iteration, increment, normalized_increment, reached, skipped,
         [resolvable]                                                                            (S, L)
@@ -52,7 +56,11 @@ Newton, ``budget_factor`` x T_N for the others, or the fixed ``--budget``; ``nor
 the sample's increments are divided by (``normalized_increment``): T_N, Newton's crossing time of the
 highest level it reached on that problem (the same for every solver), or the fixed budget. Files written
 before per-benchmark levels have the run's ``levels`` at the root instead (:func:`benchmark_levels`).
-Newton's ``logs/<sample>/newton/*`` hold one entry per Newton step attempted (one ``solve_subproblem`` call):
+``e0`` is each solve's initial error, the error of the problem's start state (the same for every solver);
+``start_relative_error`` is the solver's first iterate's e/e0, 1 unless it started elsewhere (files written
+before it have none, and their e0 is the log's ``error[0]``). The case's and the solver group's attribute
+``init_strategy`` names the initial guess (``Integration.init_strategy``; Position for static problems), and the
+root's lists the run's. Newton's ``logs/<sample>/newton/*`` hold one entry per Newton step attempted (one ``solve_subproblem`` call):
 its ``status`` (``stepped``, or why the last one was rejected), the CG iterations, whether CG stopped at its
 cap, the CG residual norm and the absolute tolerance it was tested against, and the line-search
 backtracks; log entry j + 1 follows step j when it stepped. NaN marks unreached levels (``reached`` False); an
@@ -237,12 +245,24 @@ def aggregate(values: np.ndarray, reached: np.ndarray) -> dict[str, np.ndarray]:
     return out
 
 
-def relative_error(error: np.ndarray) -> np.ndarray:
+def relative_error(error: np.ndarray, e0: float | None = None) -> np.ndarray:
     """(n,) e / e0 of a logged error (zeros if e0 is 0), as the benchmark scores it
-    (``static.StaticSolveLog.relative_error``)."""
+    (``static.StaticSolveLog.relative_error``).
+
+    Args:
+        error (np.ndarray): (n,) the logged errors.
+        e0 (float | None): The solve's stored ``e0``; ``error[0]`` if None. They differ when a dynamic solve
+            started from a predicted trajectory (``init_strategy``): e0 is the start state's error.
+    """
     error = np.asarray(error, dtype=np.float64)
-    e0 = error[0] if error.size else 1.0
+    if e0 is None:
+        e0 = error[0] if error.size else 1.0
     return error / e0 if e0 > 0 else np.zeros_like(error)
+
+
+def solver_e0(solver_group: h5py.Group, row: int) -> float | None:
+    """A solve's stored ``e0`` (row ``row`` of ``/<benchmark>/<case>/<solver>``), None if the group has none."""
+    return float(solver_group["e0"][row]) if "e0" in solver_group else None
 
 
 def rescore(
@@ -273,7 +293,7 @@ def rescore(
     for row, sample in enumerate(np.asarray(g["sample"])):
         log = g[f"logs/{int(sample):06d}"]
         limit = min(factor * normalization[row], budget[row])
-        c = level_crossings(relative_error(log["error"][()]), log["time"][()], levels, limit)
+        c = level_crossings(relative_error(log["error"][()], solver_e0(g, row)), log["time"][()], levels, limit)
         increments[row], reached[row] = c.increment / normalization[row], c.reached
     return aggregate(increments, reached if counted is None else reached & counted)
 
@@ -439,7 +459,7 @@ def write_solver(
         group (h5py.Group): The case group (:func:`require_case`).
         solver (str): Solver name.
         levels: The accuracy levels.
-        summaries (list[dict]): Per sample: ``sample``, ``e0``, ``iterations``, ``sweeps``,
+        summaries (list[dict]): Per sample: ``sample``, ``e0``, optionally ``start_relative_error``, ``iterations``, ``sweeps``,
             ``solver_time``, ``final_relative_error``, ``termination``, ``deformation_energy``,
             ``crossings`` (:class:`LevelCrossings`), and optionally ``min_J``,
             ``reference_error_bound``, ``reference_relative_error_bound``, ``budget`` (the solve's time
@@ -452,7 +472,8 @@ def write_solver(
     """
     g = group.create_group(solver)
     g.attrs.update(solver=solver, n_samples=len(summaries))
-    scalar_keys = ["sample", "e0", "iterations", "sweeps", "solver_time", "host_time", "final_relative_error",
+    scalar_keys = ["sample", "e0", "start_relative_error", "iterations", "sweeps", "solver_time", "host_time",
+                   "final_relative_error",
                    "deformation_energy", "min_J", "reference_error_bound", "reference_relative_error_bound",
                    "budget", "normalization"]
     for key in scalar_keys:
@@ -677,6 +698,35 @@ class TestLevelCrossings(unittest.TestCase):
                 self.assertEqual(list(g["logs/000001/newton/status"].asstr()[()]), ["stepped", "stepped"])
                 self.assertNotIn("newton", cases[0][2]["VBD/logs/000000"])
                 self.assertEqual(list(g["termination"].asstr()[()]), ["target", "target"])
+
+    def test_start_elsewhere(self):
+        """A solve started from a better iterate than the start state (e0 = 2, error[0] = 0.8): levels it
+        already crosses are reached at time 0, and re-scoring reads the stored e0, not error[0]."""
+        import os
+        import tempfile
+
+        levels = (0.5, 0.9, 0.99)
+        error, times = np.array([0.8, 0.1, 0.01]), np.array([0.0, 1.0, 2.0])
+        np.testing.assert_allclose(relative_error(error, 2.0), [0.4, 0.05, 0.005])
+        np.testing.assert_allclose(relative_error(error), [1.0, 0.125, 0.0125])
+        c = level_crossings(relative_error(error, 2.0), times, levels)
+        np.testing.assert_array_equal(c.iteration, [0, 1, 2])
+        np.testing.assert_array_equal(c.increment, [0.0, 1.0, 1.0])
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "results.h5")
+            with h5py.File(path, "w") as f:
+                case = require_case(f, "dynamic_h0.01", "Y1e6", {"scene": "Y1e6"}, levels=levels)
+                write_solver(case, "VBD", levels, [dict(
+                    sample=0, e0=2.0, start_relative_error=0.4, iterations=2, sweeps=2, solver_time=2.0,
+                    final_relative_error=0.005, termination="target", deformation_energy=1.0, crossings=c,
+                    budget=4.0, normalization=2.0,
+                )], [(error, times, np.arange(3))])
+            with h5py.File(path, "r") as f:
+                g = f["dynamic_h0.01/Y1e6/VBD"]
+                np.testing.assert_allclose(g["start_relative_error"][()], [0.4])
+                a = rescore(g, levels, 1.0)
+                np.testing.assert_array_equal(a["count"], [1, 1, 1])
+                np.testing.assert_allclose(a["mean"], [0.0, 0.5, 0.5])
 
     def test_trajectory_sample(self):
         """A trajectory is written under its own sample, also when earlier samples have none."""
