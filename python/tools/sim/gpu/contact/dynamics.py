@@ -1053,10 +1053,13 @@ class MeshDynamics:
         self._compute_rayleigh_quotients(*self._penalty_hessian)
         self._reduce_penalty_parameters(wp.get_stream())
 
-    # TODO: Whether local penalties (Params.penalty_stiffness) help is unmeasured: one global sigma_n set by the
-    # stiffest contact also applies to soft-side contacts, which may worsen CG conditioning and stiffen soft-on-stiff
-    # contact (suspected for Newton on the heterogeneous trampoline + sphere and its CG iteration counts), and on
-    # DragonImpact it sat 3.4x above the alternating pillar contacts' median quotient (solver notes entry 13).
+    # TODO: Local penalties (Params.penalty_stiffness) are measured only on Celebration, where they helped every solver
+    # (gradient ratio median, global -> local: Newton 302 -> 20 on 10 steps from 2 s, AAAVBD 40 -> 21, Anderson
+    # 104 -> 35 over 5 s; scene_configs.py's Celebration rule) and are now that scene's setting. Elsewhere one global
+    # sigma_n set by the stiffest contact also applies to soft-side contacts, which may worsen CG conditioning and
+    # stiffen soft-on-stiff contact (suspected for Newton on the heterogeneous trampoline + sphere and its CG
+    # iteration counts), and on DragonImpact it sat 3.4x above the alternating pillar contacts' median quotient
+    # (solver notes entry 13). Whether to make local the default is open.
     def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array, h2: float):
         """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
         (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
