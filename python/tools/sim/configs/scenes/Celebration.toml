@@ -1,7 +1,7 @@
 # Scene config: Celebration, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/celebration.h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/Celebration.toml. Keys not listed below have the source's values.
-# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-02 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
@@ -57,6 +57,14 @@
 #     Solver.Newton.LinearSolver.n_max_iters = 6000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-07 (source 1e-06)
 #     Solver.Newton.newton.n_max_iters = 2 (source 1)
+# - Per-contact penalties (LocalMaxRayleighQuotient) for every solver (maintainer, 2026-11-02): the global
+#   penalty, set by the stiffest contact, put Newton's outer test in a period-2 multiplier cycle (solver notes
+#   entry 16); 10 Newton steps from 2 s, step-end gradient ratio median 20 vs 302, worst feasibility 0.20 vs
+#   0.54. 5 s production runs, global -> per-contact, gradient ratio median: AAAVBD 40 -> 21, VBD 59 -> 47,
+#   Chebyshev 29 -> 21, Anderson 104 -> 35; AAAVBD's letters within 15 / 18 mm of Newton's at 1 / 5 s (was 80 /
+#   31). Worst single-step feasibility ratio went up for AAAVBD (2.48 -> 4.58) and VBD (3.56 -> 6.66), its P99
+#   not (VBD 2.59 -> 1.22). No inverted tets, step times within 12%.
+#     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Solver.Convergence.early_exit
@@ -86,7 +94,7 @@ min_sigma_n = 10000.0
 mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 1
-penalty_stiffness = 0
+penalty_stiffness = 1
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.0

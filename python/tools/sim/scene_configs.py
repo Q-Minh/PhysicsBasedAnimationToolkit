@@ -262,6 +262,17 @@ SCENES = {
                  "Solver.Newton.newton.n_max_iters": 2, "Solver.Newton.LinearSolver.rtol": 1e-7,
                  "Solver.Newton.LinearSolver.n_max_iters": 6000},
             ),
+            Rule(
+                "Per-contact penalties (LocalMaxRayleighQuotient) for every solver (maintainer, 2026-11-02): the "
+                "global penalty, set by the stiffest contact, put Newton's outer test in a period-2 multiplier cycle "
+                "(solver notes entry 16); 10 Newton steps from 2 s, step-end gradient ratio median 20 vs 302, worst "
+                "feasibility 0.20 vs 0.54. 5 s production runs, global -> per-contact, gradient ratio median: AAAVBD "
+                "40 -> 21, VBD 59 -> 47, Chebyshev 29 -> 21, Anderson 104 -> 35; AAAVBD's letters within 15 / 18 mm "
+                "of Newton's at 1 / 5 s (was 80 / 31). Worst single-step feasibility ratio went up for AAAVBD "
+                "(2.48 -> 4.58) and VBD (3.56 -> 6.66), its P99 not (VBD 2.59 -> 1.22). No inverted tets, step "
+                "times within 12%.",
+                {"Contact.ContactDynamics.penalty_stiffness": 1},
+            ),
         ],
     ),
     # TODO: With this config (AAAVBD), the mat penetrates about 2 cm after its 2 s release, loses contact by about
