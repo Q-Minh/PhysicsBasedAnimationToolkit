@@ -192,6 +192,17 @@ CAPSULE_BUDGET = Rule(
     {"Integration.substeps": 1, **_per_solver("n_max_iters", 10), **_per_solver("n_subproblem_max_iters", 20),
      "Solver.Newton.n_max_iters": 10, "Solver.Newton.newton.n_max_iters": 2},
 )
+BASKET_BUDGET = Rule(
+    "One budget for every VBD-family solver on the basket of fruit, so that the paper shows their different "
+    "behaviour at equal budget (maintainer, 2026-11-03): 5 substeps per 10 ms step, each of 10 outer iterations "
+    "(contact detection passes) x 15 sweeps, 750 sweeps per step (the paper file gives 3 substeps of 10 x 15 = 450). "
+    "With 10 x 15 per substep, AAAVBD kept the fruit in the basket to 2 s at 3 substeps, while VBD blew up at 3 and "
+    "4 substeps and ran to 2 s at 5, with the fruit falling through the strands. The paper's 450 sweeps per step, "
+    "as 5 substeps of 10 x 9, kept every fruit in the basket to 2 s with AAAVBD, but VBD blew up at 0.78 s, hence "
+    "the 750. At 750, AAAVBD keeps every fruit in the basket to 2 s, while all 9 fall through VBD's strands by "
+    "1.75 s. Newton keeps its settings, now per substep (untested at 5 substeps).",
+    {"Integration.substeps": 5, **_per_solver("n_max_iters", 10), **_per_solver("n_subproblem_max_iters", 15)},
+)
 
 
 # Contact pair capacities, as multipliers of the contact multimesh's vertices (its surface vertices)
@@ -228,7 +239,7 @@ SCENES = {
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [_stiff_budget("3 substeps of 10 x 15 = 450 sweeps"), *SOLVERS, *HET_CONTACT, PENALTY_FLOOR,
+        [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, PENALTY_FLOOR,
          CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
