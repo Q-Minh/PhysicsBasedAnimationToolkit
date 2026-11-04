@@ -194,14 +194,18 @@ CAPSULE_BUDGET = Rule(
 )
 BASKET_BUDGET = Rule(
     "One budget for every VBD-family solver on the basket of fruit, so that the paper shows their different "
-    "behaviour at equal budget (maintainer, 2026-11-03): 5 substeps per 10 ms step, each of 10 outer iterations "
-    "(contact detection passes) x 15 sweeps, 750 sweeps per step (the paper file gives 3 substeps of 10 x 15 = 450). "
+    "behaviour at equal budget (maintainer, 2026-11-03): 5 substeps per 10 ms step, each of 3 outer iterations "
+    "(contact detection passes) x 50 sweeps, 750 sweeps per step (the paper file gives 3 substeps of 10 x 15 = 450). "
     "With 10 x 15 per substep, AAAVBD kept the fruit in the basket to 2 s at 3 substeps, while VBD blew up at 3 and "
-    "4 substeps and ran to 2 s at 5, with the fruit falling through the strands. The paper's 450 sweeps per step, "
-    "as 5 substeps of 10 x 9, kept every fruit in the basket to 2 s with AAAVBD, but VBD blew up at 0.78 s, hence "
-    "the 750. At 750, AAAVBD keeps every fruit in the basket to 2 s, while all 9 fall through VBD's strands by "
-    "1.75 s. Newton keeps its settings, now per substep (untested at 5 substeps).",
-    {"Integration.substeps": 5, **_per_solver("n_max_iters", 10), **_per_solver("n_subproblem_max_iters", 15)},
+    "4 substeps and ran to 2 s at 5. Fewer, longer subproblems also suit AAAVBD, whose first sweep of every "
+    "subproblem is plain VBD. At 750 sweeps per step (2026-11-03), AAAVBD ran to 2 s with every fruit in the basket "
+    "at 1 x 150, 2 x 75 and 3 x 50 (896, 912 and 934 s, against 1103 s at 10 x 15), but VBD blew up at 1 x 150 and "
+    "2 x 75 (0.73 to 0.79 s) and ran to 2 s at 3 x 50 (853 s, against 1041 s at 10 x 15), with 7 of the 9 fruit "
+    "falling through its strands. Each outer iteration per substep costs about 25 ms per step. Lower budgets fail "
+    "with VBD: it blew up at 1 x 80, 2 x 40, 3 x 27 (400 to 405 sweeps per step, 0.82 to 0.86 s) and 10 x 9 (450, "
+    "0.78 s), while AAAVBD ran to 2 s at 1 x 80 and 10 x 9 with every fruit in the basket. Newton keeps its "
+    "settings, now per substep (untested at 5 substeps).",
+    {"Integration.substeps": 5, **_per_solver("n_max_iters", 3), **_per_solver("n_subproblem_max_iters", 50)},
 )
 
 
