@@ -84,6 +84,7 @@ def friction_penalty(contact: MeshDynamicsData, kind: wp.int32, c: wp.int32) -> 
 def _apply_dual_update(
     c_n: wp.float32,
     c_f: wp.vec2f,
+    d_n: wp.float32,
     k: wp.int32,
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
@@ -94,30 +95,41 @@ def _apply_dual_update(
     sigma_f: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
+    dmin: wp.float32,
     request_slack_update: bool,
     request_decay_update: bool,
     request_lagrange_multiplier_update: bool,
     multiplier_step: wp.float32,
 ):
-    """One contact's dual update: slack, decay weight and multipliers, as requested. The decay weight the
-    update decides is the next subproblem's: it goes to ``gamma_next`` (pending, see
+    """One contact's dual update: slack, decay weight and multipliers, as requested.
+
+    ``c_n`` is the gap past the margin ``dmin`` and ``d_n`` the contact's relative normal motion since the
+    substep's start, n . ((x_i - x_i^t) - (x_c - x_c^t)), the contact point's interpolated by its barycentric
+    weights. The decay weight resets to 1 on a pressed contact (new slack 0), decays by ``decay_rate`` on a
+    contact predicted to separate, whose gap one substep ahead at its current relative normal velocity is past
+    twice the margin (c_n + d_n > dmin), and is kept otherwise. The stored slack no longer enters the decay (it is
+    still refreshed as before). GPU only: C++ (and the GPU until 2026-11-05) decays on any slack growth since the
+    last sweep, which on BasketOfFruit was close to chance (precision 0.87-0.88 against a base rate of 0.84; 41-44%
+    of the contacts pressed again within a step were decayed), while the predicted gap reached precision 0.95-0.96
+    and decayed 13-17% of them, 0.1-2% within the next substep.
+
+    The decay weight the update decides is the next subproblem's: it goes to ``gamma_next`` (pending, see
     :meth:`ConstraintSet.commit_decay`), and ``gamma`` keeps the one the positions were solved with, which the
-    outer test reads with the new multipliers. ``multiplier_step`` (alpha)
-    scales the multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha
-    sigma_f c_f, projected onto the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++),
-    computed as before: lambda_n - sigma_n c_n while the new slack is 0, else 0."""
+    outer test reads with the new multipliers. ``multiplier_step`` (alpha) scales the multiplier steps:
+    lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha sigma_f c_f, projected onto
+    the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++), computed as before:
+    lambda_n - sigma_n c_n while the new slack is 0, else 0."""
     # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
     lambda_n_k = lambda_n[k]
     assert sigma_n > wp.float32(0)
     new_s = wp.max(wp.float32(0), c_n - lambda_n_k / sigma_n)
-    # --- Decay: read old s[k] before any write ---
+    # --- Decay ---
     if request_decay_update:
-        s_prev = s[k]
         gamma_k = gamma[k]
         new_gamma = gamma_k
         if new_s == wp.float32(0):
             new_gamma = wp.float32(1)
-        elif new_s > s_prev:  # contact gap growing -> separating # type: ignore
+        elif c_n + d_n > dmin:  # predicted to separate past twice the margin # type: ignore
             new_gamma = gamma_k * decay_rate
         gamma_next[k] = new_gamma  # type: ignore
     # --- Slack ---
@@ -260,6 +272,7 @@ def _update_dual_vv(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
+        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -270,6 +283,7 @@ def _update_dual_vv(
         sigma_f,
         contact.mu_f,
         contact.decay,
+        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -316,6 +330,7 @@ def _update_dual_ve(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
+        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -326,6 +341,7 @@ def _update_dual_ve(
         sigma_f,
         contact.mu_f,
         contact.decay,
+        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -372,6 +388,7 @@ def _update_dual_vf(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
+        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -382,6 +399,7 @@ def _update_dual_vf(
         sigma_f,
         contact.mu_f,
         contact.decay,
+        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -433,6 +451,7 @@ def _update_dual_ee(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
+        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -443,6 +462,7 @@ def _update_dual_ee(
         sigma_f,
         contact.mu_f,
         contact.decay,
+        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -761,7 +781,10 @@ class Params(SerializableMixin):
                       (separating threshold in the AL slack update).
         mu_f        : Coulomb friction coefficient.
         decay       : Multiplicative decay applied to the contact-activity weight ``gamma``
-                      when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
+                      at a full dual update when an unpressed contact is predicted to separate: its gap
+                      past the margin plus its relative normal motion since the substep's start exceeds
+                      ``dmin`` (``_apply_dual_update``; GPU only, C++ decays on any slack growth). Must
+                      satisfy ``0 < decay < 1``.
         gamman      : Normal AL penalty scaling factor with a constant penalty, which is
                       ``gamman * dt^2``.
         gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
@@ -1186,8 +1209,8 @@ def _slack_only_dual_update(
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
-        wp.float32(0.5), True, False, False, wp.float32(1),
+        c_n[k], wp.vec2f(1.0, 0.0), wp.float32(0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n,
+        wp.float32(0.5), wp.float32(0.5), wp.float32(0), True, False, False, wp.float32(1),
     )
 
 
@@ -1222,6 +1245,7 @@ class TestSlackOnlyDualUpdate(unittest.TestCase):
 def _full_dual_update(
     c_n: wp.array[wp.float32],
     c_f: wp.array[wp.vec2f],
+    d_n: wp.array[wp.float32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
     gamma_next: wp.array[wp.float32],
@@ -1231,11 +1255,12 @@ def _full_dual_update(
     sigma_f: wp.float32,
     mu_f: wp.float32,
     multiplier_step: wp.float32,
+    dmin: wp.float32,
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], c_f[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True, True, True,
-        multiplier_step,
+        c_n[k], c_f[k], d_n[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f,
+        wp.float32(0.5), dmin, True, True, True, multiplier_step,
     )
 
 
@@ -1257,8 +1282,8 @@ class TestMultiplierStep(unittest.TestCase):
             g = wp.ones(len(lam), dtype=wp.float32)
             g_next = wp.ones(len(lam), dtype=wp.float32)
             wp.launch(_full_dual_update, dim=len(lam), inputs=[
-                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, g_next, ln, lf, sigma_n,
-                sigma_f, mu_f, alpha])
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), wp.zeros(len(lam), dtype=wp.float32),
+                s, g, g_next, ln, lf, sigma_n, sigma_f, mu_f, alpha, 0.0])
             return (np.array(c_n), np.array(lam), np.array(c_f), np.array(lam_f), sigma_n, sigma_f, mu_f,
                     ln.numpy(), lf.numpy())
 
