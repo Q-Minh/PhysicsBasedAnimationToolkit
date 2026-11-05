@@ -1315,6 +1315,35 @@ class TestMultiplierStep(unittest.TestCase):
         self.assertEqual(ln[3], 0.0)  # beyond 0.02: zeroed
 
 
+class TestDecayRule(unittest.TestCase):
+    """The full dual update's decay weight (Warp's CPU device): a pressed contact resets to 1, an unpressed one
+    decays only when predicted to separate past twice the margin (gap past the margin c_n plus the normal motion
+    since the substep's start d_n above dmin), and the decided weight is pending: gamma itself is unchanged."""
+
+    def test_predicted_gap(self):
+        sigma_n, dmin, decay = 100.0, 1e-3, 0.5
+        lam = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        c_n = [
+            0.005,  # pressed: c_n <= lambda / sigma = 0.01
+            2.0e-3,  # unpressed, receding beyond dmin: c_n + d_n = 2.5e-3
+            0.5e-3,  # unpressed, resting with jitter: c_n + d_n = 0.501e-3
+            1.5e-3,  # unpressed, past dmin but approaching: c_n + d_n = 0.7e-3
+            0.8e-3,  # unpressed, not yet past dmin but receding: c_n + d_n = 1.1e-3
+            1.0e-3,  # at the threshold: c_n + d_n = dmin, kept
+        ]
+        d_n = [0.0, 0.5e-3, 1e-6, -0.8e-3, 0.3e-3, 0.0]
+        n = len(lam)
+        with wp.ScopedDevice("cpu"):
+            gamma = wp.full(n, 0.25, dtype=wp.float32)
+            gamma_next = wp.full(n, -1.0, dtype=wp.float32)
+            wp.launch(_full_dual_update, dim=n, inputs=[
+                wp.array(c_n, dtype=wp.float32), wp.zeros(n, dtype=wp.vec2f), wp.array(d_n, dtype=wp.float32),
+                wp.zeros(n, dtype=wp.float32), gamma, gamma_next, wp.array(lam, dtype=wp.float32),
+                wp.zeros(n, dtype=wp.vec2f), sigma_n, 10.0, 0.2, 1.0, dmin])
+            self.assertEqual(gamma_next.numpy().tolist(), [1.0, 0.25 * decay, 0.25, 0.25, 0.25 * decay, 0.25])
+            self.assertEqual(gamma.numpy().tolist(), [0.25] * n)
+
+
 class TestNewtonFrictionConsistency(unittest.TestCase):
     """GPU Newton's gradient, line-search energy and Hessian use the same Coulomb limit per contact,
     set or unset (Warp's CPU device)."""

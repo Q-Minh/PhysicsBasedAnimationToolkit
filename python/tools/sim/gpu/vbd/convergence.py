@@ -1038,5 +1038,89 @@ class TestStationarityTolerance(unittest.TestCase):
             self.assertLess(absolute_stationarity_tolerance(astol, 9.81, h), 9.81 * h * h)
 
 
+class TestOuterTestDecayWeights(unittest.TestCase):
+    """The outer test after a full dual update measures the positions with the decay weights gamma_k their
+    subproblem solved with and the new multipliers lambda_{k+1}: with ``multiplier_step`` 1 that is the
+    subproblem's augmented-Lagrangian gradient at the end of its sweeps (slack refreshed there), also when the
+    update resets softened contacts to gamma = 1, which the next subproblem then uses. The recorded test follows
+    the feasibility filter and the re-detection, which re-evaluate the contact bases at the new positions, so
+    there the identity holds only up to their (here small) change. Two cubes resting in contact, VBD with one outer
+    iteration per step, the measured step run eagerly."""
+
+    def test_reset_contacts(self):
+        from pbatoolkit import pbat, pypbat
+        from ...state import SimulationState, SolverType, load_params
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.21, 0.13, 1.002]]).astype(np.float64)
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem_cpu.set_mass_matrix(1e3)
+        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+        fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+        fem_cpu.constrain(np.repeat([1, 0], 8))
+        state = SimulationState(fem_cpu, load_params(fem_cpu))
+        state.solver = SolverType.VBD
+        state.convergence_params.early_exit = False
+        state.reset()
+        state.params[SolverType.VBD].data.n_max_iters = 1
+        self.assertEqual(float(state.contact.params.multiplier_step), 1.0)
+        for _ in range(5):  # settle into contact
+            state.step()
+        contact, check = state.contact, state.convergence
+        sets = (contact.cvv, contact.cve, contact.cvf, contact.cee)
+        for cs in sets:
+            cs.gamma.current.fill_(0.5)
+
+        augmented = GradientNorm(state.fem, contact, augmented_lagrangian=True)
+        measured = {}
+        update_dual, commit_decay = contact.update_dual, contact.commit_decay
+
+        def ratio() -> float:
+            return float(np.sqrt(check.residual_m2.numpy()[0] / check.stationarity_tol2.numpy()[0]))
+
+        def hooked_update_dual(x, xt, **kwargs):
+            full = kwargs.get("request_decay_update", True)
+            if full:
+                # The subproblem's augmented gradient at the end of its sweeps, with the slack refreshed there and
+                # the Coulomb limits unset (the dual update projects onto the new multiplier's cone)
+                update_dual(x, xt, request_decay_update=False, request_lagrange_multiplier_update=False)
+                contact.reset_friction_limits()
+                augmented.compute(wp.get_stream())
+                check._measure_residual(augmented.g)
+                measured["augmented"] = ratio()
+                contact.reset_friction_limits()
+            update_dual(x, xt, **kwargs)
+            if full:  # The outer test's quantity, before the filter and the re-detection
+                check._test()
+                measured["post_update"] = ratio()
+
+        def hooked_commit_decay():
+            measured["resets"] = sum(
+                int(np.sum((cs.gamma.current.numpy() == 0.5) & (cs.gamma_next.current.numpy() == 1.0))) for cs in sets
+            )
+            commit_decay()
+            # The former outer test's quantity: the new multipliers with the new weights
+            check._test()
+            measured["committed"] = ratio()
+
+        contact.update_dual, contact.commit_decay = hooked_update_dual, hooked_commit_decay
+        state._advance()  # eager, so the hooks run
+        check.enqueue_status_readback()
+        wp.synchronize()
+        rows, _ = check.read_status()
+        status = float(rows[-1]["gradient_ratio"])
+        self.assertGreater(measured["resets"], 0)
+        np.testing.assert_allclose(measured["post_update"], measured["augmented"], rtol=1e-5)
+        # The positions never felt the reset contacts' full force, which the former test charged them with
+        # (measured: committed 1.9, augmented 2.3e-4, recorded 2.5e-3 after re-detection)
+        self.assertGreater(measured["committed"], 100.0 * measured["augmented"])
+        self.assertLess(abs(status - measured["augmented"]), 1e-2 * measured["committed"])
+        # The next subproblem solves with the reset weights
+        self.assertTrue(all(np.all(cs.gamma.current.numpy() == cs.gamma_next.current.numpy()) for cs in sets))
+
+
 if __name__ == "__main__":
     unittest.main()

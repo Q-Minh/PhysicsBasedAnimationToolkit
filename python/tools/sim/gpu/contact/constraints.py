@@ -682,6 +682,19 @@ class TestFrozenFrictionLimit(unittest.TestCase):
         self._detect([(0, 1), (0, 3), (1, 2)])
         self.assertEqual(self.cs.s.current.numpy()[:3].tolist(), [np.float32(0.3), 0.0, 0.5])
 
+    def test_pending_decay_weights(self):
+        # The dual update's pending gamma rides through a re-detection with its contact, as gamma does; a new
+        # contact starts at 1 for both, and the commit makes the pending weights current
+        self._detect([(0, 1), (1, 2)])
+        tail = [9.0] * (self.capacity - 2)
+        self.cs.gamma.current.assign(np.array([0.5, 0.25] + tail, dtype=np.float32))
+        self.cs.gamma_next.current.assign(np.array([1.0, 0.125] + tail, dtype=np.float32))
+        self._detect([(0, 1), (0, 3), (1, 2)])
+        self.assertEqual(self.cs.gamma.current.numpy()[:3].tolist(), [0.5, 1.0, 0.25])
+        self.assertEqual(self.cs.gamma_next.current.numpy()[:3].tolist(), [1.0, 1.0, 0.125])
+        self.cs.commit_decay()
+        self.assertEqual(self.cs.gamma.current.numpy()[:3].tolist(), [1.0, 1.0, 0.125])
+
 
 class TestFeatureTransitions(unittest.TestCase):
     """Vertex contacts that change their partner feature to an adjacent one keep their AL state
@@ -733,9 +746,12 @@ class TestFeatureTransitions(unittest.TestCase):
         for kind, cs in self.sets.items():
             cs.store_tangent_bases(self.bases[kind])
 
-    def _set(self, kind, slot, lambda_n, lambda_f=(0.0, 0.0), s=0.0, gamma=1.0):
+    def _set(self, kind, slot, lambda_n, lambda_f=(0.0, 0.0), s=0.0, gamma=1.0, gamma_next=1.0):
         cs = self.sets[kind]
-        for buf, value in ((cs.lambda_n, lambda_n), (cs.lambda_f, lambda_f), (cs.s, s), (cs.gamma, gamma)):
+        values = (
+            (cs.lambda_n, lambda_n), (cs.lambda_f, lambda_f), (cs.s, s), (cs.gamma, gamma), (cs.gamma_next, gamma_next)
+        )
+        for buf, value in values:
             a = buf.current.numpy()
             a[slot] = value
             buf.current.assign(a)
@@ -744,15 +760,16 @@ class TestFeatureTransitions(unittest.TestCase):
         return self.sets[kind].lambda_n.current.numpy().tolist()
 
     def test_adjacent_transitions(self):
-        # Face -> its edge, with slack and gamma
+        # Face -> its edge, with slack, gamma and the pending gamma
         self._detect(vf=[(8, 0)])
-        self._set("vf", 0, 2.0, (0.5, 0.25), s=0.1, gamma=0.5)
+        self._set("vf", 0, 2.0, (0.5, 0.25), s=0.1, gamma=0.5, gamma_next=0.25)
         self._detect(ve=[(8, 3)])
         cs = self.sets["ve"]
         self.assertEqual(self._lambda("ve")[0], 2.0)
         self.assertEqual(cs.lambda_f.current.numpy()[0].tolist(), [0.5, 0.25])
         self.assertAlmostEqual(float(cs.s.current.numpy()[0]), 0.1)
         self.assertEqual(float(cs.gamma.current.numpy()[0]), 0.5)
+        self.assertEqual(float(cs.gamma_next.current.numpy()[0]), 0.25)
         # Edge -> the other face at it; face -> the face across an edge, and across a corner
         self._detect(vf=[(8, 1)])
         self.assertEqual(self._lambda("vf")[0], 2.0)
