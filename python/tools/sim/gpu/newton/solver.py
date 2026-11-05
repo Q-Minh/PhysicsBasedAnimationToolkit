@@ -1515,7 +1515,8 @@ def finalize_subproblem(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Dual update and contact re-detection -- mirrors ``vbd.solver.finalize_subproblem``."""
+    """Dual update and contact re-detection -- mirrors ``vbd.solver.finalize_subproblem``. The decay weights stay
+    pending until :meth:`NewtonSolver.solve` commits them after the next outer test."""
     contact.update_dual(
         fem.data.x,
         fem.xt,
@@ -1604,9 +1605,15 @@ class NewtonSolver:
         early_exit = _early_exit(params)
         subproblems, outer_tests = [], []
         initialize_solve(fem, contact, cd, params)
+        # Whether a full dual update's decay weights wait for the outer test: it measures the positions with the
+        # weights they were solved with and the new multipliers, then the new weights become the next subproblem's
+        pending_decay = False
         for _ in range(int(params.data.n_max_iters)):
             converged = check_convergence(fem, contact, params)
             outer_tests.append(params.last_outer_ratios)
+            if pending_decay:
+                contact.commit_decay()
+                pending_decay = False
             if converged and early_exit:
                 stopped = True
                 break
@@ -1614,10 +1621,13 @@ class NewtonSolver:
             solve_subproblem(fem, contact, params)
             subproblems.append(params.last_subproblem)
             finalize_subproblem(fem, contact, cd, params)
+            pending_decay = True
         if not stopped:
             # As C++ newton::Solve: test the last subproblem's result too (a test, not a step)
             converged = check_convergence(fem, contact, params)
             outer_tests.append(params.last_outer_ratios)
+        if pending_decay:
+            contact.commit_decay()
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         # Host-side status of the solve, drained by SimulationState.step

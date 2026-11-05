@@ -87,6 +87,7 @@ def _apply_dual_update(
     k: wp.int32,
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
@@ -98,7 +99,10 @@ def _apply_dual_update(
     request_lagrange_multiplier_update: bool,
     multiplier_step: wp.float32,
 ):
-    """One contact's dual update: slack, decay weight and multipliers, as requested. ``multiplier_step`` (alpha)
+    """One contact's dual update: slack, decay weight and multipliers, as requested. The decay weight the
+    update decides is the next subproblem's: it goes to ``gamma_next`` (pending, see
+    :meth:`ConstraintSet.commit_decay`), and ``gamma`` keeps the one the positions were solved with, which the
+    outer test reads with the new multipliers. ``multiplier_step`` (alpha)
     scales the multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha
     sigma_f c_f, projected onto the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++),
     computed as before: lambda_n - sigma_n c_n while the new slack is 0, else 0."""
@@ -115,7 +119,7 @@ def _apply_dual_update(
             new_gamma = wp.float32(1)
         elif new_s > s_prev:  # contact gap growing -> separating # type: ignore
             new_gamma = gamma_k * decay_rate
-        gamma[k] = new_gamma  # type: ignore
+        gamma_next[k] = new_gamma  # type: ignore
     # --- Slack ---
     if request_slack_update:
         s[k] = new_s  # type: ignore
@@ -259,6 +263,7 @@ def _update_dual_vv(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -314,6 +319,7 @@ def _update_dual_ve(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -369,6 +375,7 @@ def _update_dual_vf(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -429,6 +436,7 @@ def _update_dual_ee(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -960,6 +968,13 @@ class MeshDynamics:
             self._compute_rayleigh_quotients(*self._penalty_hessian)
             self._reduce_penalty_parameters(main_stream)
 
+    def commit_decay(self):
+        """Make the decay weights the last full dual update decided current for the next subproblem (see
+        :meth:`ConstraintSet.commit_decay`), after the outer test that measured the positions with the ones they
+        were solved with. Call once after each full dual update and its outer test."""
+        for cset in (self.cvv, self.cve, self.cvf, self.cee):
+            cset.commit_decay()
+
     def reset_friction_limits(self):
         """Unfreeze every contact's Coulomb limit for a new time step (GPU Newton; see
         :meth:`ConstraintSet.reset_friction_limits`)."""
@@ -981,7 +996,8 @@ class MeshDynamics:
         For each active contact k the kernel:
           1. Computes the gap vector between cached closest points using current positions ``x``.
           2. Projects the gap onto the cached contact basis (normal + 2 tangents).
-          3. Runs the AL update: slack -> decay -> (lambda_n, lambda_f with cone projection).
+          3. Runs the AL update: slack -> decay -> (lambda_n, lambda_f with cone projection). The decay
+             weight it decides is pending (``ConstraintSet.gamma_next``) until :meth:`commit_decay`.
 
         Unlike the C++ side, this implementation does not cache a Taylor expansion; it
         recomputes the linearized gap directly from the stored barycentric weights and basis.
@@ -1163,13 +1179,14 @@ def _slack_only_dual_update(
     c_n: wp.array[wp.float32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
+        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
         wp.float32(0.5), True, False, False, wp.float32(1),
     )
 
@@ -1185,16 +1202,18 @@ class TestSlackOnlyDualUpdate(unittest.TestCase):
         with wp.ScopedDevice("cpu"):
             s = wp.array([7.0] * 4, dtype=wp.float32)  # stale values
             gamma = wp.array([0.25] * 4, dtype=wp.float32)
+            gamma_next = wp.array([0.125] * 4, dtype=wp.float32)
             lam = wp.array(lambda_n, dtype=wp.float32)
             lam_f = wp.array([(0.1, 0.2)] * 4, dtype=wp.vec2f)
             wp.launch(
                 _slack_only_dual_update,
                 dim=4,
-                inputs=[wp.array(c_n, dtype=wp.float32), s, gamma, lam, lam_f, sigma_n],
+                inputs=[wp.array(c_n, dtype=wp.float32), s, gamma, gamma_next, lam, lam_f, sigma_n],
             )
             expected = [max(0.0, c - l / sigma_n) for c, l in zip(c_n, lambda_n)]
             np.testing.assert_allclose(s.numpy(), expected, atol=1e-7)
             self.assertEqual(gamma.numpy().tolist(), [0.25] * 4)
+            self.assertEqual(gamma_next.numpy().tolist(), [0.125] * 4)
             self.assertEqual(lam.numpy().tolist(), lambda_n)
             np.testing.assert_allclose(lam_f.numpy(), [(0.1, 0.2)] * 4, rtol=1e-7)
 
@@ -1205,6 +1224,7 @@ def _full_dual_update(
     c_f: wp.array[wp.vec2f],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
@@ -1214,7 +1234,7 @@ def _full_dual_update(
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], c_f[k], k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True, True, True,
+        c_n[k], c_f[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True, True, True,
         multiplier_step,
     )
 
@@ -1235,9 +1255,10 @@ class TestMultiplierStep(unittest.TestCase):
             lf = wp.array(lam_f, dtype=wp.vec2f)
             s = wp.zeros(len(lam), dtype=wp.float32)
             g = wp.ones(len(lam), dtype=wp.float32)
+            g_next = wp.ones(len(lam), dtype=wp.float32)
             wp.launch(_full_dual_update, dim=len(lam), inputs=[
-                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, ln, lf, sigma_n, sigma_f, mu_f,
-                alpha])
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, g_next, ln, lf, sigma_n,
+                sigma_f, mu_f, alpha])
             return (np.array(c_n), np.array(lam), np.array(c_f), np.array(lam_f), sigma_n, sigma_f, mu_f,
                     ln.numpy(), lf.numpy())
 

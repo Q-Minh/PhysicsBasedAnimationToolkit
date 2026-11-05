@@ -58,6 +58,7 @@ def _snapshot_and_reset_constraints(
     v: wp.array[wp.uint32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     friction_limit: wp.array[wp.float32],
@@ -65,6 +66,7 @@ def _snapshot_and_reset_constraints(
     v_prev: wp.array[wp.uint32],
     s_prev: wp.array[wp.float32],
     gamma_prev: wp.array[wp.float32],
+    gamma_next_prev: wp.array[wp.float32],
     lambda_n_prev: wp.array[wp.float32],
     lambda_f_prev: wp.array[wp.vec2f],
     friction_limit_prev: wp.array[wp.float32],
@@ -72,8 +74,8 @@ def _snapshot_and_reset_constraints(
     """Copy slot k of the current arrays to the previous snapshot, then reset it to defaults.
 
     Slot k gets the key (u, v) of the new contact k, or the empty-slot sentinel u = n_u past the
-    contacts, so that the next update can find it. gamma (1), the multipliers (0), the slack (0) and
-    the frozen Coulomb limit (unset) are reset; the warm start then restores a persisting contact's
+    contacts, so that the next update can find it. gamma and the pending gamma (1), the multipliers (0),
+    the slack (0) and the frozen Coulomb limit (unset) are reset; the warm start then restores a persisting contact's
     state. The solvers refresh s from the positions before using it (VBD before every sweep, Newton
     before every step's gradient), but without the reset a new contact would inherit the slack of the
     slot's previous contact until then.
@@ -83,6 +85,7 @@ def _snapshot_and_reset_constraints(
     v_prev[k] = v[k]
     s_prev[k] = s[k]
     gamma_prev[k] = gamma[k]
+    gamma_next_prev[k] = gamma_next[k]
     lambda_n_prev[k] = lambda_n[k]
     lambda_f_prev[k] = lambda_f[k]
     friction_limit_prev[k] = friction_limit[k]
@@ -94,6 +97,7 @@ def _snapshot_and_reset_constraints(
         u[k] = n_u
     s[k] = wp.float32(0)
     gamma[k] = wp.float32(1)
+    gamma_next[k] = wp.float32(1)
     lambda_n[k] = wp.float32(0)
     lambda_f[k] = wp.vec2f(wp.float32(0), wp.float32(0))
     friction_limit[k] = FRICTION_LIMIT_UNSET
@@ -107,6 +111,7 @@ def _warm_start_constraints(
     v_prev: wp.array[wp.uint32],
     s_prev: wp.array[wp.float32],
     gamma_prev: wp.array[wp.float32],
+    gamma_next_prev: wp.array[wp.float32],
     lambda_n_prev: wp.array[wp.float32],
     lambda_f_prev: wp.array[wp.vec2f],
     friction_limit_prev: wp.array[wp.float32],
@@ -114,6 +119,7 @@ def _warm_start_constraints(
     v: wp.array[wp.uint32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     friction_limit: wp.array[wp.float32],
@@ -122,7 +128,7 @@ def _warm_start_constraints(
 
     Thread k reads previous slot k. If it holds a valid contact pair (u, v) >= 0
     that can be located in the new forward contact list, the AL state
-    (s, gamma, lambda_n, lambda_f, friction_limit) is copied to its new position.
+    (s, gamma, gamma_next, lambda_n, lambda_f, friction_limit) is copied to its new position.
     """
     k = wp.tid()  # type: ignore
     pu = u_prev[k]
@@ -137,6 +143,7 @@ def _warm_start_constraints(
     v[l] = pv  # type: ignore
     s[l] = s_prev[k]  # type: ignore
     gamma[l] = gamma_prev[k]  # type: ignore
+    gamma_next[l] = gamma_next_prev[k]  # type: ignore
     lambda_n[l] = lambda_n_prev[k]  # type: ignore
     lambda_f[l] = lambda_f_prev[k]  # type: ignore
     friction_limit[l] = friction_limit_prev[k]  # type: ignore
@@ -157,6 +164,7 @@ class FeatureTransitionData:
     v: wp.array[wp.uint32]
     s: wp.array[wp.float32]
     gamma: wp.array[wp.float32]
+    gamma_next: wp.array[wp.float32]
     lambda_n: wp.array[wp.float32]
     lambda_f: wp.array[wp.vec2f]
     t: wp.array[wp.vec3f]  # the current contacts' tangent bases
@@ -165,6 +173,7 @@ class FeatureTransitionData:
     v_prev: wp.array[wp.uint32]
     s_prev: wp.array[wp.float32]
     gamma_prev: wp.array[wp.float32]
+    gamma_next_prev: wp.array[wp.float32]
     lambda_n_prev: wp.array[wp.float32]
     lambda_f_prev: wp.array[wp.vec2f]
     t_prev: wp.array[wp.vec3f]  # the previous contacts' tangent bases, in which lambda_f_prev is expressed
@@ -270,6 +279,7 @@ def _inherit(me: FeatureTransitionData, k: wp.int32, src: FeatureTransitionData,
     previous tangent basis into the new one."""
     me.s[k] = src.s_prev[i]
     me.gamma[k] = src.gamma_prev[i]
+    me.gamma_next[k] = src.gamma_next_prev[i]
     me.lambda_n[k] = src.lambda_n_prev[i]
     lf = src.lambda_f_prev[i]
     f = lf[0] * src.t_prev[i] + lf[1] * src.b_prev[i]
@@ -334,6 +344,7 @@ class ConstraintSetData:
 
     s: wp.array[wp.float32]
     gamma: wp.array[wp.float32]
+    gamma_next: wp.array[wp.float32]
     lambda_n: wp.array[wp.float32]
     lambda_f: wp.array[wp.vec2f]
     friction_limit: wp.array[wp.float32]
@@ -355,7 +366,12 @@ class ConstraintSet:
     ------
     u, v      : uint32  contact pair keys (n_u = empty slot sentinel).
     s         : float32 inequality slack variable.
-    gamma     : float32 constraint decay factor (default 1).
+    gamma     : float32 constraint decay factor (default 1), the one the current subproblem solves with.
+    gamma_next : float32 pending decay factor: the full dual update decides the next subproblem's gamma
+                and writes it here instead of into ``gamma``, so that the outer test after it measures
+                the positions with the gamma they were solved with (and the new multipliers).
+                :meth:`commit_decay` makes it ``gamma`` after that test. Carried across re-detection
+                exactly like ``gamma``.
     lambda_n  : float32 normal Lagrange multiplier.
     lambda_f  : vec2f   friction Lagrange multiplier (tangential plane).
     friction_limit : float32 GPU Newton's Coulomb limit of the primal friction force, frozen for the
@@ -385,6 +401,7 @@ class ConstraintSet:
     v: DoubleBuffer
     s: DoubleBuffer
     gamma: DoubleBuffer
+    gamma_next: DoubleBuffer
     lambda_n: DoubleBuffer
     lambda_f: DoubleBuffer
     friction_limit: DoubleBuffer
@@ -404,6 +421,7 @@ class ConstraintSet:
         self.v = _make(n_u, wp.uint32)
         self.s = _make(0.0, wp.float32)
         self.gamma = _make(1.0, wp.float32)
+        self.gamma_next = _make(1.0, wp.float32)
         self.lambda_n = _make(0.0, wp.float32)
         self.lambda_f = _make(0.0, wp.vec2f)
         self.friction_limit = _make(FRICTION_LIMIT_UNSET, wp.float32)
@@ -412,6 +430,7 @@ class ConstraintSet:
         self._data = ConstraintSetData()
         self._data.s = self.s.current
         self._data.gamma = self.gamma.current
+        self._data.gamma_next = self.gamma_next.current
         self._data.lambda_n = self.lambda_n.current
         self._data.lambda_f = self.lambda_f.current
         self._data.friction_limit = self.friction_limit.current
@@ -426,10 +445,10 @@ class ConstraintSet:
 
         1. **Snapshot and reset** (:func:`_snapshot_and_reset_constraints`): copy every field's
            current slot to alternate (the previous snapshot), then set each slot's key ``(u, v)``
-           to its new contact's (``u = n_u`` past the contacts), gamma to 1, the multipliers
+           to its new contact's (``u = n_u`` past the contacts), gamma and the pending gamma to 1, the multipliers
            and the slack to 0 and the frozen Coulomb limit to unset.
         2. **Warm start** (:func:`_warm_start_constraints`): for each valid previous pair whose
-           ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``,
+           ``(u, v)`` appears in the new forward contact list, copy ``s``, ``gamma``, ``gamma_next``,
            ``lambda_n``, ``lambda_f``, ``friction_limit`` to the corresponding current slot. It writes arbitrary
            slots, so it must follow the whole reset.
 
@@ -439,7 +458,9 @@ class ConstraintSet:
         Args:
             contacts: Forward contact pairs produced by a collision detector.
         """
-        fields = (self.u, self.v, self.s, self.gamma, self.lambda_n, self.lambda_f, self.friction_limit)
+        fields = (
+            self.u, self.v, self.s, self.gamma, self.gamma_next, self.lambda_n, self.lambda_f, self.friction_limit
+        )
         # Step 1: snapshot current into alternate and reset current to defaults.
         wp.launch(
             _snapshot_and_reset_constraints,
@@ -460,6 +481,7 @@ class ConstraintSet:
                 self.v.alternate,
                 self.s.alternate,
                 self.gamma.alternate,
+                self.gamma_next.alternate,
                 self.lambda_n.alternate,
                 self.lambda_f.alternate,
                 self.friction_limit.alternate,
@@ -467,6 +489,7 @@ class ConstraintSet:
                 self.v.current,
                 self.s.current,
                 self.gamma.current,
+                self.gamma_next.current,
                 self.lambda_n.current,
                 self.lambda_f.current,
                 self.friction_limit.current,
@@ -477,11 +500,15 @@ class ConstraintSet:
         """This set's arrays for :func:`carry_across_features`, with its contacts' bases ``bases``."""
         data = FeatureTransitionData()
         data.u, data.v = self.u.current, self.v.current
-        data.s, data.gamma = self.s.current, self.gamma.current
+        data.s, data.gamma, data.gamma_next = self.s.current, self.gamma.current, self.gamma_next.current
         data.lambda_n, data.lambda_f = self.lambda_n.current, self.lambda_f.current
         data.t, data.b = bases.t, bases.b
         data.u_prev, data.v_prev = self.u.alternate, self.v.alternate
-        data.s_prev, data.gamma_prev = self.s.alternate, self.gamma.alternate
+        data.s_prev, data.gamma_prev, data.gamma_next_prev = (
+            self.s.alternate,
+            self.gamma.alternate,
+            self.gamma_next.alternate,
+        )
         data.lambda_n_prev, data.lambda_f_prev = self.lambda_n.alternate, self.lambda_f.alternate
         data.t_prev, data.b_prev = self.tangent, self.bitangent
         return data
@@ -491,6 +518,12 @@ class ConstraintSet:
         :func:`carry_across_features` (the detection overwrites ``bases`` before it). Two capture-safe copies."""
         wp.copy(self.tangent, bases.t)
         wp.copy(self.bitangent, bases.b)
+
+    def commit_decay(self):
+        """Make the pending decay factors current, ``gamma <- gamma_next``, after the outer test that follows a
+        full dual update, for the next subproblem. Valid only after a full dual update, which writes every
+        contact's ``gamma_next`` (re-detection carries it; new contacts start at 1). One capture-safe copy."""
+        wp.copy(self.gamma.current, self.gamma_next.current)
 
     def reset_friction_limits(self):
         """Unfreeze every contact's Coulomb limit (GPU Newton, at the start of each time step), so each
@@ -521,10 +554,10 @@ def carry_across_features(
     then :meth:`ConstraintSet.store_tangent_bases`. ``sets`` are the VV, VE and VF sets'
     :meth:`ConstraintSet.transition_data`; ``n_u`` is their number of vertices (the empty-slot sentinel).
 
-    A new contact (u, v') with no exact previous key inherits the slack, gamma and multipliers of a previous
-    contact (u, v) of the same vertex, in any of the three sets, whose feature v shares a mesh vertex with v'
-    (:func:`are_adjacent_features`: v' is in v's closed one-ring, so on the same mesh) and which no new contact has
-    the exact key of. So a vertex sliding from a face onto its edge, a corner or a neighbouring face keeps its
+    A new contact (u, v') with no exact previous key inherits the slack, gamma (and the pending gamma) and
+    multipliers of a previous contact (u, v) of the same vertex, in any of the three sets, whose feature v shares
+    a mesh vertex with v' (:func:`are_adjacent_features`: v' is in v's closed one-ring, so on the same mesh) and
+    which no new contact has the exact key of. So a vertex sliding from a face onto its edge, a corner or a neighbouring face keeps its
     contact force, and the outer test doesn't see a pressed contact without one; a jump to a disjoint feature
     starts over. Sliding capsules on CapsulesIntoBowl change features at ~3% of their contacts per detection,
     2/3 of them to a neighbouring face, and ended ~2% of their contacts pressed without a multiplier (the outer
