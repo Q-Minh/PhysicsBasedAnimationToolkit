@@ -1625,6 +1625,9 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             }
             if (static_cast<bool>(Mask & EDualVariable::Decay))
             {
+                // TODO: The GPU (gpu/contact/dynamics.py) decays only when gap past dmin + normal motion since x^t
+                // > dmin, pending until after the outer test: on BasketOfFruit precision 0.95-0.96 vs this rule's
+                // 0.87-0.88 (base rate 0.84), 13-17% of re-pressed contacts decayed instead of 41-44%.
                 if (C.Slack() == TScalar(0))
                     C.Decay() = TScalar(1);
                 else if (C.Slack() > sk) // separating

@@ -1192,7 +1192,9 @@ def check_convergence(
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
-    augmented-Lagrangian gradient, as in C++.
+    augmented-Lagrangian gradient, as in C++. Either way, after a subproblem the contact terms use its new
+    multipliers with the decay weights it solved with: :meth:`NewtonSolver.solve` commits the dual update's
+    pending weights after this test.
 
     Sets ``params.last_outer_ratios`` to the test's (gradient, feasibility) measures over their
     tolerances, as the VBD family's status ratios (at most 1 passes). The absolute test doesn't include

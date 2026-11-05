@@ -5,7 +5,11 @@ Mirrors ``pbat::sim::algorithm::vbd::CheckConvergence``: stop once ``|g|^2 <= gt
 the gradient of the time step's Lagrangian at the current contact multipliers, over free DOFs
 (:class:`gpu.gradient.GradientNorm` without the augmented-Lagrangian penalty term, as C++
 ``ToGradient(..., bForAugmentedLagrangian = false)``). Without contact it is the objective's gradient,
-so the test means the same inside a subproblem as between subproblems.
+so the test means the same inside a subproblem as between subproblems. The contact terms are weighted by the
+decay weights gamma the positions were solved with: between outer iterations the full dual update's new weights
+are still pending (``ConstraintSet.gamma_next``, committed after the test), so the test sees the new multipliers
+with the subproblem's gamma, which with ``multiplier_step`` 1 is the subproblem's augmented gradient at the end of
+its sweeps. C++ tests with the new weights.
 
 The test runs between outer iterations, as in C++, and also every ``check_interval`` sweeps inside a
 subproblem. Between outer iterations, the step must also be feasible: no contact may penetrate its
@@ -786,7 +790,9 @@ class ConvergenceCheck:
         self, gtol: float, n_max_iters: int, layout: SweepLayout | None = None
     ) -> None:
         """Test after an outer iteration (C++'s check before the next one, plus feasibility):
-        ``k += 1``, update ``keep`` and the solve's status row.
+        ``k += 1``, update ``keep`` and the solve's status row. Call it before the dual update's pending decay
+        weights are committed (``ContactDynamics.commit_decay``), so it measures the new multipliers with the
+        decay weights the subproblem solved with.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
