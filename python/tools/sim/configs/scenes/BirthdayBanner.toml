@@ -54,7 +54,7 @@ mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 0
 penalty_stiffness = 0
-vbd_slack_at_evaluation = 0
+vbd_slack_at_evaluation = 1
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.20000000298023224

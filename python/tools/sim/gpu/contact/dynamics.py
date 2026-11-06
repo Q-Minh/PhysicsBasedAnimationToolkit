@@ -813,7 +813,7 @@ class Params(SerializableMixin):
                       (lambda_n / sigma_n < c_n < lambda_n / (alpha sigma_n)) keeps part of its multiplier
                       instead of losing all of it. On DragonImpact, alpha = 0.5 kept AAAVBD at 10 substeps
                       of 1 x 40 sweeps past the step where the standard update diverges (solver notes).
-        vbd_slack_at_evaluation : VBD family only (GPU only, default off; GPU Newton has
+        vbd_slack_at_evaluation : VBD family only (GPU only, default on since 2026-11-05, maintainer; GPU Newton has
                       ``Solver.Newton.one_sided_contact``): the vertex solves (``vbd.kernels._contact_derivatives``)
                       evaluate a contact's slack at the gap of that evaluation, s = max(0, g - lambda_n / sigma_n),
                       instead of the slack refreshed before the sweep. The normal force becomes the one-sided
@@ -878,11 +878,12 @@ class Params(SerializableMixin):
         "and lambda_f's step likewise before the Coulomb cone. 1 is the standard augmented Lagrangian update",
     )
     vbd_slack_at_evaluation = DocField(
-        False,
-        "VBD family only: the vertex solves evaluate each contact's slack at their own gap g, s = max(0, g - "
-        "lambda_n / sigma_n), so the normal force is the one-sided gamma max(0, lambda_n - sigma_n g) (none from "
-        "unpressed contacts) while every contact keeps its Hessian block gamma sigma_n n n^T. Off: the slack "
-        "refreshed before the sweep, a spring that holds unpressed contacts at their sweep-start gap",
+        True,
+        "VBD family only (default on since 2026-11-05, maintainer): the vertex solves evaluate each contact's "
+        "slack at their own gap g, s = max(0, g - lambda_n / sigma_n), so the normal force is the one-sided gamma "
+        "max(0, lambda_n - sigma_n g) (none from unpressed contacts) while every contact keeps its Hessian block "
+        "gamma sigma_n n n^T. Off: the slack refreshed before the sweep, a spring that holds unpressed contacts at "
+        "their sweep-start gap",
     )
     penalty_stiffness = DocField(
         pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
