@@ -621,12 +621,22 @@ class Params(SerializableMixin):
         "Whether to apply initial step filter.",
     )
     deactivate = DocField(False, "Whether to deactivate contact detection.")
-    # TODO: Two other within-solve rules were measured and rejected (investigate/stable-contact-set, report of
-    # 2026-11-06): freezing without the drop (each pair keeps its step-start contact all solve, re-detection only
+    # TODO: Other within-solve rules were measured and rejected. From the investigate/stable-contact-set report
+    # (2026-11-06): freezing without the drop (each pair keeps its step-start contact all solve, re-detection only
     # adds) kept the 6k-14k pairs that the step-start widening finds on BasketOfFruit as decayed proximal Hessian
     # blocks: AAAVBD +27% and VBD +10% median outer ratio at 5 x (3 x 50), +5% step time. Hysteresis alone (keep a
     # pair's contact while the re-detected gap is within 0.05 dmin and its normal within 5 deg) cut DragonImpact's
-    # feature changes 7x, but ~160 large switches kept the period-2 cycle (13 um per outer iteration). Untried next
+    # feature changes 7x, but ~160 large switches kept the period-2 cycle (13 um per outer iteration). Dropping a
+    # kept pair as soon as the full dual update zeroes its lambda_n (unpressed: removed from that re-detection,
+    # instead of when its gap leaves dmin + band) was much worse (2026-11-06, scratch experiment): DragonImpact
+    # AAAVBD 10 x 100 from 7 s dropped 17k of 30k pairs at the first re-detection and re-added 900-10,000 dropped
+    # pairs per re-detection, ending at ratio 2534 (band rule 10.3), 217 um per outer iteration (0.67) and
+    # feasibility 2.16 (0.12); BasketOfFruit 5 x (3 x 50) max outer ratio AAAVBD 4601 (1283), VBD 1807 (509),
+    # feasibility max 2.40 / 1.18 (0.85 / 1.44); on the basket's VBD 3 x 50 solves at step 51 it removed 24k-29k
+    # pairs at the first re-detection and re-added 14k-20k at the next (band rule: 30-1,100 re-added), with
+    # penetration up to 6.9 x the tolerance mid-solve (0.82). Unpressed pairs in the band exert no force, but
+    # dropping them throws away pairs that the next subproblem presses again; the band is the better test that a
+    # pair has separated (maintainer's expectation, confirmed). Untried next
     # steps: re-linearize only once the AL converged on the frozen set (an outer-outer loop), or evaluate each kept
     # pair's exact point-triangle distance in the vertex solves instead of its frozen plane.
     freeze_within_solve = DocField(
