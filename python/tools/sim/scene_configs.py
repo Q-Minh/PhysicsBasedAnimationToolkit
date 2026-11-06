@@ -405,12 +405,15 @@ SCENES = {
         [*SOLVERS, *HET_CONTACT, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
-    # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply, Newton keeps its budget
+    # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply (only the margin, for consistency),
+    # Newton keeps its budget
     "BirthdayBanner": Scene(
         "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
-        [*SOLVERS],
+        [*SOLVERS, DMIN],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
+         "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while VertexSdf "
+         "detection is off.",
          "Budgets kept: 1 x 2000 sweeps per step."],
     ),
     **{
@@ -419,8 +422,10 @@ SCENES = {
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
-            [*SOLVERS],
+            [*SOLVERS, DMIN],
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
+             "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while "
+             "VertexSdf detection is off.",
              "Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour "
              "(accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt)."]
             + (["The paper's BendingBeam.10MPa.GroundTruth.5Substeps (5 substeps of 20 AAAVBD / 500 VBD sweeps) is a variant "
