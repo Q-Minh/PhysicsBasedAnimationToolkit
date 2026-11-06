@@ -1625,6 +1625,9 @@ inline void MeshDynamics<TScalar, TIndex>::UpdateDual(Eigen::MatrixBase<TDerived
             }
             if (static_cast<bool>(Mask & EDualVariable::Decay))
             {
+                // TODO: The GPU (gpu/contact/dynamics.py) decays every unpressed contact, pending until after the
+                // outer test, with one-sided vertex-solve forces: lower median/p90/max residual than this rule on all
+                // 4 BasketOfFruit segments; Trampoline totals lower, worst step +10% (maintainer, 2026-11-05).
                 if (C.Slack() == TScalar(0))
                     C.Decay() = TScalar(1);
                 else if (C.Slack() > sk) // separating

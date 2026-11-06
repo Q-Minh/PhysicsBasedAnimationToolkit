@@ -52,6 +52,7 @@ class MeshDynamicsData:
     mu_f: wp.float32  # Friction coefficient
     decay: wp.float32  # Rate of decay for deactivating constraints
     multiplier_step: wp.float32  # Scale of the full dual update's multiplier steps (1: the standard AL update)
+    vbd_slack_at_evaluation: wp.int32  # 1: VBD vertex solves evaluate the slack at each evaluation's gap
     in_contact: wp.array[
         wp.int32
     ]  # (# surface vertices,) 1 if the vertex's contact gather has any pair, else 0
@@ -87,6 +88,7 @@ def _apply_dual_update(
     k: wp.int32,
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
@@ -98,24 +100,38 @@ def _apply_dual_update(
     request_lagrange_multiplier_update: bool,
     multiplier_step: wp.float32,
 ):
-    """One contact's dual update: slack, decay weight and multipliers, as requested. ``multiplier_step`` (alpha)
-    scales the multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha
-    sigma_f c_f, projected onto the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++),
-    computed as before: lambda_n - sigma_n c_n while the new slack is 0, else 0."""
+    """One contact's dual update: slack, decay weight and multipliers, as requested.
+
+    ``c_n`` is the gap past the margin. The decay weight resets to 1 on a pressed contact (new slack 0) and decays
+    by ``decay_rate`` on every unpressed one, at each full update. The stored slack doesn't enter the decay (it is
+    refreshed as before). GPU only: C++ (and the GPU until 2026-11-05) decays only on slack growth since the last
+    sweep, close to chance on BasketOfFruit. With the VBD vertex solves' slack at evaluation
+    (``vbd_slack_at_evaluation``), decaying every unpressed contact gave a lower median, p90 and max outer
+    residual than that rule in all four BasketOfFruit segments measured (AAAVBD 1 x 80, VBD 3 x 50, steps 50
+    and 100); on Trampoline.SoftSoft the totals were lower and the worst step 10% higher with early exit off,
+    accepted (maintainer, 2026-11-05). A predicted-separation rule (gap plus the substep's normal motion past
+    dmin) decayed more accurately but raised the residual: unpressed contacts it kept at gamma = 1 held their
+    vertices with full-strength Hessian blocks (scratchpad A/B, 2026-11-05).
+
+    The decay weight the update decides is the next subproblem's: it goes to ``gamma_next`` (pending, see
+    :meth:`ConstraintSet.commit_decay`), and ``gamma`` keeps the one the positions were solved with, which the
+    outer test reads with the new multipliers. ``multiplier_step`` (alpha) scales the multiplier steps:
+    lambda_n <- max(0, lambda_n - alpha sigma_n c_n) and lambda_f <- lambda_f - alpha sigma_f c_f, projected onto
+    the Coulomb cone of the new lambda_n. alpha = 1 is the standard AL update (C++), computed as before:
+    lambda_n - sigma_n c_n while the new slack is 0, else 0."""
     # lambda_n[k] and mu_n[0] are always needed to compute new_s, which drives all branches.
     lambda_n_k = lambda_n[k]
     assert sigma_n > wp.float32(0)
     new_s = wp.max(wp.float32(0), c_n - lambda_n_k / sigma_n)
-    # --- Decay: read old s[k] before any write ---
+    # --- Decay ---
     if request_decay_update:
-        s_prev = s[k]
         gamma_k = gamma[k]
         new_gamma = gamma_k
         if new_s == wp.float32(0):
             new_gamma = wp.float32(1)
-        elif new_s > s_prev:  # contact gap growing -> separating # type: ignore
+        else:  # unpressed # type: ignore
             new_gamma = gamma_k * decay_rate
-        gamma[k] = new_gamma  # type: ignore
+        gamma_next[k] = new_gamma  # type: ignore
     # --- Slack ---
     if request_slack_update:
         s[k] = new_s  # type: ignore
@@ -259,6 +275,7 @@ def _update_dual_vv(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -314,6 +331,7 @@ def _update_dual_ve(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -369,6 +387,7 @@ def _update_dual_vf(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -429,6 +448,7 @@ def _update_dual_ee(
         c,  # type: ignore
         data.s,
         data.gamma,
+        data.gamma_next,
         data.lambda_n,
         data.lambda_f,
         sigma_n,
@@ -752,8 +772,10 @@ class Params(SerializableMixin):
         dmin        : Minimum separation distance used as the contact distance margin
                       (separating threshold in the AL slack update).
         mu_f        : Coulomb friction coefficient.
-        decay       : Multiplicative decay applied to the contact-activity weight ``gamma``
-                      when a contact is separating (slack growing). Must satisfy ``0 < decay < 1``.
+        decay       : Multiplicative decay applied to the contact-activity weight ``gamma`` of every
+                      unpressed contact at each full dual update; a pressed one resets to 1
+                      (``_apply_dual_update``; GPU only, C++ decays only on slack growth). Must satisfy
+                      ``0 < decay < 1``.
         gamman      : Normal AL penalty scaling factor with a constant penalty, which is
                       ``gamman * dt^2``.
         gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
@@ -791,6 +813,16 @@ class Params(SerializableMixin):
                       (lambda_n / sigma_n < c_n < lambda_n / (alpha sigma_n)) keeps part of its multiplier
                       instead of losing all of it. On DragonImpact, alpha = 0.5 kept AAAVBD at 10 substeps
                       of 1 x 40 sweeps past the step where the standard update diverges (solver notes).
+        vbd_slack_at_evaluation : VBD family only (GPU only, default on since 2026-11-05, maintainer; GPU Newton has
+                      ``Solver.Newton.one_sided_contact``): the vertex solves (``vbd.kernels._contact_derivatives``)
+                      evaluate a contact's slack at the gap of that evaluation, s = max(0, g - lambda_n / sigma_n),
+                      instead of the slack refreshed before the sweep. The normal force becomes the one-sided
+                      gamma max(0, lambda_n - sigma_n g), so an unpressed contact exerts none, while its Hessian
+                      block gamma sigma_n n n^T stays as a proximal term that doesn't change the subproblem's
+                      fixed point. Off, the stored slack makes an unpressed contact a spring toward its sweep-start
+                      gap, which pulls once partners of other colours move within the sweep (they are read at their
+                      current positions). The friction cap uses the same normal force. The stored slack refresh
+                      and the dual update are unchanged.
         penalty_stiffness : With adaptive penalties, one penalty for all contacts or one per contact,
                       C++ ``vbd::Params::ePenaltyStiffness`` (``pbat.sim.algorithm.vbd.SALPenaltyStiffness``).
                       GlobalMaxRayleighQuotient (default): ``sigma_n = sigma_f`` = the largest contact
@@ -844,6 +876,14 @@ class Params(SerializableMixin):
         1.0,
         "Scale alpha of the full dual update's multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n), "
         "and lambda_f's step likewise before the Coulomb cone. 1 is the standard augmented Lagrangian update",
+    )
+    vbd_slack_at_evaluation = DocField(
+        True,
+        "VBD family only (default on since 2026-11-05, maintainer): the vertex solves evaluate each contact's "
+        "slack at their own gap g, s = max(0, g - lambda_n / sigma_n), so the normal force is the one-sided gamma "
+        "max(0, lambda_n - sigma_n g) (none from unpressed contacts) while every contact keeps its Hessian block "
+        "gamma sigma_n n n^T. Off: the slack refreshed before the sweep, a spring that holds unpressed contacts at "
+        "their sweep-start gap",
     )
     penalty_stiffness = DocField(
         pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
@@ -909,6 +949,7 @@ class MeshDynamics:
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
         self._data.multiplier_step = self.params.multiplier_step
+        self._data.vbd_slack_at_evaluation = wp.int32(1 if self.params.vbd_slack_at_evaluation else 0)
         self._data.in_contact = wp.zeros(n_verts, dtype=wp.int32)
         self.sigma_n_min = self.params.min_sigma_n
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
@@ -960,6 +1001,13 @@ class MeshDynamics:
             self._compute_rayleigh_quotients(*self._penalty_hessian)
             self._reduce_penalty_parameters(main_stream)
 
+    def commit_decay(self):
+        """Make the decay weights the last full dual update decided current for the next subproblem (see
+        :meth:`ConstraintSet.commit_decay`), after the outer test that measured the positions with the ones they
+        were solved with. Call once after each full dual update and its outer test."""
+        for cset in (self.cvv, self.cve, self.cvf, self.cee):
+            cset.commit_decay()
+
     def reset_friction_limits(self):
         """Unfreeze every contact's Coulomb limit for a new time step (GPU Newton; see
         :meth:`ConstraintSet.reset_friction_limits`)."""
@@ -981,7 +1029,8 @@ class MeshDynamics:
         For each active contact k the kernel:
           1. Computes the gap vector between cached closest points using current positions ``x``.
           2. Projects the gap onto the cached contact basis (normal + 2 tangents).
-          3. Runs the AL update: slack -> decay -> (lambda_n, lambda_f with cone projection).
+          3. Runs the AL update: slack -> decay -> (lambda_n, lambda_f with cone projection). The decay
+             weight it decides is pending (``ConstraintSet.gamma_next``) until :meth:`commit_decay`.
 
         Unlike the C++ side, this implementation does not cache a Taylor expansion; it
         recomputes the linearized gap directly from the stored barycentric weights and basis.
@@ -1163,13 +1212,14 @@ def _slack_only_dual_update(
     c_n: wp.array[wp.float32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
+        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
         wp.float32(0.5), True, False, False, wp.float32(1),
     )
 
@@ -1185,16 +1235,18 @@ class TestSlackOnlyDualUpdate(unittest.TestCase):
         with wp.ScopedDevice("cpu"):
             s = wp.array([7.0] * 4, dtype=wp.float32)  # stale values
             gamma = wp.array([0.25] * 4, dtype=wp.float32)
+            gamma_next = wp.array([0.125] * 4, dtype=wp.float32)
             lam = wp.array(lambda_n, dtype=wp.float32)
             lam_f = wp.array([(0.1, 0.2)] * 4, dtype=wp.vec2f)
             wp.launch(
                 _slack_only_dual_update,
                 dim=4,
-                inputs=[wp.array(c_n, dtype=wp.float32), s, gamma, lam, lam_f, sigma_n],
+                inputs=[wp.array(c_n, dtype=wp.float32), s, gamma, gamma_next, lam, lam_f, sigma_n],
             )
             expected = [max(0.0, c - l / sigma_n) for c, l in zip(c_n, lambda_n)]
             np.testing.assert_allclose(s.numpy(), expected, atol=1e-7)
             self.assertEqual(gamma.numpy().tolist(), [0.25] * 4)
+            self.assertEqual(gamma_next.numpy().tolist(), [0.125] * 4)
             self.assertEqual(lam.numpy().tolist(), lambda_n)
             np.testing.assert_allclose(lam_f.numpy(), [(0.1, 0.2)] * 4, rtol=1e-7)
 
@@ -1205,6 +1257,7 @@ def _full_dual_update(
     c_f: wp.array[wp.vec2f],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
+    gamma_next: wp.array[wp.float32],
     lambda_n: wp.array[wp.float32],
     lambda_f: wp.array[wp.vec2f],
     sigma_n: wp.float32,
@@ -1214,8 +1267,8 @@ def _full_dual_update(
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], c_f[k], k, s, gamma, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True, True, True,
-        multiplier_step,
+        c_n[k], c_f[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True,
+        True, True, multiplier_step,
     )
 
 
@@ -1235,9 +1288,10 @@ class TestMultiplierStep(unittest.TestCase):
             lf = wp.array(lam_f, dtype=wp.vec2f)
             s = wp.zeros(len(lam), dtype=wp.float32)
             g = wp.ones(len(lam), dtype=wp.float32)
+            g_next = wp.ones(len(lam), dtype=wp.float32)
             wp.launch(_full_dual_update, dim=len(lam), inputs=[
-                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, ln, lf, sigma_n, sigma_f, mu_f,
-                alpha])
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, g_next, ln, lf, sigma_n,
+                sigma_f, mu_f, alpha])
             return (np.array(c_n), np.array(lam), np.array(c_f), np.array(lam_f), sigma_n, sigma_f, mu_f,
                     ln.numpy(), lf.numpy())
 
@@ -1267,6 +1321,33 @@ class TestMultiplierStep(unittest.TestCase):
         np.testing.assert_allclose(lf, expected_f, rtol=1e-6, atol=1e-7)
         self.assertGreater(ln[2], 0.0)  # 0.01 < c_n = 0.015 < lambda / (alpha sigma) = 0.02: keeps a part
         self.assertEqual(ln[3], 0.0)  # beyond 0.02: zeroed
+
+
+class TestDecayRule(unittest.TestCase):
+    """The full dual update's decay weight (Warp's CPU device): a pressed contact resets to 1, every unpressed one
+    decays, whatever its motion, and the decided weight is pending: gamma itself is unchanged."""
+
+    def test_pressed_reset_unpressed_decay(self):
+        sigma_n, decay = 100.0, 0.5
+        lam = [1.0, 0.5, 0.0, 0.0, 0.0]
+        c_n = [
+            0.005,  # pressed: c_n <= lambda / sigma = 0.01
+            0.004,  # pressed: c_n <= lambda / sigma = 0.005
+            2.0e-3,  # unpressed, far
+            1e-6,  # unpressed, resting just past the margin
+            0.0,  # at the margin without a multiplier: slack 0, pressed
+        ]
+        c_f = [(0.0, 0.0), (0.0, 0.0), (0.01, 0.0), (0.0, -0.02), (0.0, 0.0)]  # sliding doesn't matter
+        n = len(lam)
+        with wp.ScopedDevice("cpu"):
+            gamma = wp.full(n, 0.25, dtype=wp.float32)
+            gamma_next = wp.full(n, -1.0, dtype=wp.float32)
+            wp.launch(_full_dual_update, dim=n, inputs=[
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), wp.zeros(n, dtype=wp.float32),
+                gamma, gamma_next, wp.array(lam, dtype=wp.float32), wp.zeros(n, dtype=wp.vec2f), sigma_n, 10.0, 0.2,
+                1.0])
+            self.assertEqual(gamma_next.numpy().tolist(), [1.0, 1.0, 0.25 * decay, 0.25 * decay, 1.0])
+            self.assertEqual(gamma.numpy().tolist(), [0.25] * n)
 
 
 class TestNewtonFrictionConsistency(unittest.TestCase):

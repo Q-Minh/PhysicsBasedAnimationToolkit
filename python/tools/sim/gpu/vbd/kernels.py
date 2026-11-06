@@ -10,6 +10,7 @@ from ..contact.dynamics import (
     CONTACT_VF,
     CONTACT_VV,
     MeshDynamicsData as ContactDynamicsData,
+    augmented_normal_derivative,
     friction_penalty,
     normal_penalty,
 )
@@ -134,19 +135,32 @@ def _contact_derivatives(
     xtcp2: wp.vec3f,
     dmin: wp.float32,
     wi: wp.float32,
+    slack_at_evaluation: wp.int32,
 ):
+    """AL contact gradient and Hessian block of one stencil node (weight ``wi``) of contact ``c``.
+
+    The normal term is gamma (sigma_n (g - s) - lambda_n) for the gap past the margin g, with the slack s refreshed
+    before the sweep (``s[c]``). With ``slack_at_evaluation`` (``Contact.ContactDynamics.vbd_slack_at_evaluation``),
+    s = max(0, g - lambda_n / sigma_n) at this evaluation's own gap instead, so the force is the one-sided
+    -gamma max(0, lambda_n - sigma_n g): an unpressed contact pushes or pulls nothing, while its Hessian block
+    gamma sigma_n n n^T stays, as for every contact in the set, a proximal term that doesn't move the fixed point.
+    """
     n, t, b = bases.n[c], bases.t[c], bases.b[c]  # type: ignore
     sk = s[c]
     gammak = gamma[c]
     dx = xcp1 - xcp2  # type: ignore
     du = (xcp1 - xtcp1) - (xcp2 - xtcp2)  # type: ignore
-    c_n = wp.dot(dx, n) - dmin - sk  # type: ignore
     c_f = wp.vec2f(wp.dot(du, t), wp.dot(du, b))  # type: ignore
-    dEn = sigma_n * c_n - lambda_n[c]
+    dEn = wp.float32(0)
+    if slack_at_evaluation != 0:
+        dEn = augmented_normal_derivative(wp.dot(dx, n) - dmin, sk, lambda_n[c], sigma_n, wp.int32(1))  # type: ignore
+    else:
+        c_n = wp.dot(dx, n) - dmin - sk  # type: ignore
+        dEn = sigma_n * c_n - lambda_n[c]
     dEf = sigma_f * c_f - lambda_f[c]
-    # Coulomb limit: the AL friction force sigma_f c_f - lambda_f is capped at mu_f times the
-    # contact's current normal force max(lambda_n - sigma_n c_n, 0), and its Hessian is scaled by
-    # the same factor. Without it, friction acts as unbounded viscous drag within a step (only the
+    # Coulomb limit: the AL friction force sigma_f c_f - lambda_f is capped at mu_f times the contact's current
+    # normal force -dEn (max(lambda_n - sigma_n (g - s), 0), or max(lambda_n - sigma_n g, 0) with the slack at
+    # evaluation), and its Hessian is scaled by the same factor. Without it, friction acts as unbounded viscous drag within a step (only the
     # dual update projects lambda_f onto the cone).
     friction_limit = mu_f * wp.max(-dEn, wp.float32(0))
     friction_scale = wp.float32(1)
@@ -247,6 +261,7 @@ def local_contact_derivatives(
             xtcp2,  # type: ignore
             dmin,
             wi,
+            contact.vbd_slack_at_evaluation,
         )
         gi += gic
         Hi += Hic
@@ -281,6 +296,7 @@ def local_contact_derivatives(
             xtcp2,  # type: ignore
             dmin,
             wi,
+            contact.vbd_slack_at_evaluation,
         )
         gi += gic
         Hi += Hic
@@ -317,6 +333,7 @@ def local_contact_derivatives(
             xtcp2,  # type: ignore
             dmin,
             wi,
+            contact.vbd_slack_at_evaluation,
         )
         gi += gic
         Hi += Hic
@@ -354,6 +371,7 @@ def local_contact_derivatives(
             xtcp2,  # type: ignore
             dmin,
             wi,
+            contact.vbd_slack_at_evaluation,
         )
         gi += gic
         Hi += Hic
@@ -400,6 +418,7 @@ def local_contact_derivatives(
                 xtcp2,
                 dmin,
                 wi,
+                contact.vbd_slack_at_evaluation,
             )
             gi += gic
             Hi += Hic
@@ -436,6 +455,7 @@ def local_contact_derivatives(
                 xtcp2,
                 dmin,
                 wi,
+                contact.vbd_slack_at_evaluation,
             )
             gi += gic
             Hi += Hic
@@ -480,6 +500,7 @@ def local_contact_derivatives(
                 xtcp2,
                 dmin,
                 wi,
+                contact.vbd_slack_at_evaluation,
             )
             gi += gic
             Hi += Hic
@@ -520,6 +541,7 @@ def local_contact_derivatives(
                 xtcp2,
                 dmin,
                 wi,
+                contact.vbd_slack_at_evaluation,
             )
             gi += gic
             Hi += Hic
@@ -657,6 +679,79 @@ class TestIntegratePositions(unittest.TestCase):
             np.testing.assert_array_equal(self._solve(Hs, gs, VLS_SOLVER_INVERSE), 0.0)
             dx = self._solve(Hs, gs, VLS_SOLVER_EVD)[0]
             np.testing.assert_allclose(dx, [1.0 / m, 1.0 / m, 0.0], rtol=1e-5)
+
+
+@wp.kernel
+def _contact_derivatives_kernel(
+    bases: ContactBasesData,  # type: ignore
+    s: wp.array[wp.float32],
+    gamma: wp.array[wp.float32],
+    lambda_n: wp.array[wp.float32],
+    lambda_f: wp.array[wp.vec2f],
+    gap: wp.array[wp.float32],
+    slide: wp.array[wp.float32],
+    sigma_n: wp.float32,
+    sigma_f: wp.float32,
+    mu_f: wp.float32,
+    dmin: wp.float32,
+    slack_at_evaluation: wp.int32,
+    g: wp.array[wp.vec3f],
+    H: wp.array[wp.mat33f],
+):
+    # Contact c: node 1 at height dmin + gap[c] above node 2 (normal z), slid by slide[c] along x since x^t
+    c = wp.tid()
+    x2 = wp.vec3f(0.0, 0.0, 0.0)
+    x1 = wp.vec3f(slide[c], 0.0, dmin + gap[c])
+    x1t = wp.vec3f(0.0, 0.0, dmin + gap[c])
+    gi, Hi = _contact_derivatives(
+        c, bases, s, gamma, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, x1, x1t, x2, x2, dmin, wp.float32(1),
+        slack_at_evaluation,
+    )
+    g[c] = gi
+    H[c] = Hi
+
+
+class TestSlackAtEvaluation(unittest.TestCase):
+    """Contact.ContactDynamics.vbd_slack_at_evaluation in the VBD vertex solve: an unpressed contact gives no
+    gradient and the unchanged Hessian block gamma sigma_n n n^T, a pressed one the one-sided force
+    -gamma max(0, lambda_n - sigma_n g), with friction capped at mu_f times that force (Warp's CPU device)."""
+
+    def test_one_sided_force_and_kept_hessian(self):
+        sigma_n, sigma_f, mu_f, dmin = 100.0, 10.0, 0.5, 1e-3
+        gap = [2e-3, 2e-3, 2e-3, 2e-3]  # gap past the margin g
+        lam = [0.0, 0.1, 1.0, 1.0]  # unpressed, unpressed with a multiplier, pressed, pressed and sliding
+        s = [1e-3, 0.0, 0.0, 0.0]  # stored (sweep-start) slacks
+        slide = [0.0, 0.0, 0.0, 0.1]
+        gamma = [0.5, 1.0, 0.5, 1.0]
+        n = len(lam)
+        with wp.ScopedDevice("cpu"):
+            bases = ContactBasesData()
+            bases.n = wp.array(np.tile([0.0, 0.0, 1.0], (n, 1)), dtype=wp.vec3f)
+            bases.t = wp.array(np.tile([1.0, 0.0, 0.0], (n, 1)), dtype=wp.vec3f)
+            bases.b = wp.array(np.tile([0.0, 1.0, 0.0], (n, 1)), dtype=wp.vec3f)
+
+            def run(flag):
+                g, H = wp.zeros(n, dtype=wp.vec3f), wp.zeros(n, dtype=wp.mat33f)
+                wp.launch(_contact_derivatives_kernel, dim=n, inputs=[
+                    bases, wp.array(s, dtype=wp.float32), wp.array(gamma, dtype=wp.float32),
+                    wp.array(lam, dtype=wp.float32), wp.zeros(n, dtype=wp.vec2f), wp.array(gap, dtype=wp.float32),
+                    wp.array(slide, dtype=wp.float32), sigma_n, sigma_f, mu_f, dmin, flag, g, H])
+                return g.numpy().astype(np.float64), H.numpy().astype(np.float64)
+
+            g_off, H_off = run(0)
+            g_on, H_on = run(1)
+        # Stored slack: the unpressed contact is a spring toward its sweep-start gap
+        self.assertAlmostEqual(g_off[0, 2], gamma[0] * sigma_n * (gap[0] - s[0]), places=5)
+        # Slack at evaluation: no normal force while unpressed, the one-sided force while pressed
+        expected = [-gm * max(0.0, l - sigma_n * gp) for gm, l, gp in zip(gamma, lam, gap)]
+        np.testing.assert_allclose(g_on[:, 2], expected, atol=1e-6)
+        np.testing.assert_allclose(g_on[:2], 0.0, atol=1e-7)
+        # The normal Hessian block gamma sigma_n n n^T stays for every contact, pressed or not
+        np.testing.assert_allclose(H_on[:, 2, 2], np.array(gamma) * sigma_n, rtol=1e-6)
+        np.testing.assert_allclose(H_on[:, 2, 2], H_off[:, 2, 2], rtol=1e-6)
+        # Friction of the sliding pressed contact is capped at mu_f times the one-sided normal force
+        normal = max(0.0, lam[3] - sigma_n * gap[3])
+        self.assertAlmostEqual(abs(g_on[3, 0]), gamma[3] * mu_f * normal, places=5)
 
 
 if __name__ == "__main__":

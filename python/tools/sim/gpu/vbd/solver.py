@@ -279,6 +279,7 @@ def solve_outer_loop(
                 if tail is not None:
                     tail(k)
             finalize_subproblem(fem, contact, cd, params)
+            contact.commit_decay()  # no outer test to take first
         return False
     gtol = float(params.data.gtol)
     prefix, block, n_blocks, remainder = _subproblem_layout(
@@ -337,7 +338,11 @@ def solve_outer_loop(
             if detect_inside:
                 cd.detect_contacts(prepared=True)
             contact.update_constraint_set()
+        # The outer test measures the positions with the decay weights they were solved with and the new
+        # multipliers; only then do the dual update's weights become the next subproblem's
         check.end_outer(gtol, n_max_iters, layout)
+        with profiling.scope("solve.finalize_subproblem"):
+            contact.commit_decay()
 
     check.start(gtol, n_max_iters)
     for k in range(n_max_iters):
@@ -410,7 +415,8 @@ def initialize_solve(
 
 
 def update_dual(fem: FemElastoDynamics, contact: ContactDynamics):
-    """Full dual update of a finished subproblem: slack, decay and Lagrange multipliers."""
+    """Full dual update of a finished subproblem: slack, decay and Lagrange multipliers. The decay weights stay
+    pending until ``contact.commit_decay()``, after the outer test."""
     contact.update_dual(
         fem.data.x,
         fem.xt,
@@ -430,9 +436,11 @@ def finalize_subproblem(
     """Finalize the current linearized subproblem.
 
     Mirrors ``pbat::sim::algorithm::vbd::FinalizeSubproblem``:
-      1. Full dual update (slack + decay + Lagrange multipliers).
+      1. Full dual update (slack + decay + Lagrange multipliers), with the decay weights pending.
       2. Restore feasibility.
       3. Update constraint set for the next subproblem.
+
+    The caller commits the pending decay weights (``contact.commit_decay()``) after its outer test, if any.
     """
     update_dual(fem, contact)
     cd.filter_step()

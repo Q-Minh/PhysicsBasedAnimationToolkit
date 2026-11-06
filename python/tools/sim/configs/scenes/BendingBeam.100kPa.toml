@@ -1,7 +1,7 @@
 # Scene config: BendingBeam.100kPa, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beamY1e5.h5 (homogeneous, Young's modulus 1e5).
 # Source: configs/paper/BendingBeam.100kPa.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-11-01 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-05 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -9,13 +9,20 @@
 #     Solver.AndersonSolver.vlinsolve = 0 (source 3)
 #     Solver.Chebyshev.vlinsolve = 0 (source 3)
 #     Solver.VBD.vlinsolve = 0 (source 3)
+# - Positive AL contact margin dmin = 1 mm (the paper's -1e-4 dates from penetration-only VertexSdf detection):
+#   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
+#   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
+#     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
 #
 # Not in the source, code defaults (configs/defaults.toml):
+#   Contact.ContactDynamics.vbd_slack_at_evaluation
 #   Solver.Convergence.early_exit
 #   Solver.Newton.one_sided_contact
 #
 # Notes:
 # - Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.
+# - The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while VertexSdf
+#   detection is off.
 # - Budgets kept: the paper's ground-truth budgets, chosen to match Newton's behaviour
 #   (accelerated-vbd-extras/parameters/gpu/beam.GroundTruth.Notes.txt).
 
@@ -34,7 +41,7 @@ use_step_filter = 0
 
 [Contact.ContactDynamics]
 decay = 0.5
-dmin = -9.999999747378752e-05
+dmin = 0.001
 gammaf = 10000.0
 gammaf_adaptive = 0.01
 gamman = 20000.0
@@ -44,6 +51,7 @@ mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 0
 penalty_stiffness = 0
+vbd_slack_at_evaluation = 1
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.20000000298023224

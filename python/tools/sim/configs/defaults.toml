@@ -1,5 +1,5 @@
 # Every parameter the GPU simulators serialize, with its code default.
-# Generated 2026-11-01 with config.params_dict on a default SimulationState. Regenerate it when
+# Generated 2026-11-05 with config.params_dict on a default SimulationState. Regenerate it when
 # parameters are added (see README.md). Useful as a reference or as an `extends` base.
 
 [Contact.CDType.OGC]
@@ -27,6 +27,7 @@ mu_f = 0.2
 multiplier_step = 1.0
 penalty_adaptivity = 1
 penalty_stiffness = 0
+vbd_slack_at_evaluation = 1
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.2
