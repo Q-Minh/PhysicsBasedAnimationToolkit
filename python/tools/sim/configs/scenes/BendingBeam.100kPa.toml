@@ -1,7 +1,7 @@
 # Scene config: BendingBeam.100kPa, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beamY1e5.h5 (homogeneous, Young's modulus 1e5).
 # Source: configs/paper/BendingBeam.100kPa.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-11-05 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-06 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -15,6 +15,7 @@
 #     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
 #
 # Not in the source, code defaults (configs/defaults.toml):
+#   Contact.CDType.VertexSdf.freeze_within_solve
 #   Contact.ContactDynamics.vbd_slack_at_evaluation
 #   Solver.Convergence.early_exit
 #   Solver.Newton.one_sided_contact
@@ -36,6 +37,7 @@ truncation_strategy = 0
 [Contact.CDType.VertexSdf]
 band = 0.001
 deactivate = 1
+freeze_within_solve = 0
 max_dist = 0.05000000074505806
 use_step_filter = 0
 
