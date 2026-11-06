@@ -29,6 +29,113 @@ tvflist = wp.types.vector(length=MAX_VF_PER_THREAD, dtype=wp.int32)
 
 MAX_BLOCK_DIM = 256
 
+# Contact kinds of a working-set contact (Params.freeze_within_solve)
+KIND_NONE = wp.constant(-1)
+KIND_VV = wp.constant(0)
+KIND_VE = wp.constant(1)
+KIND_VF = wp.constant(2)
+
+
+@wp.func
+def _working_contact(W: pairs.ContactPairsData, meshes: MultiMeshData, v: wp.int32, m: wp.int32):  # type: ignore
+    """The working set W's contact of surface vertex v with mesh m (at most one): (kind, feature, slot), kind
+    KIND_NONE if there is none. The feature is a face (VF), a half-edge (VE) or a surface vertex (VV) index."""
+    wk, wfeat, wslot = wp.int32(KIND_NONE), wp.int32(0), wp.int32(0)
+    fb, fe = meshes.FP[m], meshes.FP[m + 1]
+    for s in range(wp.int32(W.vf.prefix[v]), wp.int32(W.vf.prefix[v + 1])):
+        f = wp.int32(W.vf.v[s])
+        if f >= fb and f < fe:
+            wk, wfeat, wslot = KIND_VF, f, s
+    for s in range(wp.int32(W.ve.prefix[v]), wp.int32(W.ve.prefix[v + 1])):
+        he = wp.int32(W.ve.v[s])
+        f = halfedges.face_of_half_edge(he)
+        if f >= fb and f < fe:
+            wk, wfeat, wslot = KIND_VE, he, s
+    vb, ve = meshes.VP[m], meshes.VP[m + 1]
+    for s in range(wp.int32(W.vv.prefix[v]), wp.int32(W.vv.prefix[v + 1])):
+        w = wp.int32(W.vv.v[s])
+        if w >= vb and w < ve:
+            wk, wfeat, wslot = KIND_VV, w, s
+    return wk, wfeat, wslot
+
+
+@wp.func
+def _working_gap(
+    W: pairs.ContactPairsData,  # type: ignore
+    meshes: MultiMeshData,  # type: ignore
+    x: wp.array[wp.vec3f],
+    xi: wp.vec3f,
+    kind: wp.int32,
+    feat: wp.int32,
+    slot: wp.int32,
+) -> wp.float32:
+    """The working-set contact's linearized gap at x, n . (x_i - c), with its stored normal n and its closest point c
+    at its stored barycentrics: the constraint the solver evaluates (plus the margin)."""
+    n = wp.vec3f(0.0)
+    c = wp.vec3f(0.0)
+    if kind == KIND_VF:
+        n = W.vf_bases.n[slot]
+        uv = W.vf_bary[slot]
+        fi = meshes.F[feat]
+        c = (wp.float32(1) - uv[0] - uv[1]) * x[fi[0]] + uv[0] * x[fi[1]] + uv[1] * x[fi[2]]
+    elif kind == KIND_VE:
+        n = W.ve_bases.n[slot]
+        t = W.ve_bary[slot]
+        c = (wp.float32(1) - t) * x[halfedges.incoming_vertex(meshes.F, feat)] + t * x[
+            halfedges.outgoing_vertex(meshes.F, feat)
+        ]
+    else:
+        n = W.vv_bases.n[slot]
+        c = x[meshes.V[feat]]
+    return wp.dot(n, xi - c)
+
+
+@wp.func
+def _restore_kept_stencil(
+    k: wp.int32,
+    n_u: wp.int32,
+    P: pairs.PairsData,  # type: ignore
+    B: pairs.ContactBasesData,  # type: ignore
+    WP: pairs.PairsData,  # type: ignore
+    WB: pairs.ContactBasesData,  # type: ignore
+    kept: wp.array[wp.int32],
+) -> wp.int32:
+    """Pair slot k (of one contact type) found in the working set with its keep flag set gets the working set's
+    basis; returns the working slot, or -1 (barycentrics are the caller's, by type)."""
+    if wp.uint64(k) >= P.prefix[n_u]:
+        return -1
+    u, f = P.u[k], P.v[k]
+    for s in range(wp.int32(WP.prefix[wp.int32(u)]), wp.int32(WP.prefix[wp.int32(u) + 1])):
+        if WP.v[s] == f and kept[s] != 0:
+            B.n[k] = WB.n[s]
+            B.t[k] = WB.t[s]
+            B.b[k] = WB.b[s]
+            return s
+    return -1
+
+
+@wp.kernel
+def _restore_kept_stencils(
+    C: pairs.ContactPairsData,  # type: ignore
+    W: pairs.ContactPairsData,  # type: ignore
+    kept_vv: wp.array[wp.int32],
+    kept_ve: wp.array[wp.int32],
+    kept_vf: wp.array[wp.int32],
+    n_u: wp.int32,
+):
+    """Contacts that detection kept from the working set (Params.freeze_within_solve) get their stored stencil back
+    (basis and barycentrics), in place of the one assemble_contacts and the normal kernels computed at x: a kept
+    feature re-linearized at x could be clamped off its region (a VF stencil off its face, with the face normal).
+    Thread k over every type's slots."""
+    k = wp.tid()
+    _restore_kept_stencil(k, n_u, C.vv, C.vv_bases, W.vv, W.vv_bases, kept_vv)
+    s = _restore_kept_stencil(k, n_u, C.ve, C.ve_bases, W.ve, W.ve_bases, kept_ve)
+    if s >= 0:
+        C.ve_bary[k] = W.ve_bary[s]
+    s = _restore_kept_stencil(k, n_u, C.vf, C.vf_bases, W.vf, W.vf_bases, kept_vf)
+    if s >= 0:
+        C.vf_bary[k] = W.vf_bary[s]
+
 
 def detection_block_dim(n_meshes: int) -> int:
     """Threads per block (one block per contact vertex) of _detect_vertex_mesh_contacts for n_meshes contact
@@ -66,8 +173,18 @@ def _detect_vertex_mesh_contacts(
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     contacts: pairs.ContactPairsData,  # type: ignore
+    freeze: wp.int32,
+    working: pairs.ContactPairsData,  # type: ignore
+    kept_vv: wp.array[wp.int32],
+    kept_ve: wp.array[wp.int32],
+    kept_vf: wp.array[wp.int32],
 ):
     """One block per contact vertex v: its pairs with every other contact component (at most one per component).
+
+    With freeze != 0 (Params.freeze_within_solve, a re-detection within a solve), a pair (v, m) that the working set
+    (the previous detection's pairs) has keeps its contact while the stored linearization's gap at x is below the
+    threshold: its key is emitted without a query, and kept_*[slot] marks the working slot for
+    _restore_kept_stencils. Otherwise (a kept_* entry of 0, or no working contact) the pair is detected as usual.
 
     Notation:
 
@@ -118,6 +235,36 @@ def _detect_vertex_mesh_contacts(
     for m in range(local_tid, mesh_ids.shape[0], block_dim):
         if m == b:
             continue
+        if freeze != 0:
+            # Within a solve, the working set's contact with m keeps its feature and stencil while its linearized gap
+            # stays below the threshold (and, on plates, above their depth); a pair that leaves is detected afresh
+            wk, wfeat, wslot = _working_contact(working, meshes, v, m)
+            if wk != KIND_NONE:
+                wgap = _working_gap(working, meshes, x, xi, wk, wfeat, wslot)
+                keep = wgap < threshold
+                if mesh_kind[m] == MESH_PLANE and wgap < -mesh_depth[m]:
+                    keep = False
+                if wk == KIND_VF:
+                    kept_vf[wslot] = wp.int32(keep)
+                elif wk == KIND_VE:
+                    kept_ve[wslot] = wp.int32(keep)
+                else:
+                    kept_vv[wslot] = wp.int32(keep)
+                if keep:
+                    tsdmin = wp.min(tsdmin, wgap)
+                    if wk == KIND_VF:
+                        assert tnvf < MAX_VF_PER_THREAD
+                        tvf[tnvf] = wfeat
+                        tnvf += 1
+                    elif wk == KIND_VE:
+                        assert tnve < MAX_VE_PER_THREAD
+                        tve[tnve] = wfeat
+                        tnve += 1
+                    else:
+                        assert tnvv < MAX_VV_PER_THREAD
+                        tvv[tnvv] = wfeat
+                        tnvv += 1
+                    continue
         # The query reaches every face that the relative motion can bring within the threshold: the vertex's own
         # motion plus the partner's largest (motion[m]), as OGC's adaptive query radius
         query_dist = max_dist
@@ -474,6 +621,25 @@ class Params(SerializableMixin):
         "Whether to apply initial step filter.",
     )
     deactivate = DocField(False, "Whether to deactivate contact detection.")
+    # TODO: Two other within-solve rules were measured and rejected (investigate/stable-contact-set, report of
+    # 2026-11-06): freezing without the drop (each pair keeps its step-start contact all solve, re-detection only
+    # adds) kept the 6k-14k pairs that the step-start widening finds on BasketOfFruit as decayed proximal Hessian
+    # blocks: AAAVBD +27% and VBD +10% median outer ratio at 5 x (3 x 50), +5% step time. Hysteresis alone (keep a
+    # pair's contact while the re-detected gap is within 0.05 dmin and its normal within 5 deg) cut DragonImpact's
+    # feature changes 7x, but ~160 large switches kept the period-2 cycle (13 um per outer iteration). Untried next
+    # steps: re-linearize only once the AL converged on the frozen set (an outer-outer loop), or evaluate each kept
+    # pair's exact point-triangle distance in the vertex solves instead of its frozen plane.
+    freeze_within_solve = DocField(
+        False,
+        "Keep each pair's linearization within a solve (one substep's outer loop). The solve's first detection (at "
+        "xt) is full. At each re-detection, a (surface vertex, other mesh) pair that the previous detection has keeps "
+        "its feature (face, edge or vertex), barycentrics and basis while its stored linearized gap is below the "
+        "detection threshold (dmin + band); a pair whose gap leaves it is detected afresh (dropped, or replaced by "
+        "a new feature), and new pairs are added. The solve's last detection is full, so the next solve warm-starts "
+        "from keys detected at its xt: at a budget of 1 outer iteration this equals the default. A fixed constraint "
+        "set per solve, which the augmented Lagrangian assumes: re-linearizing at every outer iteration made "
+        "ArmadilloSpaghetti.DragonImpact's contact set cycle with period 2. VertexSdf only.",
+    )
 
 
 class Sd(ContactDetection):
@@ -491,6 +657,12 @@ class Sd(ContactDetection):
     _sds: wp.array[wp.float32]  # (# verts,) signed distances
     _mesh_streams: list[wp.Stream]
     _normal_streams: list[wp.Stream]
+    # Params.freeze_within_solve, allocated while it is on: the working set (a copy of the last detection's forward
+    # VV/VE/VF pairs, bases and barycentrics), per working slot whether the last detection kept it, and a (1,) flag
+    # set while the last detection kept frozen stencils (cleared by a full one)
+    _working = None  # pairs.ContactPairsData
+    _kept: tuple[wp.array, wp.array, wp.array] | None = None
+    _frozen: wp.array | None = None
 
     def __init__(self, params: Params | None):
         self.params = params or Params()
@@ -545,6 +717,56 @@ class Sd(ContactDetection):
         )
         self._mesh_streams = [wp.Stream() for _ in range(len(self._wp_meshes))]
         self._normal_streams = [wp.Stream() for _ in range(3)]  # (vv, ve, vf)
+        self._working, self._kept, self._frozen = None, None, None
+        if self.params.freeze_within_solve:
+            self._allocate_working_set()
+
+    def _allocate_working_set(self):
+        """Allocate the working set of Params.freeze_within_solve: buffers like the contact storage's forward
+        VV/VE/VF pairs."""
+        C = self._contacts.read_data[0]
+
+        def pairs_like(P):
+            Q = pairs.PairsData()
+            Q.prefix, Q.u, Q.v = wp.zeros_like(P.prefix), wp.zeros_like(P.u), wp.zeros_like(P.v)
+            return Q
+
+        def bases_like(B):
+            Q = pairs.ContactBasesData()
+            Q.n, Q.t, Q.b = wp.zeros_like(B.n), wp.zeros_like(B.t), wp.zeros_like(B.b)
+            return Q
+
+        W = pairs.ContactPairsData()
+        W.vv, W.ve, W.vf = pairs_like(C.vv), pairs_like(C.ve), pairs_like(C.vf)
+        W.vv_bases, W.ve_bases, W.vf_bases = bases_like(C.vv_bases), bases_like(C.ve_bases), bases_like(C.vf_bases)
+        W.ve_bary, W.vf_bary = wp.zeros_like(C.ve_bary), wp.zeros_like(C.vf_bary)
+        W.ee, W.ee_bases, W.ee_bary = C.ee, C.ee_bases, C.ee_bary  # unused: vertex SDF has no edge-edge pairs
+        self._working = W
+        self._kept = tuple(wp.zeros(P.u.shape[0], dtype=wp.int32) for P in (C.vv, C.ve, C.vf))
+        self._frozen = wp.zeros(1, dtype=wp.int32)
+
+    def _store_working_set(self):
+        """Copy the detection's forward VV/VE/VF pairs, bases and barycentrics into the working set (whole buffers:
+        the counts are on the device)."""
+        C, W = self._contacts.read_data[0], self._working
+        for P, Q in ((C.vv, W.vv), (C.ve, W.ve), (C.vf, W.vf)):
+            wp.copy(Q.prefix, P.prefix)
+            wp.copy(Q.u, P.u)
+            wp.copy(Q.v, P.v)
+        for B, Q in ((C.vv_bases, W.vv_bases), (C.ve_bases, W.ve_bases), (C.vf_bases, W.vf_bases)):
+            wp.copy(Q.n, B.n)
+            wp.copy(Q.t, B.t)
+            wp.copy(Q.b, B.b)
+        wp.copy(W.ve_bary, C.ve_bary)
+        wp.copy(W.vf_bary, C.vf_bary)
+
+    @property
+    def freezes_within_solve(self) -> bool:
+        return bool(self.params.freeze_within_solve) and not self.inactive
+
+    @property
+    def last_detection_frozen(self) -> wp.array | None:
+        return self._frozen if self.freezes_within_solve else None
 
     def set_plane_depths(self, depths: np.ndarray):
         """Set how far below each plane mesh a vertex is still in contact with it.
@@ -594,9 +816,20 @@ class Sd(ContactDetection):
             main_stream.wait_stream(stream)
 
     @profiling.scoped("contact.detect")
-    def detect_contacts(self, from_xt: bool = False, prepared: bool = False):
+    def detect_contacts(self, from_xt: bool = False, prepared: bool = False, fresh: bool = False):
         if self.inactive:
             return
+        # Params.freeze_within_solve: re-detections within a solve keep the working set's linearizations; a solve's
+        # first detection (from_xt) and its last (fresh) are full
+        freeze = bool(self.params.freeze_within_solve)
+        if freeze and self._working is None:
+            if wp.get_device().is_capturing:
+                raise RuntimeError(
+                    "Contact.CDType.VertexSdf.freeze_within_solve was turned on after the detector was built: reset "
+                    "the simulation"
+                )
+            self._allocate_working_set()
+        frozen = freeze and not (from_xt or fresh)
         # A time step's first detection (the solvers' initialize_solve, from_xt) is at xt, as C++
         # vbd::InitializeSolve builds the constraint set at xt and OGC honors from_xt, and also finds the pairs
         # that the step's starting iterate x (the init strategy's) may bring within the threshold (see the
@@ -629,6 +862,10 @@ class Sd(ContactDetection):
                 x,
                 self._meshes.data,  # type: ignore
                 self._contacts.write_data,  # type: ignore
+                int(frozen),
+                # Not read without freeze
+                self._working if frozen else self._contacts.read_data[0],
+                *(self._kept if frozen else (None, None, None)),
             ],
             block_dim=block_dim,
             stream=main_stream,
@@ -658,6 +895,16 @@ class Sd(ContactDetection):
                 stream=stream,
             )
             main_stream.wait_stream(stream)
+        if frozen:
+            wp.launch(
+                _restore_kept_stencils,
+                dim=max(self._contacts.capacity[:3]),
+                inputs=[contact_data, self._working, *self._kept, self._meshes.n_verts],
+                stream=main_stream,
+            )
+        if freeze:
+            self._store_working_set()
+            self._frozen.fill_(int(frozen))
 
     @profiling.scoped("contact.filter")
     def filter_step(self):
@@ -948,6 +1195,186 @@ class TestFirstDetection(unittest.TestCase):
         for c in range(len(u)):
             self.assertGreater(abs(float(normals[c][2])), 0.99)  # the cubes' facing vertices
             self.assertAlmostEqual(float(np.dot(xt[V[u[c]]] - xt[V[w[c]]], normals[c])), self.gap, delta=1e-5)
+
+
+def _vf_pairs(state) -> dict:
+    """The detected VF pairs as {surface vertex: (face, barycentrics, normal)}."""
+    contacts = state.detector._contacts
+    u, f = contacts.vf_contacts
+    data = contacts.read_data[0]
+    bary, n = data.vf_bary.numpy(), data.vf_bases.n.numpy()
+    return {int(u[c]): (int(f[c]), bary[c].copy(), n[c].copy()) for c in range(len(u))}
+
+
+class TestFreezeWithinSolve(unittest.TestCase):
+    """Params.freeze_within_solve: a fixed unit cube and three probe tets whose lowest vertices hover over its top
+    face (two triangles; the probes start inside the triangle at the origin's x-axis edge, x > y and x + y < 1, so
+    that the test holds for either diagonal)."""
+
+    # Lowest vertex of each probe tet (x, y) and its heights over the face, in units of the detection threshold:
+    # before and after the move. A slides to the face's other triangle (kept), B rises out of the threshold
+    # (dropped), C comes within it (added).
+    probes = {"A": ((0.25, 0.1), (0.75, 0.9)), "B": ((0.45, 0.2), None), "C": ((0.6, 0.3), None)}
+    heights = {"A": (0.5, 0.6), "B": (0.5, 2.0), "C": (3.0, 0.5)}
+
+    def _state(self, freeze: bool):
+        from pbatoolkit import pbat, pypbat
+        from ....state import CDType, SimulationState, load_params
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = [np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])]
+        X = [V.astype(np.float64)]
+        self.node = {}
+        for name, ((x, y), _) in self.probes.items():
+            p = np.array([x, y, 1.0])
+            self.node[name] = 8 + 4 * len(self.node)
+            X.append([p, p + [0.05, 0, 0.05], p + [0, 0.05, 0.05], p + [0.03, 0.03, 0.1]])
+            C.append(np.array([[0, 1, 2, 3]]) + self.node[name])
+        X, C = np.vstack(X), np.vstack(C)
+        for e in C:  # positive volumes
+            a, b, c, d = X[e]
+            if np.dot(np.cross(b - a, c - a), d - a) < 0:
+                e[[2, 3]] = e[[3, 2]]
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, C.T)
+        fem.set_mass_matrix(1e3)
+        fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        state = SimulationState(fem, load_params(fem), None)
+        state.cd_params[CDType.VertexSdf].freeze_within_solve = freeze
+        for k in ("vv", "ve", "vf"):  # a slot per vertex
+            setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
+        state.reset()
+        self.threshold = float(state.contact.params.dmin) + float(state.detector.params.band)
+        self.vertex = {name: int(np.flatnonzero(state.multimesh.data.V.numpy() == i)[0]) for name, i in self.node.items()}
+        return state
+
+    def _place(self, state, after: bool):
+        """Translate each probe tet so that its lowest vertex is at its position and height."""
+        x = state.fem.data.x.numpy()
+        for name, (xy0, xy1) in self.probes.items():
+            xy = xy1 if after and xy1 is not None else xy0
+            h = self.heights[name][int(after)] * self.threshold
+            i = self.node[name]
+            x[i : i + 4] += np.array([xy[0], xy[1], 1.0 + h]) - x[i]
+        state.fem.data.x.assign(x)
+
+    def _detect(self, state, after: bool, **kwargs) -> dict:
+        self._place(state, after)
+        state.detector.detect_contacts(**kwargs)
+        return _vf_pairs(state)
+
+    def test_kept_dropped_added(self):
+        state = self._state(freeze=True)
+        A, B, C = (self.vertex[k] for k in "ABC")
+        first = self._detect(state, after=False, fresh=True)
+        self.assertEqual(sorted(first), sorted([A, B]))
+        self.assertEqual(int(state.detector.last_detection_frozen.numpy()[0]), 0)
+        frozen = self._detect(state, after=True)
+        self.assertEqual(int(state.detector.last_detection_frozen.numpy()[0]), 1)
+        # (a) A keeps its face, barycentrics and normal, though it is now over the other triangle
+        self.assertEqual(sorted(frozen), sorted([A, C]), "B must be dropped, C added")
+        self.assertEqual(frozen[A][0], first[A][0])
+        np.testing.assert_array_equal(frozen[A][1], first[A][1])
+        np.testing.assert_array_equal(frozen[A][2], first[A][2])
+        # (b) C is new: its stencil is the fresh one, at its current position
+        np.testing.assert_allclose(frozen[C][2], [0, 0, 1], atol=1e-6)
+        # (c) A full detection re-linearizes A on the triangle it is over
+        fresh = self._detect(state, after=True, fresh=True)
+        self.assertEqual(int(state.detector.last_detection_frozen.numpy()[0]), 0)
+        self.assertEqual(sorted(fresh), sorted([A, C]))
+        self.assertNotEqual(fresh[A][0], first[A][0])
+        # The same as without the option
+        off = self._state(freeze=False)
+        self._detect(off, after=False)
+        reference = self._detect(off, after=True)
+        self.assertIsNone(off.detector.last_detection_frozen)
+        for v in (A, C):
+            self.assertEqual(fresh[v][0], reference[v][0])
+            np.testing.assert_array_equal(fresh[v][1], reference[v][1])
+            np.testing.assert_array_equal(fresh[v][2], reference[v][2])
+
+    def test_dropped_pair_is_detected_afresh(self):
+        """A pair whose stored gap leaves the threshold isn't kept: detected afresh (here: A's gap, measured
+        along its face's normal, leaves the threshold, and so does its distance)."""
+        state = self._state(freeze=True)
+        A = self.vertex["A"]
+        self._detect(state, after=False, fresh=True)
+        self.heights = dict(self.heights, A=(0.5, 1.5))
+        self.assertNotIn(A, self._detect(state, after=True))
+
+
+class TestFreezeLastDetection(unittest.TestCase):
+    """With freeze_within_solve, a solve ends on a full detection, also when its outer loop exits early (decided on
+    the device), eager and under graph capture: two cubes resting in contact (VBD, 3 outer iterations, early exit
+    forced after the first by clearing the outer test's keep flag)."""
+
+    @staticmethod
+    def _pairs(state):
+        contacts = state.detector._contacts
+        data = contacts.read_data[0]
+        out = []
+        for kind in ("vv", "ve", "vf"):
+            u, v = getattr(contacts, f"{kind}_contacts")
+            n = getattr(data, f"{kind}_bases").n.numpy()[: len(u)]
+            bary = {"vv": None, "ve": data.ve_bary, "vf": data.vf_bary}[kind]
+            b = bary.numpy()[: len(u)] if bary is not None else np.zeros(len(u))
+            o = np.lexsort((v, u))
+            out.append((u[o], v[o], n[o], b[o]))
+        return out
+
+    def _assert_fresh(self, state, expect: bool):
+        before = self._pairs(state)
+        state.detector.detect_contacts(fresh=True)
+        after = self._pairs(state)
+        same = all(
+            np.array_equal(a, b) for pa, pb in zip(before, after) for a, b in zip(pa, pb)
+        )
+        self.assertEqual(same, expect)
+
+    def _run(self, capture: bool, refresh: bool = True):
+        from ...vbd.convergence import _two_resting_cubes
+        from ....state import CDType
+
+        state = _two_resting_cubes("VBD")
+        state.cd_params[CDType.VertexSdf].freeze_within_solve = True
+        state.detector = state._make_contact_detector(state.contact.contacts)
+        state.params[state.solver].data.n_max_iters = 3
+        state.convergence_params.early_exit = True
+        check = state.convergence
+        end_outer = check.end_outer
+
+        def stop_after_first(*args, **kwargs):
+            end_outer(*args, **kwargs)
+            check.keep.zero_()
+
+        check.end_outer = stop_after_first
+        original = Sd.last_detection_frozen
+        if not refresh:
+            Sd.last_detection_frozen = property(lambda self: None)
+        try:
+            if capture:
+                with wp.ScopedCapture() as c:
+                    state._advance()
+                wp.capture_launch(c.graph)
+            else:
+                state._advance()
+            wp.synchronize()
+        finally:
+            Sd.last_detection_frozen = original
+        return state
+
+    def test_early_exit_ends_fresh(self):
+        for capture in (False, True):
+            with self.subTest(capture=capture):
+                state = self._run(capture)
+                self.assertEqual(int(state.detector._frozen.numpy()[0]), 0)
+                self._assert_fresh(state, True)
+
+    def test_without_refresh_the_last_detection_is_frozen(self):
+        """The check above has teeth: without the refresh after the loop, the early exit's detection is frozen."""
+        state = self._run(capture=False, refresh=False)
+        self.assertEqual(int(state.detector._frozen.numpy()[0]), 1)
+        self._assert_fresh(state, False)
 
 
 if __name__ == "__main__":

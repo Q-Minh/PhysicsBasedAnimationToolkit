@@ -1249,7 +1249,8 @@ class Ogc(ContactDetection):
         self._query_radius_reduction(main_stream)
 
     @profiling.scoped("contact.detect")
-    def detect_contacts(self, from_xt: bool = False):
+    def detect_contacts(self, from_xt: bool = False, fresh: bool = False):
+        # Every detection is full (fresh): OGC keeps no linearizations within a solve (VertexSdf.freeze_within_solve)
         if self._params.deactivate:
             return
         main_stream = wp.get_stream()
