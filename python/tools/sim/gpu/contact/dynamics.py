@@ -123,6 +123,14 @@ def _apply_dual_update(
     lambda_n_k = lambda_n[k]
     assert sigma_n > wp.float32(0)
     new_s = wp.max(wp.float32(0), c_n - lambda_n_k / sigma_n)
+    # TODO: A contact pressed again mid-subproblem with a decayed gamma pushes weakly until the next full update
+    # (gamma reaches exactly 0 in float32 after ~150 unpressed updates). Tried on 2026-11-06, not adopted
+    # (AAAVBD, BasketOfFruit 1 x 80 from step 50 and ArmadilloSpaghetti.DragonImpact from step 480, 10 steps):
+    # a floor max(gamma * decay, gamma_min) of 1e-6, 1e-2 or 0.1 kept medians within 4% but raised the worst step
+    # 6-24% on the basket and 5-95% on DragonImpact (1e-6 went NaN); weight 1 on contacts pressed at evaluation
+    # (gamma only on unpressed contacts' Hessian) raised the basket median 1022 -> 2357. The DragonImpact
+    # feasibility spike behind both was a reversed edge normal, fixed in detection. Untried: a floor only for
+    # contacts pressed again within a subproblem.
     # --- Decay ---
     if request_decay_update:
         gamma_k = gamma[k]
