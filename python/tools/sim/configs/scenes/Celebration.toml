@@ -82,7 +82,7 @@ truncation_strategy = 0
 [Contact.CDType.VertexSdf]
 band = 0.003
 deactivate = 0
-freeze_within_solve = 0
+freeze_within_solve = 1
 max_dist = 0.05000000074505806
 use_step_filter = 0
 

@@ -640,7 +640,7 @@ class Params(SerializableMixin):
     # steps: re-linearize only once the AL converged on the frozen set (an outer-outer loop), or evaluate each kept
     # pair's exact point-triangle distance in the vertex solves instead of its frozen plane.
     freeze_within_solve = DocField(
-        False,
+        True,
         "Keep each pair's linearization within a solve (one substep's outer loop). The solve's first detection (at "
         "xt) is full. At each re-detection, a (surface vertex, other mesh) pair that the previous detection has keeps "
         "its feature (face, edge or vertex), barycentrics and basis while its stored linearized gap is below the "
@@ -648,7 +648,8 @@ class Params(SerializableMixin):
         "a new feature), and new pairs are added. The solve's last detection is full, so the next solve warm-starts "
         "from keys detected at its xt: at a budget of 1 outer iteration this equals the default. A fixed constraint "
         "set per solve, which the augmented Lagrangian assumes: re-linearizing at every outer iteration made "
-        "ArmadilloSpaghetti.DragonImpact's contact set cycle with period 2. VertexSdf only.",
+        "ArmadilloSpaghetti.DragonImpact's contact set cycle with period 2. VertexSdf only. On by default "
+        "(maintainer, 2026-11-06); off re-linearizes at every re-detection, as before.",
     )
 
 
