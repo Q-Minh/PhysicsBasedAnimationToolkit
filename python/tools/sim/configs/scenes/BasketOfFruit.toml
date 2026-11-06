@@ -1,7 +1,7 @@
 # Scene config: BasketOfFruit, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
 # Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
-# Generated 2026-11-03 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-05 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - One budget for every VBD-family solver on the basket of fruit, so that the paper shows their different
@@ -64,6 +64,7 @@
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
 #
 # Not in the source, code defaults (configs/defaults.toml):
+#   Contact.ContactDynamics.vbd_slack_at_evaluation
 #   Solver.Convergence.early_exit
 #   Solver.Newton.one_sided_contact
 
@@ -92,6 +93,7 @@ mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 1
 penalty_stiffness = 0
+vbd_slack_at_evaluation = 0
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.0

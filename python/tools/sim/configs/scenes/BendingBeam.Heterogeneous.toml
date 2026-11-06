@@ -19,6 +19,7 @@
 #     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
 #
 # Not in the source, code defaults (configs/defaults.toml):
+#   Contact.ContactDynamics.vbd_slack_at_evaluation
 #   Solver.Convergence.early_exit
 #   Solver.Newton.one_sided_contact
 #
@@ -54,6 +55,7 @@ mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 0
 penalty_stiffness = 0
+vbd_slack_at_evaluation = 0
 
 [Contact.ContactStorage]
 n_ee_contact_capacity = 0.20000000298023224
