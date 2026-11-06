@@ -85,7 +85,6 @@ def friction_penalty(contact: MeshDynamicsData, kind: wp.int32, c: wp.int32) -> 
 def _apply_dual_update(
     c_n: wp.float32,
     c_f: wp.vec2f,
-    d_n: wp.float32,
     k: wp.int32,
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
@@ -96,7 +95,6 @@ def _apply_dual_update(
     sigma_f: wp.float32,
     mu_friction: wp.float32,
     decay_rate: wp.float32,
-    dmin: wp.float32,
     request_slack_update: bool,
     request_decay_update: bool,
     request_lagrange_multiplier_update: bool,
@@ -104,15 +102,16 @@ def _apply_dual_update(
 ):
     """One contact's dual update: slack, decay weight and multipliers, as requested.
 
-    ``c_n`` is the gap past the margin ``dmin`` and ``d_n`` the contact's relative normal motion since the
-    substep's start, n . ((x_i - x_i^t) - (x_c - x_c^t)), the contact point's interpolated by its barycentric
-    weights. The decay weight resets to 1 on a pressed contact (new slack 0), decays by ``decay_rate`` on a
-    contact predicted to separate, whose gap one substep ahead at its current relative normal velocity is past
-    twice the margin (c_n + d_n > dmin), and is kept otherwise. The stored slack no longer enters the decay (it is
-    still refreshed as before). GPU only: C++ (and the GPU until 2026-11-05) decays on any slack growth since the
-    last sweep, which on BasketOfFruit was close to chance (precision 0.87-0.88 against a base rate of 0.84; 41-44%
-    of the contacts pressed again within a step were decayed), while the predicted gap reached precision 0.95-0.96
-    and decayed 13-17% of them, 0.1-2% within the next substep.
+    ``c_n`` is the gap past the margin. The decay weight resets to 1 on a pressed contact (new slack 0) and decays
+    by ``decay_rate`` on every unpressed one, at each full update. The stored slack doesn't enter the decay (it is
+    refreshed as before). GPU only: C++ (and the GPU until 2026-11-05) decays only on slack growth since the last
+    sweep, close to chance on BasketOfFruit. With the VBD vertex solves' slack at evaluation
+    (``vbd_slack_at_evaluation``), decaying every unpressed contact gave a lower median, p90 and max outer
+    residual than that rule in all four BasketOfFruit segments measured (AAAVBD 1 x 80, VBD 3 x 50, steps 50
+    and 100); on Trampoline.SoftSoft the totals were lower and the worst step 10% higher with early exit off,
+    accepted (maintainer, 2026-11-05). A predicted-separation rule (gap plus the substep's normal motion past
+    dmin) decayed more accurately but raised the residual: unpressed contacts it kept at gamma = 1 held their
+    vertices with full-strength Hessian blocks (scratchpad A/B, 2026-11-05).
 
     The decay weight the update decides is the next subproblem's: it goes to ``gamma_next`` (pending, see
     :meth:`ConstraintSet.commit_decay`), and ``gamma`` keeps the one the positions were solved with, which the
@@ -130,7 +129,7 @@ def _apply_dual_update(
         new_gamma = gamma_k
         if new_s == wp.float32(0):
             new_gamma = wp.float32(1)
-        elif c_n + d_n > dmin:  # predicted to separate past twice the margin # type: ignore
+        else:  # unpressed # type: ignore
             new_gamma = gamma_k * decay_rate
         gamma_next[k] = new_gamma  # type: ignore
     # --- Slack ---
@@ -273,7 +272,6 @@ def _update_dual_vv(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -284,7 +282,6 @@ def _update_dual_vv(
         sigma_f,
         contact.mu_f,
         contact.decay,
-        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -331,7 +328,6 @@ def _update_dual_ve(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -342,7 +338,6 @@ def _update_dual_ve(
         sigma_f,
         contact.mu_f,
         contact.decay,
-        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -389,7 +384,6 @@ def _update_dual_vf(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -400,7 +394,6 @@ def _update_dual_vf(
         sigma_f,
         contact.mu_f,
         contact.decay,
-        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -452,7 +445,6 @@ def _update_dual_ee(
     _apply_dual_update(  # type: ignore
         c_n,
         c_f,
-        wp.dot(du, n),  # type: ignore
         c,  # type: ignore
         data.s,
         data.gamma,
@@ -463,7 +455,6 @@ def _update_dual_ee(
         sigma_f,
         contact.mu_f,
         contact.decay,
-        contact.dmin,
         request_slack_update,
         request_decay_update,
         request_lagrange_multiplier_update,
@@ -781,11 +772,10 @@ class Params(SerializableMixin):
         dmin        : Minimum separation distance used as the contact distance margin
                       (separating threshold in the AL slack update).
         mu_f        : Coulomb friction coefficient.
-        decay       : Multiplicative decay applied to the contact-activity weight ``gamma``
-                      at a full dual update when an unpressed contact is predicted to separate: its gap
-                      past the margin plus its relative normal motion since the substep's start exceeds
-                      ``dmin`` (``_apply_dual_update``; GPU only, C++ decays on any slack growth). Must
-                      satisfy ``0 < decay < 1``.
+        decay       : Multiplicative decay applied to the contact-activity weight ``gamma`` of every
+                      unpressed contact at each full dual update; a pressed one resets to 1
+                      (``_apply_dual_update``; GPU only, C++ decays only on slack growth). Must satisfy
+                      ``0 < decay < 1``.
         gamman      : Normal AL penalty scaling factor with a constant penalty, which is
                       ``gamman * dt^2``.
         gammaf      : Friction AL penalty scaling factor with a constant penalty, ``gammaf * dt^2``.
@@ -1228,8 +1218,8 @@ def _slack_only_dual_update(
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], wp.vec2f(1.0, 0.0), wp.float32(0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n,
-        wp.float32(0.5), wp.float32(0.5), wp.float32(0), True, False, False, wp.float32(1),
+        c_n[k], wp.vec2f(1.0, 0.0), k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_n, wp.float32(0.5),
+        wp.float32(0.5), True, False, False, wp.float32(1),
     )
 
 
@@ -1264,7 +1254,6 @@ class TestSlackOnlyDualUpdate(unittest.TestCase):
 def _full_dual_update(
     c_n: wp.array[wp.float32],
     c_f: wp.array[wp.vec2f],
-    d_n: wp.array[wp.float32],
     s: wp.array[wp.float32],
     gamma: wp.array[wp.float32],
     gamma_next: wp.array[wp.float32],
@@ -1274,12 +1263,11 @@ def _full_dual_update(
     sigma_f: wp.float32,
     mu_f: wp.float32,
     multiplier_step: wp.float32,
-    dmin: wp.float32,
 ):
     k = wp.tid()
     _apply_dual_update(
-        c_n[k], c_f[k], d_n[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f,
-        wp.float32(0.5), dmin, True, True, True, multiplier_step,
+        c_n[k], c_f[k], k, s, gamma, gamma_next, lambda_n, lambda_f, sigma_n, sigma_f, mu_f, wp.float32(0.5), True,
+        True, True, multiplier_step,
     )
 
 
@@ -1301,8 +1289,8 @@ class TestMultiplierStep(unittest.TestCase):
             g = wp.ones(len(lam), dtype=wp.float32)
             g_next = wp.ones(len(lam), dtype=wp.float32)
             wp.launch(_full_dual_update, dim=len(lam), inputs=[
-                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), wp.zeros(len(lam), dtype=wp.float32),
-                s, g, g_next, ln, lf, sigma_n, sigma_f, mu_f, alpha, 0.0])
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), s, g, g_next, ln, lf, sigma_n,
+                sigma_f, mu_f, alpha])
             return (np.array(c_n), np.array(lam), np.array(c_f), np.array(lam_f), sigma_n, sigma_f, mu_f,
                     ln.numpy(), lf.numpy())
 
@@ -1335,31 +1323,29 @@ class TestMultiplierStep(unittest.TestCase):
 
 
 class TestDecayRule(unittest.TestCase):
-    """The full dual update's decay weight (Warp's CPU device): a pressed contact resets to 1, an unpressed one
-    decays only when predicted to separate past twice the margin (gap past the margin c_n plus the normal motion
-    since the substep's start d_n above dmin), and the decided weight is pending: gamma itself is unchanged."""
+    """The full dual update's decay weight (Warp's CPU device): a pressed contact resets to 1, every unpressed one
+    decays, whatever its motion, and the decided weight is pending: gamma itself is unchanged."""
 
-    def test_predicted_gap(self):
-        sigma_n, dmin, decay = 100.0, 1e-3, 0.5
-        lam = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    def test_pressed_reset_unpressed_decay(self):
+        sigma_n, decay = 100.0, 0.5
+        lam = [1.0, 0.5, 0.0, 0.0, 0.0]
         c_n = [
             0.005,  # pressed: c_n <= lambda / sigma = 0.01
-            2.0e-3,  # unpressed, receding beyond dmin: c_n + d_n = 2.5e-3
-            0.5e-3,  # unpressed, resting with jitter: c_n + d_n = 0.501e-3
-            1.5e-3,  # unpressed, past dmin but approaching: c_n + d_n = 0.7e-3
-            0.8e-3,  # unpressed, not yet past dmin but receding: c_n + d_n = 1.1e-3
-            1.0e-3,  # at the threshold: c_n + d_n = dmin, kept
+            0.004,  # pressed: c_n <= lambda / sigma = 0.005
+            2.0e-3,  # unpressed, far
+            1e-6,  # unpressed, resting just past the margin
+            0.0,  # at the margin without a multiplier: slack 0, pressed
         ]
-        d_n = [0.0, 0.5e-3, 1e-6, -0.8e-3, 0.3e-3, 0.0]
+        c_f = [(0.0, 0.0), (0.0, 0.0), (0.01, 0.0), (0.0, -0.02), (0.0, 0.0)]  # sliding doesn't matter
         n = len(lam)
         with wp.ScopedDevice("cpu"):
             gamma = wp.full(n, 0.25, dtype=wp.float32)
             gamma_next = wp.full(n, -1.0, dtype=wp.float32)
             wp.launch(_full_dual_update, dim=n, inputs=[
-                wp.array(c_n, dtype=wp.float32), wp.zeros(n, dtype=wp.vec2f), wp.array(d_n, dtype=wp.float32),
-                wp.zeros(n, dtype=wp.float32), gamma, gamma_next, wp.array(lam, dtype=wp.float32),
-                wp.zeros(n, dtype=wp.vec2f), sigma_n, 10.0, 0.2, 1.0, dmin])
-            self.assertEqual(gamma_next.numpy().tolist(), [1.0, 0.25 * decay, 0.25, 0.25, 0.25 * decay, 0.25])
+                wp.array(c_n, dtype=wp.float32), wp.array(c_f, dtype=wp.vec2f), wp.zeros(n, dtype=wp.float32),
+                gamma, gamma_next, wp.array(lam, dtype=wp.float32), wp.zeros(n, dtype=wp.vec2f), sigma_n, 10.0, 0.2,
+                1.0])
+            self.assertEqual(gamma_next.numpy().tolist(), [1.0, 1.0, 0.25 * decay, 0.25 * decay, 1.0])
             self.assertEqual(gamma.numpy().tolist(), [0.25] * n)
 
 
