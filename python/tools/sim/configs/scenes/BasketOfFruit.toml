@@ -64,6 +64,14 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+# - Per-contact penalties (LocalMaxRayleighQuotient) for every solver (maintainer, 2026-11-06): the global
+#   penalty, set by the stiffest contact, made the soft strands' contacts stiff and the sweeps converge slowly.
+#   Full 2 s runs at 5 x (3 x 50), global -> per-contact, outer gradient ratio median / p90 / max: AAAVBD 117 /
+#   449 / 1241 -> 51 / 96 / 306 (lower in 94% of substeps), worst feasibility 2.0 -> 0.98 (median 0.02 -> 0.23:
+#   resting contacts sit deeper in the margin), 9 of 9 fruit kept either way, same step time; VBD 270 / 1234 /
+#   2462 -> 41 / 117 / 220, but its fruit falls through the strands either way (8 of 9 by 2 s global, 9 of 9 by
+#   1.5 s per-contact).
+#     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -96,7 +104,7 @@ min_sigma_n = 10000.0
 mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 1
-penalty_stiffness = 0
+penalty_stiffness = 1
 vbd_slack_at_evaluation = 1
 
 [Contact.ContactStorage]

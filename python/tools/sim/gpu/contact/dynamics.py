@@ -1110,9 +1110,10 @@ class MeshDynamics:
         self._compute_rayleigh_quotients(*self._penalty_hessian)
         self._reduce_penalty_parameters(wp.get_stream())
 
-    # TODO: Local penalties (Params.penalty_stiffness) are measured only on Celebration, where they helped every solver
+    # TODO: Local penalties (Params.penalty_stiffness) are measured on Celebration, where they helped every solver
     # (gradient ratio median, global -> local: Newton 302 -> 20 on 10 steps from 2 s, AAAVBD 40 -> 21, Anderson
-    # 104 -> 35 over 5 s; scene_configs.py's Celebration rule) and are now that scene's setting. Elsewhere one global
+    # 104 -> 35 over 5 s), and on BasketOfFruit (2 s, AAAVBD 117 -> 51, VBD 270 -> 41), and are those scenes'
+    # settings (scene_configs.py). Elsewhere one global
     # sigma_n set by the stiffest contact also applies to soft-side contacts, which may worsen CG conditioning and
     # stiffen soft-on-stiff contact (suspected for Newton on the heterogeneous trampoline + sphere and its CG
     # iteration counts), and on DragonImpact it sat 3.4x above the alternating pillar contacts' median quotient
