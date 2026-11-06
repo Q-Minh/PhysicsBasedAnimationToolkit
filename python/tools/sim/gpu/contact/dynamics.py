@@ -52,6 +52,7 @@ class MeshDynamicsData:
     mu_f: wp.float32  # Friction coefficient
     decay: wp.float32  # Rate of decay for deactivating constraints
     multiplier_step: wp.float32  # Scale of the full dual update's multiplier steps (1: the standard AL update)
+    vbd_slack_at_evaluation: wp.int32  # 1: VBD vertex solves evaluate the slack at each evaluation's gap
     in_contact: wp.array[
         wp.int32
     ]  # (# surface vertices,) 1 if the vertex's contact gather has any pair, else 0
@@ -822,6 +823,16 @@ class Params(SerializableMixin):
                       (lambda_n / sigma_n < c_n < lambda_n / (alpha sigma_n)) keeps part of its multiplier
                       instead of losing all of it. On DragonImpact, alpha = 0.5 kept AAAVBD at 10 substeps
                       of 1 x 40 sweeps past the step where the standard update diverges (solver notes).
+        vbd_slack_at_evaluation : VBD family only (GPU only, default off; GPU Newton has
+                      ``Solver.Newton.one_sided_contact``): the vertex solves (``vbd.kernels._contact_derivatives``)
+                      evaluate a contact's slack at the gap of that evaluation, s = max(0, g - lambda_n / sigma_n),
+                      instead of the slack refreshed before the sweep. The normal force becomes the one-sided
+                      gamma max(0, lambda_n - sigma_n g), so an unpressed contact exerts none, while its Hessian
+                      block gamma sigma_n n n^T stays as a proximal term that doesn't change the subproblem's
+                      fixed point. Off, the stored slack makes an unpressed contact a spring toward its sweep-start
+                      gap, which pulls once partners of other colours move within the sweep (they are read at their
+                      current positions). The friction cap uses the same normal force. The stored slack refresh
+                      and the dual update are unchanged.
         penalty_stiffness : With adaptive penalties, one penalty for all contacts or one per contact,
                       C++ ``vbd::Params::ePenaltyStiffness`` (``pbat.sim.algorithm.vbd.SALPenaltyStiffness``).
                       GlobalMaxRayleighQuotient (default): ``sigma_n = sigma_f`` = the largest contact
@@ -875,6 +886,13 @@ class Params(SerializableMixin):
         1.0,
         "Scale alpha of the full dual update's multiplier steps: lambda_n <- max(0, lambda_n - alpha sigma_n c_n), "
         "and lambda_f's step likewise before the Coulomb cone. 1 is the standard augmented Lagrangian update",
+    )
+    vbd_slack_at_evaluation = DocField(
+        False,
+        "VBD family only: the vertex solves evaluate each contact's slack at their own gap g, s = max(0, g - "
+        "lambda_n / sigma_n), so the normal force is the one-sided gamma max(0, lambda_n - sigma_n g) (none from "
+        "unpressed contacts) while every contact keeps its Hessian block gamma sigma_n n n^T. Off: the slack "
+        "refreshed before the sweep, a spring that holds unpressed contacts at their sweep-start gap",
     )
     penalty_stiffness = DocField(
         pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
@@ -940,6 +958,7 @@ class MeshDynamics:
         self._data.mu_f = self.params.mu_f
         self._data.decay = self.params.decay
         self._data.multiplier_step = self.params.multiplier_step
+        self._data.vbd_slack_at_evaluation = wp.int32(1 if self.params.vbd_slack_at_evaluation else 0)
         self._data.in_contact = wp.zeros(n_verts, dtype=wp.int32)
         self.sigma_n_min = self.params.min_sigma_n
         self._streams = [wp.Stream() for _ in range(4)]  # one stream per contact type
