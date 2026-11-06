@@ -305,20 +305,36 @@ def _unit_face_normal(x: wp.array[wp.vec3f], F: wp.array[wp.vec3i], f: wp.int32)
 
 
 @wp.func
-def _oriented_normal(d: wp.vec3f, pseudonormal: wp.vec3f) -> wp.vec3f:
-    """The contact normal: d (from the partner's closest point to the vertex) normalized and signed by the
-    partner's pseudonormal, which tells the outside of its surface. For a vertex on the surface (d ~ 0), the
-    pseudonormal itself."""
+def _oriented_normal(
+    xi: wp.vec3f, d: wp.vec3f, pseudonormal: wp.vec3f, mesh_id: wp.uint64, kind: wp.int32
+) -> wp.vec3f:
+    """The contact normal: d = xi - c (from the partner's closest point c to the vertex xi) normalized and signed
+    to point outside the partner. For a vertex on the surface (d ~ 0), the pseudonormal itself.
+
+    On closed partners the sign is the detection's own inside/outside test (Warp's ray vote, which signed the
+    distance that detected the pair); on open ones, the partner's pseudonormal (as Warp's sign_normal query).
+    The pseudonormal's sign is exact only on an embedded surface: where a partner's surface folds over itself (an
+    inverted surface tet under impact, so one face's normal is opposite its neighbours'), the two faces of the fold
+    edge nearly cancel and an outside vertex over that edge got a normal pointing into the partner, a gap of
+    -|d| (DragonImpact step 482, docs/solver-accuracy-notes.md entry 8)."""
     if wp.length(d) <= wp.float32(1e-7) * (wp.float32(1) + wp.length(pseudonormal)):
         return wp.normalize(pseudonormal)
     n = wp.normalize(d)
-    if wp.dot(d, pseudonormal) < wp.float32(0):
+    outside = wp.dot(d, pseudonormal) >= wp.float32(0)
+    if kind == MESH_CLOSED:
+        # The sign doesn't depend on the radius, which only needs to reach c
+        qp = wp.mesh_query_point(mesh_id, xi, wp.float32(2) * wp.length(d) + wp.float32(1e-6))  # type: ignore
+        if qp.result:  # type: ignore
+            outside = qp.sign >= wp.float32(0)  # type: ignore
+    if not outside:
         n = -n
     return n
 
 
 @wp.kernel
 def _orient_vv_contact_normals(
+    mesh_ids: wp.array[wp.uint64],
+    mesh_kind: wp.array[wp.int32],
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     cpairs: pairs.PairsData,  # type: ignore
@@ -328,8 +344,10 @@ def _orient_vv_contact_normals(
     k = wp.tid()
     if wp.uint64(k) >= cpairs.prefix[n_u]:  # type: ignore
         return
-    i, j = meshes.V[wp.int32(cpairs.u[k])], meshes.V[wp.int32(cpairs.v[k])]
-    # Angle-weighted vertex pseudonormal of j: the sign of d against it is exact
+    vj = wp.int32(cpairs.v[k])
+    i, j = meshes.V[wp.int32(cpairs.u[k])], meshes.V[vj]
+    m = lower_bound(meshes.VP, meshes.VP.shape[0], vj + 1) - 1  # type: ignore
+    # Angle-weighted vertex pseudonormal of j (the sign on open partners and for a vertex on the surface)
     pn = wp.vec3f(0.0)
     for a in range(meshes.GVHEp[j], meshes.GVHEp[j + 1]):
         f = halfedges.face_of_half_edge(meshes.GVHEadj[a])
@@ -342,7 +360,7 @@ def _orient_vv_contact_normals(
         e1, e2 = wp.normalize(x[p] - x[j]), wp.normalize(x[q] - x[j])
         angle = wp.acos(wp.clamp(wp.dot(e1, e2), wp.float32(-1), wp.float32(1)))
         pn += angle * _unit_face_normal(x, meshes.F, f)
-    n = _oriented_normal(x[i] - x[j], pn)
+    n = _oriented_normal(x[i], x[i] - x[j], pn, mesh_ids[m], mesh_kind[m])
     t, b = pairs._build_contact_basis(n)
     bases.n[k] = n
     bases.t[k] = t
@@ -351,6 +369,8 @@ def _orient_vv_contact_normals(
 
 @wp.kernel
 def _orient_ve_contact_normals(
+    mesh_ids: wp.array[wp.uint64],
+    mesh_kind: wp.array[wp.int32],
     x: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     cpairs: pairs.PairsData,  # type: ignore
@@ -363,15 +383,18 @@ def _orient_ve_contact_normals(
         return
     i = meshes.V[wp.int32(cpairs.u[k])]
     he = wp.int32(cpairs.v[k])
+    f = halfedges.face_of_half_edge(he)
+    m = lower_bound(meshes.FP, meshes.FP.shape[0], f + 1) - 1  # type: ignore
     xa = x[halfedges.incoming_vertex(meshes.F, he)]
     xb = x[halfedges.outgoing_vertex(meshes.F, he)]
     xc = (wp.float32(1) - bary[k]) * xa + bary[k] * xb
-    # Edge pseudonormal: the sum of its faces' unit normals
-    pn = _unit_face_normal(x, meshes.F, halfedges.face_of_half_edge(he))
+    # Edge pseudonormal: the sum of its faces' unit normals (the sign on open partners and for a vertex on the
+    # surface)
+    pn = _unit_face_normal(x, meshes.F, f)
     fo = meshes.GHEF[he][1]
     if fo >= 0:
         pn += _unit_face_normal(x, meshes.F, fo)
-    n = _oriented_normal(x[i] - xc, pn)
+    n = _oriented_normal(x[i], x[i] - xc, pn, mesh_ids[m], mesh_kind[m])
     t, b = pairs._build_contact_basis(n)
     bases.n[k] = n
     bases.t[k] = t
@@ -612,11 +635,14 @@ class Sd(ContactDetection):
         )
         self._contacts.assemble_contacts(x, with_reverse_contacts=True)
         # Normals point from the partner surface to the vertex, on both sides of the surface: assemble_contacts
-        # computes them as from outside (OGC's convention)
+        # computes them as from outside (OGC's convention). VV and VE sign them with the detection's inside/outside
+        # test, on the meshes detection queried.
         contact_data = self._contacts.read_data[0]
-        for kernel, capacity, extra, stream in zip(
+        signs = [self._mesh_ids_xt if from_xt else self._mesh_ids, self._mesh_kind]
+        for kernel, capacity, prefix, extra, stream in zip(
             (_orient_vv_contact_normals, _orient_ve_contact_normals, _orient_vf_contact_normals),
             self._contacts.capacity[:3],
+            (signs, signs, []),
             (
                 [contact_data.vv, contact_data.vv_bases],
                 [contact_data.ve, contact_data.ve_bases, contact_data.ve_bary],
@@ -628,7 +654,7 @@ class Sd(ContactDetection):
             wp.launch(
                 kernel=kernel,
                 dim=capacity,
-                inputs=[x, self._meshes.data] + extra + [self._meshes.n_verts],
+                inputs=prefix + [x, self._meshes.data] + extra + [self._meshes.n_verts],
                 stream=stream,
             )
             main_stream.wait_stream(stream)
@@ -770,6 +796,69 @@ class TestDetectionBlockDim(unittest.TestCase):
         self.assertEqual(detection_block_dim(capacity * MAX_BLOCK_DIM), MAX_BLOCK_DIM)
         with self.assertRaises(ValueError):
             detection_block_dim(capacity * MAX_BLOCK_DIM + 1)
+
+
+class TestNormalOrientation(unittest.TestCase):
+    def test_folded_partner(self):
+        """An outside vertex over the fold edge of a partner whose surface tet inverted gets a normal pointing to
+        it (DragonImpact step 482: a pillar vertex 1 cm over an armadillo edge whose faces' normals had cosine
+        -0.9998 got a gap of -dmin, entry 8 of docs/solver-accuracy-notes.md).
+
+        The partner is a triangular bipyramid (equator a, b, c, apices s, t; three tets around st). Apex t is moved
+        just across the plane of face abs, on s's side of edge ab, so that only the tet abst inverts and face abt
+        folds back over abs (cosine -0.9998, as on the armadillo). A probe vertex 2.5 mm over ab and 0.5 mm beyond
+        it is outside the partner (winding number 0) and closest to the edge, where the edge pseudonormal's sign
+        says inside: the pseudonormal-signed normal gave n . d = -|d|."""
+        from pbatoolkit import pbat, pypbat
+        from ....state import SimulationState, load_params
+
+        a, b, c = np.array([0.0, 0, 0]), np.array([1.0, 0, 0]), np.array([0.5, -1.0, 0])
+        s, t = np.array([0.5, -0.3, 0.5]), np.array([0.5, -0.3, -0.5])
+        nabs = np.cross(s - a, b - a)  # outward normal of face abs
+        nabs /= np.linalg.norm(nabs)
+        w = (s - a) - np.dot(s - a, b - a) * (b - a)  # in face abs, from ab toward s
+        w /= np.linalg.norm(w)
+        phi = 0.02
+        t_folded = np.array([0.5, 0, 0]) + 0.3 * (np.cos(phi) * w + np.sin(phi) * nabs)
+        p = np.array([0.4, 0, 0]) + 2.5e-3 * nabs - 5e-4 * w
+        distance = np.hypot(2.5e-3, 5e-4)  # to its closest point (0.4, 0, 0) on ab
+        X = np.vstack([a, b, c, s, t, p, p + [0.0, 0.05, 0.02], p + [0.02, 0.05, -0.02], p + [-0.02, 0.05, -0.02]])
+        C = np.array([[0, 1, 3, 4], [0, 3, 4, 2], [1, 3, 4, 2], [5, 6, 7, 8]])
+        for e in C:  # positive volumes at rest
+            q0, q1, q2, q3 = X[e]
+            if np.dot(np.cross(q1 - q0, q2 - q0), q3 - q0) < 0:
+                e[[2, 3]] = e[[3, 2]]
+        fem = pbat.sim.dynamics.FemElastoDynamics(X.T, C.T)
+        fem.set_mass_matrix(1e3)
+        fem.set_elastic_energy(*pypbat.fem.lame_coefficients(1e6, 0.45))
+        fem.set_time_integration_scheme(dt=1e-2, s=1)
+        state = SimulationState(fem, load_params(fem), None)
+        for k in ("vv", "ve", "vf"):  # a slot per vertex
+            setattr(state.contact_storage_params, f"n_{k}_contact_capacity", 1.0)
+        state.reset()
+        x = state.fem.data.x.numpy()
+        x[4] = t_folded
+        state.fem.data.x.assign(x)
+        x = x.astype(np.float64)
+        volumes = [np.dot(np.cross(x[e[1]] - x[e[0]], x[e[2]] - x[e[0]]), x[e[3]] - x[e[0]]) for e in C[:3]]
+        self.assertEqual([v < 0 for v in volumes], [True, False, False], "only the tet abst must invert")
+        dmin = float(state.contact.params.dmin)
+        self.assertLess(dmin, distance)
+        state.detector.detect_contacts()
+        state.contact.update_constraint_set()
+        contacts = state.detector._contacts
+        self.assertEqual(tuple(int(k) for k in contacts.num_contacts)[:3], (0, 1, 0))
+        V, F = state.multimesh.data.V.numpy(), state.multimesh.data.F.numpy()
+        u, he = contacts.ve_contacts
+        self.assertEqual(int(V[u[0]]), 5)
+        f, h = divmod(int(he[0]), 3)
+        self.assertEqual(sorted((int(F[f][h]), int(F[f][(h + 1) % 3]))), [0, 1])
+        data = contacts.read_data[0]
+        bary, n = float(data.ve_bary.numpy()[0]), data.ve_bases.n.numpy()[0]
+        xc = (1 - bary) * x[F[f][h]] + bary * x[F[f][(h + 1) % 3]]
+        self.assertAlmostEqual(float(np.dot(x[5] - xc, n)), distance, delta=1e-6)
+        state.convergence._measure_penetration()
+        self.assertEqual(float(state.convergence.penetration.numpy()[0]), 0.0)
 
 
 class TestSurfaceVertices(unittest.TestCase):
