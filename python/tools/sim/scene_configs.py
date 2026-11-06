@@ -253,7 +253,17 @@ SCENES = {
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
         [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR,
-         CONTACT_CAPACITIES],
+         CONTACT_CAPACITIES,
+         Rule(
+             "Per-contact penalties (LocalMaxRayleighQuotient) for every solver (maintainer, 2026-11-06): the global "
+             "penalty, set by the stiffest contact, made the soft strands' contacts stiff and the sweeps converge "
+             "slowly. Full 2 s runs at 5 x (3 x 50), global -> per-contact, outer gradient ratio median / p90 / max: "
+             "AAAVBD 117 / 449 / 1241 -> 51 / 96 / 306 (lower in 94% of substeps), worst feasibility 2.0 -> 0.98 "
+             "(median 0.02 -> 0.23: resting contacts sit deeper in the margin), 9 of 9 fruit kept either way, same "
+             "step time; VBD 270 / 1234 / 2462 -> 41 / 117 / 220, but its fruit falls through the strands either "
+             "way (8 of 9 by 2 s global, 9 of 9 by 1.5 s per-contact).",
+             {"Contact.ContactDynamics.penalty_stiffness": 1},
+         )],
     ),
     "Celebration": Scene(
         "Celebration",
