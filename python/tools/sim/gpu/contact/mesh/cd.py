@@ -66,7 +66,7 @@ class ContactDetection(ABC):
         pass
 
     @abstractmethod
-    def detect_contacts(self, from_xt: bool = False):
+    def detect_contacts(self, from_xt: bool = False, fresh: bool = False):
         """Detects and writes contact pairs (u, v), and contact
         count (prefix[-1]) for any detected vv, ve, vf and ee contact.
 
@@ -82,6 +82,10 @@ class ContactDetection(ABC):
         Args:
             from_xt (bool): If True, detects contacts based on the positions at
             the start of the time step (xt) instead of the current positions (x).
+            fresh (bool): If True, a full detection even when the detector keeps
+            linearizations within a solve (:attr:`freezes_within_solve`): the
+            solve's last detection, whose keys the next solve warm-starts from.
+            Detectors that don't freeze ignore it.
         """
         pass
 
@@ -113,6 +117,20 @@ class ContactDetection(ABC):
         detection outside conditional bodies otherwise. Conservatively False unless verified.
         """
         return False
+
+    @property
+    def freezes_within_solve(self) -> bool:
+        """Whether re-detections within a solve keep the stencils of pairs the previous detection found (vertex
+        SDF's ``freeze_within_solve``). Solvers then make the solve's last detection a full one: ``fresh=True`` on
+        the last scheduled re-detection, and once more after the outer loop if :attr:`last_detection_frozen` is
+        set (an early exit). False by default."""
+        return False
+
+    @property
+    def last_detection_frozen(self) -> wp.array | None:
+        """(1,) int32 device flag, nonzero while the last detection kept frozen stencils, for a capture-safe
+        ``wp.capture_if`` after the outer loop; None for detectors that don't freeze."""
+        return None
 
     @property
     def name(self) -> str:

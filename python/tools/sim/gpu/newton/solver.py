@@ -1570,11 +1570,12 @@ def finalize_subproblem(
 
 
 @profiling.scoped("solve.finalize_subproblem")
-def update_constraint_set(contact: ContactDynamics, cd: ContactDetection) -> None:
+def update_constraint_set(contact: ContactDynamics, cd: ContactDetection, fresh: bool = False) -> None:
     """Re-detect contacts and update the constraint set for the next subproblem (or the next time step's warm
     start) -- the second half of ``vbd.solver.finalize_subproblem``. The dual state, pending decay weights
-    included, carries across by the constraint set's warm start."""
-    cd.detect_contacts()
+    included, carries across by the constraint set's warm start. ``fresh`` makes the re-detection full with
+    ``freeze_within_solve`` (the solve's last one)."""
+    cd.detect_contacts(fresh=fresh)
     contact.update_constraint_set()
 
 
@@ -1655,7 +1656,11 @@ class NewtonSolver:
         initialize_solve(fem, contact, cd, params)
         converged = check_convergence(fem, contact, params)
         outer_tests.append(params.last_outer_ratios)
-        for _ in range(int(params.data.n_max_iters)):
+        n_max_iters = int(params.data.n_max_iters)
+        # With freeze_within_solve, whether the last detection kept frozen stencils: the solve's last detection
+        # must be full, since the next solve warm-starts from its keys
+        frozen = False
+        for k in range(n_max_iters):
             if converged and early_exit:
                 break
             prepare_subproblem(fem, contact, cd, params)
@@ -1667,10 +1672,16 @@ class NewtonSolver:
             # dual update's weights become the next subproblem's
             finalize_subproblem(fem, contact, cd, params)
             gradient = outer_gradient_test(fem, contact, params)
-            update_constraint_set(contact, cd)
+            last = k == n_max_iters - 1
+            update_constraint_set(contact, cd, fresh=last)
+            frozen = cd.freezes_within_solve and not last
             converged = outer_feasibility_test(params, gradient)
             outer_tests.append(params.last_outer_ratios)
             contact.commit_decay()
+        if frozen:
+            # An early exit after a frozen re-detection (the VBD family decides this on the device, see
+            # vbd.solver.solve_outer_loop)
+            update_constraint_set(contact, cd, fresh=True)
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
         # Host-side status of the solve, drained by SimulationState.step
@@ -1757,7 +1768,10 @@ class TestOuterTestOrder(unittest.TestCase):
             commit_decay=lambda: calls.append("commit"),
         )
         cd = SimpleNamespace(
-            filter_step=lambda: calls.append("filter"), detect_contacts=detect_contacts, on_time_step_ended=lambda: None
+            filter_step=lambda: calls.append("filter"),
+            detect_contacts=detect_contacts,
+            on_time_step_ended=lambda: None,
+            freezes_within_solve=False,
         )
         params = SimpleNamespace(
             data=SimpleNamespace(n_max_iters=2),
@@ -1776,6 +1790,72 @@ class TestOuterTestOrder(unittest.TestCase):
         self.assertEqual(calls, ["initialize", "gradient", "feasibility"] + 2 * after_subproblem)
         # Each subproblem's gradient ratio is measured on the contact set it solved
         self.assertEqual([r[0] for r in params.solve_records[0].outer_tests], [0.0, 0.0, 1.0])
+
+
+class TestFreezeWithinSolve(unittest.TestCase):
+    """With a detector that freezes linearizations within a solve, the solve's last detection is full: the last
+    scheduled outer iteration's, or one more after an early exit. Stubbed solver steps."""
+
+    def _detections(self, n_max_iters: int, converge_after: int | None, freezes: bool = True) -> list:
+        from unittest import mock
+
+        detections, tests = [], [0]
+
+        class Check:
+            relative = True
+            params = SimpleNamespace(early_exit=True)
+
+            def test_gradient(self):
+                return True
+
+            def gradient_ratio(self):
+                return 0.0
+
+            def test_feasibility(self):
+                tests[0] += 1
+                # The first test is before any subproblem
+                return converge_after is not None and tests[0] > converge_after
+
+            def feasibility_ratio(self):
+                return 0.0
+
+        fem = SimpleNamespace(data=SimpleNamespace(x="x"), xt="xt", back_substitute_velocities=lambda: None)
+        contact = SimpleNamespace(
+            params=SimpleNamespace(penalty_adaptivity=PenaltyAdaptivity.TIMESTEP),
+            update_dual=lambda *args, **kwargs: None,
+            update_constraint_set=lambda: None,
+            commit_decay=lambda: None,
+        )
+        def detect_contacts(fresh: bool = False):
+            detections.append(fresh)
+
+        cd = SimpleNamespace(
+            filter_step=lambda: None,
+            detect_contacts=detect_contacts,
+            on_time_step_ended=lambda: None,
+            freezes_within_solve=freezes,
+        )
+        params = SimpleNamespace(
+            data=SimpleNamespace(n_max_iters=n_max_iters),
+            convergence=Check(),
+            last_subproblem=None,
+            last_outer_ratios=None,
+            solve_records=[],
+        )
+        stubs = dict(initialize_solve=lambda *args: None, solve_subproblem=lambda *args: None)
+        with mock.patch.dict(globals(), stubs):
+            NewtonSolver().solve(fem, contact, cd, params)
+        return detections
+
+    def test_last_detection_is_fresh(self):
+        # Budget reached: only the last scheduled re-detection is full
+        self.assertEqual(self._detections(3, None), [False, False, True])
+        # Early exit after the first outer iteration: a full detection follows its frozen one
+        self.assertEqual(self._detections(3, 1), [False, True])
+        # Converged before any subproblem: no re-detection (the solve's first detection, at xt, is full)
+        self.assertEqual(self._detections(3, 0), [])
+        # Without freezing, no extra detection
+        self.assertEqual(self._detections(3, 1, freezes=False), [False])
 
 
 class TestEeContactHessianTriplets(unittest.TestCase):

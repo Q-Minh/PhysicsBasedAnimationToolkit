@@ -885,6 +885,15 @@ void FinalizeSubproblem(
     contact.UpdateDual<
         EDualVariable::Slack | EDualVariable::LagrangeMultiplier | EDualVariable::Decay>(fem.x);
     contact.RestoreFeasibility(fem.x, fem.dmask);
+    // TODO: Keep the constraint linearizations within a solve, as the GPU's
+    // Contact.CDType.VertexSdf.freeze_within_solve (python/tools/sim/gpu/contact/mesh/sd.py): a pair found
+    // again keeps its feature, barycentrics and basis while its stored linearized gap stays below the
+    // detection threshold, new pairs are added, and the solve's last detection is full. Re-linearizing at
+    // every outer iteration put the GPU's outer loop on ArmadilloSpaghetti.DragonImpact in a period-2 cycle
+    // of the contact set (~1,100-1,750 feature flips per re-detection, 20 um per outer iteration); frozen,
+    // AAAVBD 10 x 100 from step 700 moved 0.67 um per outer iteration, and BasketOfFruit's production
+    // outer ratio fell 13% (median, AAAVBD). A mirror would keep the DenseAdjacencySet between outer
+    // iterations and only append here; RequiresConstraintSetUpdate is the natural switch.
     contact.UpdateConstraintSet(fem.x, true /*bComputeReverseContactPairs*/);
 }
 

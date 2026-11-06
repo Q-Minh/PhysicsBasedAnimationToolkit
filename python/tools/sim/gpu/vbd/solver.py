@@ -288,7 +288,7 @@ def solve_outer_loop(
                     schedule.iteration(k, kp)
                 if tail is not None:
                     tail(k)
-            finalize_subproblem(fem, contact, cd, params)
+            finalize_subproblem(fem, contact, cd, params, fresh=k == n_max_iters - 1)
             contact.commit_decay()  # no outer test to take first
         return False
     gtol = float(params.data.gtol)
@@ -346,10 +346,10 @@ def solve_outer_loop(
     # waited ~10 us; ~7.6 ms of a ~83 ms trampoline AAAVBD step was boundary gaps (profiling.anatomy,
     # 2026-10-18). That was before the constraint-set update was fused into two kernels (ae18a043,
     # -2...3%), so re-measure on dev to see what's left before fusing anything.
-    def update_constraints():
+    def update_constraints(k: int):
         with profiling.scope("solve.finalize_subproblem"):
             if detect_inside:
-                cd.detect_contacts(prepared=True)
+                cd.detect_contacts(prepared=True, fresh=k == n_max_iters - 1)
             contact.update_constraint_set()
         # The outer test: the gradient measured before re-detection (new multipliers, the decay weights the
         # positions were solved with) and feasibility on the re-detected contacts; only then do the dual update's
@@ -368,8 +368,20 @@ def solve_outer_loop(
             else:
                 cd.filter_step()
                 wp.capture_if(check.active, on_true=check.measure_outer_gradient)
-                cd.detect_contacts()
-        wp.capture_if(check.active, on_true=update_constraints)
+                cd.detect_contacts(fresh=k == n_max_iters - 1)
+        wp.capture_if(check.active, on_true=update_constraints, k=k)
+    frozen = cd.last_detection_frozen
+    if frozen is not None:
+        # With freeze_within_solve, the solve's last detection must be full (the next solve warm-starts from its
+        # keys). The last scheduled outer iteration's is; an early exit, decided on the device, stops after a frozen
+        # one, so a full detection follows here then. Detection runs inside conditionals with such detectors, and
+        # the last prepare_detection above refit the BVHs at the final positions (no subproblem ran since).
+        def refresh():
+            with profiling.scope("solve.finalize_subproblem"):
+                cd.detect_contacts(prepared=True, fresh=True)
+                contact.update_constraint_set()
+
+        wp.capture_if(frozen, on_true=refresh)
     return False if wp.get_device().is_capturing else check.converged(gtol)
 
 
@@ -448,6 +460,7 @@ def finalize_subproblem(
     contact: ContactDynamics,
     cd: ContactDetection,
     params: Params,
+    fresh: bool = False,
 ):
     """Finalize the current linearized subproblem.
 
@@ -458,11 +471,12 @@ def finalize_subproblem(
 
     The caller commits the pending decay weights (``contact.commit_decay()``) after its outer test, if any.
     It has no outer test: :func:`solve_outer_loop` inlines these steps to measure the test's gradient between
-    the filter and the re-detection.
+    the filter and the re-detection. ``fresh`` makes the re-detection full with ``freeze_within_solve`` (the
+    solve's last one).
     """
     update_dual(fem, contact)
     cd.filter_step()
-    cd.detect_contacts()
+    cd.detect_contacts(fresh=fresh)
     contact.update_constraint_set()
 
 
