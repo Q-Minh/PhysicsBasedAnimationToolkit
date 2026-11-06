@@ -259,7 +259,7 @@ def _compute_ee_contact_data(
     xj1 = x[halfedges.outgoing_vertex(meshes.F, he1)]
     xi2 = x[halfedges.incoming_vertex(meshes.F, he2)]
     xj2 = x[halfedges.outgoing_vertex(meshes.F, he2)]
-    std = wp.closest_point_edge_edge(xi1, xj2, xi2, xj2, epsilon=wp.float32(1e-3))  # type: ignore
+    std = wp.closest_point_edge_edge(xi1, xj1, xi2, xj2, epsilon=wp.float32(1e-3))  # type: ignore
     s0, s1 = std[0], std[1]  # type: ignore
     xc1 = (wp.float32(1.0) - s0) * xi1 + s0 * xj1  # type: ignore
     xc2 = (wp.float32(1.0) - s1) * xi2 + s1 * xj2  # type: ignore
