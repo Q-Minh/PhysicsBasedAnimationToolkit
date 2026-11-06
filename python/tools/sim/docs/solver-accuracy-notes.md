@@ -373,9 +373,11 @@ further from stationarity. The production budget stays at 1 outer iteration x 10
   (`small_beamY1e8.h5`, h = 1e-2, VBD 1 x 4000) the window movement is 1e-2 |a| h² by sweep 200, while the residual
   ratio falls from 494 to 8 over 4000 sweeps.
 
-## 8. Unexplained: a gap of exactly −dmin, then a reversed normal, at a vertex-edge to vertex-face hand-off
+## 8. A gap of exactly −dmin at a vertex-edge contact: a normal reversed by an inverted surface tet
 
-An observation without an explanation yet; nothing was changed over it.
+First recorded without an explanation (2026-10-25); explained and fixed on 2026-11-06 (**Explained** below): an
+impact inverts a sliver tet on the armadillo's surface, its two exposed faces fold onto each other, and the edge
+pseudonormal that signed vertex-edge normals points the wrong way at the fold.
 
 **Setup.** The DragonImpact production run (`configs/scenes/ArmadilloSpaghetti.DragonImpact.toml`: AAAVBD, 10 substeps
 of 1 x 100, dmin = 1 cm, ftol 0.5, so the penetration tolerance is 5 mm). Steps 481-490 replayed eagerly from the
@@ -400,6 +402,42 @@ held (`_ve_penetration` in `gpu/vbd/convergence.py`). A gap within 0.3% of −dm
 activation distance measured against a normal of the opposite orientation rather than a 2 cm overlap, but that was
 not checked (the stored normals and the pairs' unsigned distances were not recorded). Whether the vertex really
 crossed the armadillo's surface is also open.
+
+**Explained (2026-11-06).** Replayed from AAAVBD's Leg2 checkpoint at step 480 with every detection's pairs checked
+against their stored normals (scratch probe; the run matches the production statuses). Step 482's spike is the
+final re-detection of substep 8 pairing pillar2 vertex 50312 (node 101870) with armadillo edge 201706-201708
+(half-edge 550846), |d| = 1.005 cm, at n . d = −|d|, so its gap is −1.005 cm and its penetration into the 1 cm
+margin 2.005 cm: ratio 4.01. Before that re-detection the vertex was a vertex-edge contact on a neighbouring edge at
++0.1 mm.
+- The edge's two faces, 183614 and 183615, are the two exposed faces of one sliver tet on the armadillo's surface,
+  201706-201734-201712-201708 (rest volume 1.2e-8 m³ against 5e-8 to 1.5e-7 for its neighbours; its exposed faces'
+  normals have cosine 0.28 at rest). At that detection the tet is inverted (volume −5.2e-10 m³, +8.6e-9 at step
+  480): node 201734 has crossed the plane of face 183615 by 0.13 mm, so face 183614 is folded back over 183615, at
+  1.1° from it, and its normal is opposite its neighbours' (cosine −0.9998 with 183615's).
+- The vertex is outside the armadillo (generalized winding number 0, float64; Warp's ray vote, which signs the
+  detection's distance, also says outside), 1.005 cm from the fold edge, in front of 183615 and of the faces
+  around it (n . d = +0.0093 to +0.0102 m) and behind the flipped 183614 (−0.009996 m). The edge pseudonormal,
+  the sum of the two normals, is nearly zero, and its sign test gave d . (n1 + n2) = −2.2e-5 m: inside. The
+  pseudonormal's sign is exact only on an embedded surface; this one folds through itself.
+- Step 484's spike in the original run was on edge 201708-201734 of the same tet.
+- Frequency: over steps 481-490 (200 detections, 1.56 M vertex-edge and 22,600 vertex-vertex pairs), this pair, at
+  two consecutive detections, is the only contact whose normal side disagrees with the detection's inside/outside
+  test, and the only falsely reversed one. 50 vertex-edge pairs had their edge's two faces on opposite sides of the
+  vertex (sharp edges), all correctly oriented. The two vertex-face pairs with n . d < 0 were real penetrations
+  (winding number 1). BasketOfFruit (AAAVBD 1 x 80 from the Tuning checkpoint at step 50, 3 steps, 30 detections,
+  182,000 vertex-edge and 827 vertex-vertex pairs): none, and the fix leaves its statuses bit-identical.
+
+**Fix.** `gpu/contact/mesh/sd.py` now signs vertex-edge and vertex-vertex normals on closed partners with the
+detection's own inside/outside test (Warp's ray vote, `wp.mesh_query_point`'s sign, which also signs the distance
+that detected the pair); open partners keep the pseudonormal (Warp's sign_normal query is pseudonormal-based too).
+Test: `TestNormalOrientation.test_folded_partner` (a bipyramid whose cap tet inverts the same way, the same cosine
+−0.9998; it fails with the pseudonormal sign). The same replay with the fix (steps 481-490): no reversed contact and
+no disagreement left; step 482's substep 8 feasibility ratio is 0.22 (was 4.01) and substep 9's 0.17 (was 6.55, the
+re-pressed armadillo vertex of the residual-floor investigation); its gradient ratios are 157.4 and 156.7 (were
+157.2 and 573.1). Step 481 is bit-identical (the sign tests agree everywhere else); the later steps' trajectories
+differ slightly, with feasibility maxima 0.16-0.43 (0.16-0.49 before) and per-substep gradient ratios within 6% of
+the run without the fix (step 483, after the spike) and 2.6% from step 484 on. C++ is not affected: its contact normals are the unsigned closest-point
+direction (OGC keeps vertices outside the offset surface), with no pseudonormal.
 
 ## 9. Low budgets at 10 substeps fail through the twist or the impact, without warning from the residual
 
@@ -697,7 +735,8 @@ among them. Pillar node 161442 (2.5-4.8% of the residual) is a vertex-edge conta
 to −0.09 mm, λ_n 5e-5 to 9e-5) and a vertex-face one in between (c_n +0.22 mm, so the carried λ_n is zeroed), so the
 vertex-edge contact restarts from λ_n = 0 each time; node 62879 does the same. The same vertex at about the same
 position has a negative gap on the edge and a positive one on the face, as at the vertex-edge to vertex-face hand-off
-of entry 8, which is still unexplained.
+of entry 8 (since explained there as a normal reversed by an inverted surface tet; whether these flips share that
+cause wasn't checked).
 
 **The alternating penetration is not on pp contacts.** The deepest pp c_n is about −0.1 mm at every update, while
 the penetration ratios (0.5-1.1 mm into the margin) come from other contacts, which weren't broken down. Part of the
