@@ -12,10 +12,14 @@ with the subproblem's gamma, which with ``multiplier_step`` 1 is the subproblem'
 its sweeps. C++ tests with the new weights.
 
 The test runs between outer iterations, as in C++, and also every ``check_interval`` sweeps inside a
-subproblem. Between outer iterations, the step must also be feasible: no contact may penetrate its
+subproblem. Between outer iterations, the gradient is measured on the contact set the subproblem solved,
+after the full dual update and the feasibility filter but before re-detection (``measure_outer_gradient``), since
+the augmented-Lagrangian method solves each subproblem for a fixed constraint set (maintainer, 2026-11-06; C++ tests
+after re-detection). The step must also be feasible: no contact may penetrate its
 margin by more than ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, i.e.
 ``max_j max(0, dmin - c_j(x)) <= ftol * max(|dmin|, FEASIBILITY_FLOOR)`` over the
-current contacts (the maintainer's choice; C++ has no feasibility test). Inside a subproblem only the
+re-detected contacts (the maintainer's choice; C++ has no feasibility test), measured by ``end_outer``, which
+decides the stop once both are known. Inside a subproblem only the
 gradient is tested: passing ends the subproblem, and both tests follow its finalization. Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
 ``vbd.solver.solve_outer_loop`` for how the flags drive the loops.
@@ -786,13 +790,23 @@ class ConvergenceCheck:
             ],
         )
 
+    def measure_outer_gradient(self) -> None:
+        """The gradient part of the test after an outer iteration, on the contact set its subproblem solved:
+        call it after the full dual update and the feasibility filter, before re-detection and the
+        constraint-set update, and before the pending decay weights are committed
+        (``ContactDynamics.commit_decay``), so it measures the new multipliers with the decay weights the
+        subproblem solved with. It stores scalars only (``gradient_norm.gnorm2``, ``residual_m2``), which
+        :meth:`end_outer` reads after the re-detection. Capturable."""
+        self._test()
+
     def end_outer(
         self, gtol: float, n_max_iters: int, layout: SweepLayout | None = None
     ) -> None:
         """Test after an outer iteration (C++'s check before the next one, plus feasibility):
-        ``k += 1``, update ``keep`` and the solve's status row. Call it before the dual update's pending decay
-        weights are committed (``ContactDynamics.commit_decay``), so it measures the new multipliers with the
-        decay weights the subproblem solved with.
+        ``k += 1``, update ``keep`` and the solve's status row. Its gradient is the one
+        :meth:`measure_outer_gradient` measured before re-detection; feasibility is measured here, on the
+        current (re-detected) contacts. Call it before the dual update's pending decay weights are committed
+        (``ContactDynamics.commit_decay``).
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
@@ -801,7 +815,6 @@ class ConvergenceCheck:
                 None counts none.
         """
         layout = layout or SweepLayout(0, 0, 0, 0)
-        self._test()
         self._measure_penetration()
         wp.launch(
             _end_outer_kernel,
@@ -878,9 +891,19 @@ class ConvergenceCheck:
             bool: Whether both pass (False if the relative test is off).
         """
         gradient_passes = self.test_gradient()
+        return self.test_feasibility() and gradient_passes
+
+    def test_feasibility(self) -> bool:
+        """Host-side feasibility test of the current positions on the current contacts: the largest
+        penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``. Sets what
+        :meth:`feasibility_ratio` reads. Synchronizes, so not capturable.
+
+        Returns:
+            bool: Whether it passes.
+        """
         self._measure_penetration()
         tol = feasibility_tolerance(self.params.ftol, self._contact.data.dmin)
-        return gradient_passes and float(self.penetration.numpy()[0]) <= tol
+        return float(self.penetration.numpy()[0]) <= tol
 
     def gradient_ratio(self) -> float:
         """Host-side stationarity measure of the last test over its tolerance,
@@ -1044,37 +1067,92 @@ class TestStationarityTolerance(unittest.TestCase):
             self.assertLess(absolute_stationarity_tolerance(astol, 9.81, h), 9.81 * h * h)
 
 
+def _two_resting_cubes(solver_name: str = "VBD"):
+    """A test scene: a free cube resting on a fixed one, settled into contact with one outer iteration per
+    step and early exit off. Returns the ``SimulationState``."""
+    from pbatoolkit import pbat, pypbat
+    from ...state import SimulationState, SolverType, load_params
+
+    V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+    C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+    X = np.vstack([V, V + [0.21, 0.13, 1.002]]).astype(np.float64)
+    fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+    fem_cpu.set_mass_matrix(1e3)
+    mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+    fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+    fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+    fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
+    fem_cpu.constrain(np.repeat([1, 0], 8))
+    state = SimulationState(fem_cpu, load_params(fem_cpu))
+    state.solver = SolverType[solver_name]
+    state.convergence_params.early_exit = False
+    state.reset()
+    state.params[state.solver].data.n_max_iters = 1
+    for _ in range(5):  # settle into contact
+        state.step()
+    return state
+
+
+def _recorded_gradient_ratio(check: "ConvergenceCheck") -> float:
+    """The last solve's recorded gradient ratio (synchronizes)."""
+    check.enqueue_status_readback()
+    wp.synchronize()
+    rows, _ = check.read_status()
+    return float(rows[-1]["gradient_ratio"])
+
+
+class TestOuterGradientBeforeRedetection(unittest.TestCase):
+    """The outer test's gradient is measured on the contact set the subproblem solved: after the full dual update
+    and the feasibility filter, before re-detection and the constraint-set update, which re-evaluate the contacts
+    at the new positions (features, bases, newly detected pairs with lambda = 0). Two cubes resting in contact, one
+    outer iteration per step, the measured step run eagerly; an independent check measures the gradient ratio
+    right before the re-detection and after the constraint-set update (measured: 2e-4 before, 5e-3 after)."""
+
+    def test_status_is_solved_set_gradient(self):
+        for solver_name in ("VBD", "AAAVBD"):
+            with self.subTest(solver=solver_name):
+                state = _two_resting_cubes(solver_name)
+                contact, check, cd = state.contact, state.convergence, state.detector
+                probe = ConvergenceCheck(state.fem, contact, check.params, acceleration=check.acceleration)
+                measured = {}
+                detect_contacts, commit_decay = cd.detect_contacts, contact.commit_decay
+
+                def ratio() -> float:
+                    return float(np.sqrt(probe.residual_m2.numpy()[0] / probe.stationarity_tol2.numpy()[0]))
+
+                def hooked_detect_contacts(*args, **kwargs):
+                    if kwargs.get("from_xt"):  # the time step's first detection
+                        result = detect_contacts(*args, **kwargs)
+                        probe.measure_scale()
+                        return result
+                    probe._test()  # the subproblem's contact set, after the dual update and the filter
+                    measured["solved"] = ratio()
+                    return detect_contacts(*args, **kwargs)
+
+                def hooked_commit_decay():
+                    probe._test()  # the re-detected contact set, with the same pending decay weights
+                    measured["redetected"] = ratio()
+                    commit_decay()
+
+                cd.detect_contacts, contact.commit_decay = hooked_detect_contacts, hooked_commit_decay
+                state._advance()  # eager, so the hooks run
+                status = _recorded_gradient_ratio(check)
+                # Re-detection changes the measure a lot, and the status records the solved set's
+                self.assertGreater(measured["redetected"], 5.0 * measured["solved"])
+                np.testing.assert_allclose(status, measured["solved"], rtol=1e-4)
+
+
 class TestOuterTestDecayWeights(unittest.TestCase):
     """The outer test after a full dual update measures the positions with the decay weights gamma_k their
     subproblem solved with and the new multipliers lambda_{k+1}: with ``multiplier_step`` 1 that is the
     subproblem's augmented-Lagrangian gradient at the end of its sweeps (slack refreshed there), also when the
     update resets softened contacts to gamma = 1, which the next subproblem then uses. The recorded test follows
-    the feasibility filter and the re-detection, which re-evaluate the contact bases at the new positions, so
-    there the identity holds only up to their (here small) change. Two cubes resting in contact, VBD with one outer
-    iteration per step, the measured step run eagerly."""
+    the feasibility filter (which leaves resting cubes in place) and precedes the re-detection. Two cubes resting in
+    contact, VBD with one outer iteration per step, the measured step run eagerly."""
 
     def test_reset_contacts(self):
-        from pbatoolkit import pbat, pypbat
-        from ...state import SimulationState, SolverType, load_params
-
-        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
-        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
-        X = np.vstack([V, V + [0.21, 0.13, 1.002]]).astype(np.float64)
-        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
-        fem_cpu.set_mass_matrix(1e3)
-        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
-        fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
-        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
-        fem_cpu.set_time_integration_scheme(dt=1e-2, s=1)
-        fem_cpu.constrain(np.repeat([1, 0], 8))
-        state = SimulationState(fem_cpu, load_params(fem_cpu))
-        state.solver = SolverType.VBD
-        state.convergence_params.early_exit = False
-        state.reset()
-        state.params[SolverType.VBD].data.n_max_iters = 1
+        state = _two_resting_cubes("VBD")
         self.assertEqual(float(state.contact.params.multiplier_step), 1.0)
-        for _ in range(5):  # settle into contact
-            state.step()
         contact, check = state.contact, state.convergence
         sets = (contact.cvv, contact.cve, contact.cvf, contact.cee)
         for cs in sets:
@@ -1114,16 +1192,13 @@ class TestOuterTestDecayWeights(unittest.TestCase):
 
         contact.update_dual, contact.commit_decay = hooked_update_dual, hooked_commit_decay
         state._advance()  # eager, so the hooks run
-        check.enqueue_status_readback()
-        wp.synchronize()
-        rows, _ = check.read_status()
-        status = float(rows[-1]["gradient_ratio"])
+        status = _recorded_gradient_ratio(check)
         self.assertGreater(measured["resets"], 0)
         np.testing.assert_allclose(measured["post_update"], measured["augmented"], rtol=1e-5)
         # The positions never felt the reset contacts' full force, which the former test charged them with
-        # (measured: committed 1.9, augmented 2.3e-4, recorded 2.5e-3 after re-detection)
+        # (measured: committed 1.9, augmented 2.3e-4)
         self.assertGreater(measured["committed"], 100.0 * measured["augmented"])
-        self.assertLess(abs(status - measured["augmented"]), 1e-2 * measured["committed"])
+        np.testing.assert_allclose(status, measured["augmented"], rtol=1e-3)
         # The next subproblem solves with the reset weights
         self.assertTrue(all(np.all(cs.gamma.current.numpy() == cs.gamma_next.current.numpy()) for cs in sets))
 

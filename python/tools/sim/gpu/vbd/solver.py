@@ -244,6 +244,16 @@ def solve_outer_loop(
     (:class:`ConvergenceCheck`). A test that passes inside a subproblem ends it; finalize and the
     outer test follow, as after a full subproblem.
 
+    Order between outer iterations: full dual update (decay weights pending) → feasibility filter → the outer
+    test's gradient (``ConvergenceCheck.measure_outer_gradient``) → re-detection and constraint-set update →
+    feasibility and the stop decision (``ConvergenceCheck.end_outer``) → ``contact.commit_decay()``. The
+    gradient is measured on the contact set the subproblem solved, since the AL method solves each subproblem
+    for a fixed constraint set (maintainer, 2026-11-06): measured after re-detection, newly detected contacts
+    (lambda = 0) and changed features charged the positions with forces no subproblem had solved for
+    (ArmadilloSpaghetti.DragonImpact AAAVBD at 7 s: ratio 856 after re-detection vs 16.8 before). Feasibility
+    needs no multipliers, so it is measured on the re-detected contacts, which see every penetration. C++
+    ``vbd::Solve`` tests after re-detection.
+
     Recording, so that captured graphs stop early and stay small:
 
     - Outer iterations are unrolled on the host. Each runs inside ``wp.capture_if(active)``, so a
@@ -327,6 +337,9 @@ def solve_outer_loop(
             update_dual(fem, contact)
             if detect_inside:
                 cd.filter_step()
+        if detect_inside:
+            # The outer test's gradient, on the contact set this subproblem solved (before re-detection)
+            check.measure_outer_gradient()
 
     # TODO: Fuse the remaining boundary copies and fills (between outer iterations: dual update,
     # filtering, detection, constraint-set update). Why: in the captured graph each copy or fill node
@@ -338,8 +351,9 @@ def solve_outer_loop(
             if detect_inside:
                 cd.detect_contacts(prepared=True)
             contact.update_constraint_set()
-        # The outer test measures the positions with the decay weights they were solved with and the new
-        # multipliers; only then do the dual update's weights become the next subproblem's
+        # The outer test: the gradient measured before re-detection (new multipliers, the decay weights the
+        # positions were solved with) and feasibility on the re-detected contacts; only then do the dual update's
+        # weights become the next subproblem's
         check.end_outer(gtol, n_max_iters, layout)
         with profiling.scope("solve.finalize_subproblem"):
             contact.commit_decay()
@@ -353,6 +367,7 @@ def solve_outer_loop(
                 cd.prepare_detection()
             else:
                 cd.filter_step()
+                wp.capture_if(check.active, on_true=check.measure_outer_gradient)
                 cd.detect_contacts()
         wp.capture_if(check.active, on_true=update_constraints)
     return False if wp.get_device().is_capturing else check.converged(gtol)
@@ -416,7 +431,8 @@ def initialize_solve(
 
 def update_dual(fem: FemElastoDynamics, contact: ContactDynamics):
     """Full dual update of a finished subproblem: slack, decay and Lagrange multipliers. The decay weights stay
-    pending until ``contact.commit_decay()``, after the outer test."""
+    pending until ``contact.commit_decay()``, after the outer test (carried across re-detection by the
+    constraint-set warm start)."""
     contact.update_dual(
         fem.data.x,
         fem.xt,
@@ -441,6 +457,8 @@ def finalize_subproblem(
       3. Update constraint set for the next subproblem.
 
     The caller commits the pending decay weights (``contact.commit_decay()``) after its outer test, if any.
+    It has no outer test: :func:`solve_outer_loop` inlines these steps to measure the test's gradient between
+    the filter and the re-detection.
     """
     update_dual(fem, contact)
     cd.filter_step()
