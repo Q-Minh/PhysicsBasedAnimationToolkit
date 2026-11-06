@@ -899,6 +899,10 @@ bool Solve(
     for (params.k = 0; params.k < params.nMaxIters; ++params.k)
     {
         LinearizeConstraints(fem, contact);
+        // TODO: This tests the previous subproblem after FinalizeSubproblem's UpdateConstraintSet,
+        // i.e. on a contact set it didn't solve (also Chebyshev, Anderson, Broyden). The GPU solvers
+        // (python/tools/sim) measure the gradient before re-detection: DragonImpact AAAVBD at 7 s,
+        // ratio 16.8 before vs 856 after (2026-11-06).
         bConverged = CheckConvergence(fem, contact, params);
         if (bConverged)
             break;

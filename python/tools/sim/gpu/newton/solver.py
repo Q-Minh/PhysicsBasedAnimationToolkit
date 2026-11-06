@@ -1178,13 +1178,14 @@ def _compute_energy(
     return float(params._energy_scalar.numpy()[0])
 
 
-@profiling.scoped("newton.convergence")
 def check_convergence(
     fem: FemElastoDynamics,
     contact: ContactDynamics,
     params: Params,
 ) -> bool:
-    """Outer test between AL iterations.
+    """Outer test of the current positions on the current contacts, gradient and feasibility at once: the
+    test before the first subproblem. After a subproblem, :meth:`NewtonSolver.solve` splits it around the
+    re-detection instead (:func:`outer_gradient_test` before it, :func:`outer_feasibility_test` after it).
 
     With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
     dynamic problems), it's the VBD family's outer test: the Lagrangian gradient,
@@ -1192,25 +1193,61 @@ def check_convergence(
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
-    augmented-Lagrangian gradient, as in C++. Either way, after a subproblem the contact terms use its new
-    multipliers with the decay weights it solved with: :meth:`NewtonSolver.solve` commits the dual update's
-    pending weights after this test.
+    augmented-Lagrangian gradient, as in C++.
 
     Sets ``params.last_outer_ratios`` to the test's (gradient, feasibility) measures over their
     tolerances, as the VBD family's status ratios (at most 1 passes). The absolute test doesn't include
     feasibility, but its ratio is still measured when the shared check exists (NaN otherwise).
     """
+    gradient = outer_gradient_test(fem, contact, params)
+    return outer_feasibility_test(params, gradient)
+
+
+@profiling.scoped("newton.convergence")
+def outer_gradient_test(
+    fem: FemElastoDynamics,
+    contact: ContactDynamics,
+    params: Params,
+) -> tuple[bool, float]:
+    """The gradient part of the outer test (see :func:`check_convergence`) on the current contact set.
+
+    After a subproblem, call it after the full dual update and the feasibility filter
+    (:func:`finalize_subproblem`), before re-detection (:func:`update_constraint_set`), and before the
+    dual update's pending decay weights are committed: it measures the subproblem's positions on the contact
+    set it solved, with the new multipliers and the decay weights it solved with (maintainer, 2026-11-06: the
+    AL method solves each subproblem for a fixed constraint set; C++ tests after re-detection).
+
+    Returns:
+        tuple[bool, float]: Whether it passes, and its measure over its tolerance.
+    """
     check = _relative_check(params)
     if check is not None:
-        passed = check.test_outer()
-        params.last_outer_ratios = (check.gradient_ratio(), check.feasibility_ratio())
-        return passed
-    main_stream = wp.get_stream()
-    params._gradient_norm.compute(main_stream)
+        passed = check.test_gradient()
+        return passed, check.gradient_ratio()
+    params._gradient_norm.compute(wp.get_stream())
     gnorm2, gtol2 = float(params._gnorm2.numpy()[0]), float(params.data.gtol2)
+    return gnorm2 <= gtol2, float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2)))
+
+
+@profiling.scoped("newton.convergence")
+def outer_feasibility_test(params: Params, gradient: tuple[bool, float]) -> bool:
+    """Complete the outer test whose gradient part ``gradient`` (:func:`outer_gradient_test`) was measured:
+    feasibility of the current positions on the current (after a subproblem: re-detected) contacts. Sets
+    ``params.last_outer_ratios``.
+
+    Returns:
+        bool: Whether the outer test passes: both parts with the relative test, the gradient alone with
+        the absolute one.
+    """
+    gradient_passes, gradient_ratio = gradient
+    check = _relative_check(params)
+    if check is not None:
+        feasible = check.test_feasibility()
+        params.last_outer_ratios = (gradient_ratio, check.feasibility_ratio())
+        return gradient_passes and feasible
     feasibility = params.convergence.feasibility_ratio(measure=True) if params.convergence is not None else float("nan")
-    params.last_outer_ratios = (float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2))), feasibility)
-    return gnorm2 <= gtol2
+    params.last_outer_ratios = (gradient_ratio, feasibility)
+    return gradient_passes
 
 
 def prepare_subproblem(
@@ -1263,8 +1300,9 @@ class NewtonSubproblemRecord(NamedTuple):
 
 class NewtonSolveRecord(NamedTuple):
     """One Newton solve (time step or substep): outer iterations, their subproblems, and the
-    (gradient, feasibility) ratios to their tolerances of every outer test (``check_convergence``), in
-    order: the test before each subproblem, then the final one, so ``len(outer_tests) ==
+    (gradient, feasibility) ratios to their tolerances of every outer test, in order: the test before the
+    first subproblem (``check_convergence``), then the one after each subproblem (its gradient on the contact
+    set the subproblem solved, its feasibility after re-detection), so ``len(outer_tests) ==
     len(subproblems) + 1``. The last entry is the solve's result."""
 
     outer: int  # outer (augmented-Lagrangian) iterations run
@@ -1517,8 +1555,10 @@ def finalize_subproblem(
     cd: ContactDetection,
     params: Params,
 ) -> None:
-    """Dual update and contact re-detection -- mirrors ``vbd.solver.finalize_subproblem``. The decay weights stay
-    pending until :meth:`NewtonSolver.solve` commits them after the next outer test."""
+    """Dual update and feasibility filter -- the first half of ``vbd.solver.finalize_subproblem``; the outer
+    test's gradient (:func:`outer_gradient_test`) follows on the contact set the subproblem solved, then
+    :func:`update_constraint_set` re-detects. The decay weights stay pending until :meth:`NewtonSolver.solve`
+    commits them after the outer test."""
     contact.update_dual(
         fem.data.x,
         fem.xt,
@@ -1527,6 +1567,13 @@ def finalize_subproblem(
         request_lagrange_multiplier_update=True,
     )
     cd.filter_step()
+
+
+@profiling.scoped("solve.finalize_subproblem")
+def update_constraint_set(contact: ContactDynamics, cd: ContactDetection) -> None:
+    """Re-detect contacts and update the constraint set for the next subproblem (or the next time step's warm
+    start) -- the second half of ``vbd.solver.finalize_subproblem``. The dual state, pending decay weights
+    included, carries across by the constraint set's warm start."""
     cd.detect_contacts()
     contact.update_constraint_set()
 
@@ -1603,32 +1650,26 @@ class NewtonSolver:
         cd: ContactDetection,
         params: Params,
     ) -> bool:
-        converged, stopped = False, False
         early_exit = _early_exit(params)
         subproblems, outer_tests = [], []
         initialize_solve(fem, contact, cd, params)
-        # Whether a full dual update's decay weights wait for the outer test: it measures the positions with the
-        # weights they were solved with and the new multipliers, then the new weights become the next subproblem's
-        pending_decay = False
+        converged = check_convergence(fem, contact, params)
+        outer_tests.append(params.last_outer_ratios)
         for _ in range(int(params.data.n_max_iters)):
-            converged = check_convergence(fem, contact, params)
-            outer_tests.append(params.last_outer_ratios)
-            if pending_decay:
-                contact.commit_decay()
-                pending_decay = False
             if converged and early_exit:
-                stopped = True
                 break
             prepare_subproblem(fem, contact, cd, params)
             solve_subproblem(fem, contact, params)
             subproblems.append(params.last_subproblem)
+            # The outer test (C++ newton::Solve tests before the next subproblem, and after the last one): the
+            # gradient on the contact set the subproblem solved, with the new multipliers and the decay weights
+            # it solved with (still pending), then feasibility on the re-detected contacts. Only then do the
+            # dual update's weights become the next subproblem's
             finalize_subproblem(fem, contact, cd, params)
-            pending_decay = True
-        if not stopped:
-            # As C++ newton::Solve: test the last subproblem's result too (a test, not a step)
-            converged = check_convergence(fem, contact, params)
+            gradient = outer_gradient_test(fem, contact, params)
+            update_constraint_set(contact, cd)
+            converged = outer_feasibility_test(params, gradient)
             outer_tests.append(params.last_outer_ratios)
-        if pending_decay:
             contact.commit_decay()
         fem.back_substitute_velocities()
         cd.on_time_step_ended()
@@ -1669,6 +1710,72 @@ class TestSubproblemGradient(unittest.TestCase):
                 ("gradient", "stream"),
             ],
         )
+
+
+class TestOuterTestOrder(unittest.TestCase):
+    """After each subproblem, the outer test's gradient is measured on the contact set the subproblem solved (after
+    the full dual update and the filter, before re-detection), feasibility after re-detection, and the decay
+    weights are committed last. Stubbed solver steps, relative test, early exit off."""
+
+    def test_gradient_before_redetection(self):
+        from unittest import mock
+
+        calls = []
+        detections = [0]  # re-detections so far: the contact set a measure sees
+
+        class Check:
+            relative = True
+            params = SimpleNamespace(early_exit=False)
+            ratio = float("nan")
+
+            def test_gradient(self):
+                calls.append("gradient")
+                self.ratio = float(detections[0])
+                return False
+
+            def gradient_ratio(self):
+                return self.ratio
+
+            def test_feasibility(self):
+                calls.append("feasibility")
+                return True
+
+            def feasibility_ratio(self):
+                return 0.0
+
+        def detect_contacts(**kwargs):
+            calls.append("detect")
+            detections[0] += 1
+
+        fem = SimpleNamespace(data=SimpleNamespace(x="x"), xt="xt", back_substitute_velocities=lambda: None)
+        contact = SimpleNamespace(
+            params=SimpleNamespace(penalty_adaptivity=PenaltyAdaptivity.TIMESTEP),
+            update_dual=lambda *args, **kwargs: calls.append(
+                "full dual" if kwargs.get("request_lagrange_multiplier_update") else "slack"
+            ),
+            update_constraint_set=lambda: calls.append("constraint set"),
+            commit_decay=lambda: calls.append("commit"),
+        )
+        cd = SimpleNamespace(
+            filter_step=lambda: calls.append("filter"), detect_contacts=detect_contacts, on_time_step_ended=lambda: None
+        )
+        params = SimpleNamespace(
+            data=SimpleNamespace(n_max_iters=2),
+            convergence=Check(),
+            last_subproblem=None,
+            last_outer_ratios=None,
+            solve_records=[],
+        )
+        stubs = dict(
+            initialize_solve=lambda *args: calls.append("initialize"),
+            solve_subproblem=lambda *args: calls.append("subproblem"),
+        )
+        with mock.patch.dict(globals(), stubs):
+            NewtonSolver().solve(fem, contact, cd, params)
+        after_subproblem = ["subproblem", "full dual", "filter", "gradient", "detect", "constraint set", "feasibility", "commit"]
+        self.assertEqual(calls, ["initialize", "gradient", "feasibility"] + 2 * after_subproblem)
+        # Each subproblem's gradient ratio is measured on the contact set it solved
+        self.assertEqual([r[0] for r in params.solve_records[0].outer_tests], [0.0, 0.0, 1.0])
 
 
 class TestEeContactHessianTriplets(unittest.TestCase):

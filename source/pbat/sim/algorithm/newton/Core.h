@@ -732,6 +732,9 @@ bool Solve(FemElastoDynamics<TElasticEnergy>& fem, MeshDynamics& contact, Params
     for (; params.k < params.nMaxIters; ++params.k)
     {
         LinearizeConstraints(fem, contact);
+        // TODO: This tests the previous subproblem after FinalizeSubproblem's UpdateConstraintSet,
+        // i.e. on a contact set it didn't solve. The GPU Newton (python/tools/sim/gpu/newton) measures
+        // the gradient before re-detection and feasibility after it, as the GPU VBD family does.
         bConverged = CheckConvergence(fem, contact, params);
         if (bConverged)
             break;
