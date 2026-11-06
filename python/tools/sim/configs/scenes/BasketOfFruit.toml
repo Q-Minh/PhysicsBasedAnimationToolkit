@@ -33,10 +33,6 @@
 # - Adaptive contact penalty per time step (TIMESTEP, the code default; maintainer: CONSTANT only with a stated
 #   justification), with the code's gamman_adaptive / gammaf_adaptive, instead of the paper's constant gamman.
 #     Contact.ContactDynamics.penalty_adaptivity = 1 (source 0)
-# - Positive AL contact margin dmin = 1 mm (the paper's -1e-4 dates from penetration-only VertexSdf detection):
-#   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
-#   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
-#     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
 # - VertexSdf band 2 mm, close to dmin (maintainer): a 2 cm band made the sphere stick to the trampolines under
 #   Newton, and the 1 mm default once let bodies pass through 10 cm plates. max_dist is kept.
 #     Contact.CDType.VertexSdf.band = 0.002 (source 0.001)
@@ -47,6 +43,12 @@
 #     Solver.Newton.n_max_iters = 30 (source 100)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
+# - AL contact margin dmin = 2 mm for the woven basket (maintainer, 2026-11-05; band unchanged at 2 mm): its
+#   strands are at least 8.7 mm in half-thickness, the gaps between strands are 4.7 mm at the 0.1 percentile
+#   (min 0.40 mm), and only about 35 of the 346k strand vertices start within 2 mm of another strand, so the
+#   detection reach dmin + band = 4 mm stays under the 0.1-percentile gap. BasketOfOranges' and EmptyBasket's
+#   probable sources (extras final_scenes) have the same 16 strand meshes as basket_of_fruit (same vertices).
+#     Contact.ContactDynamics.dmin = 0.002 (source -9.999999747378752e-05)
 # - Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the
 #   effective normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with
 #   BDF1 like the former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it
@@ -83,7 +85,7 @@ use_step_filter = 0
 
 [Contact.ContactDynamics]
 decay = 0.5
-dmin = 0.001
+dmin = 0.002
 gammaf = 10000.0
 gammaf_adaptive = 0.01
 gamman = 20000.0

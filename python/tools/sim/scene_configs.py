@@ -208,6 +208,15 @@ BASKET_BUDGET = Rule(
     {"Integration.substeps": 5, **_per_solver("n_max_iters", 3), **_per_solver("n_subproblem_max_iters", 50)},
 )
 
+BASKET_MARGIN = Rule(
+    "AL contact margin dmin = 2 mm for the woven basket (maintainer, 2026-11-05; band unchanged at 2 mm): its "
+    "strands are at least 8.7 mm in half-thickness, the gaps between strands are 4.7 mm at the 0.1 percentile "
+    "(min 0.40 mm), and only about 35 of the 346k strand vertices start within 2 mm of another strand, so the "
+    "detection reach dmin + band = 4 mm stays under the 0.1-percentile gap. BasketOfOranges' and EmptyBasket's "
+    "probable sources (extras final_scenes) have the same 16 strand meshes as basket_of_fruit (same vertices).",
+    {"Contact.ContactDynamics.dmin": 2e-3},
+)
+
 
 # Contact pair capacities, as multipliers of the contact multimesh's vertices (its surface vertices)
 CONTACT_CAPACITIES = Rule(
@@ -243,7 +252,7 @@ SCENES = {
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, PENALTY_FLOOR,
+        [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR,
          CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
@@ -395,14 +404,14 @@ SCENES = {
         "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
-        [*SOLVERS, *CONTACT, PENALTY_FLOOR, CONTACT_CAPACITIES],
+        [*SOLVERS, *CONTACT, BASKET_MARGIN, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
          "Young's modulus ~1e7."],
     ),
     "BasketOfOranges": Scene(
         "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *HET_CONTACT, PENALTY_FLOOR, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply (only the margin, for consistency),
