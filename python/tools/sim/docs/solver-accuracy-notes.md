@@ -43,7 +43,9 @@ per mass) of max(rstol |v| / h, astol |a|): about max(1.3, 4.9) m/s² for this s
 the 2.5 m/s² being simulated. A rigidly sliding body's residual is nearly uniform, so it goes straight into the
 acceleration. The relative term also grows with speed, because the free-flight displacement x̃ - xᵗ is mostly
 rigid translation. The test is a stationarity tolerance for the step's deformation, not an accuracy bound on slow
-rigid motion such as sliding, rolling or settling.
+rigid motion such as sliding, rolling or settling. (Since 2026-11-06 the relative term is relative to each node's
+forces instead, rstol max(|f_inertial|, |f_el|, |f_c|, |f_ext|) per node, so it no longer grows with speed or 1/h; the
+absolute term, 4.9 m/s² here, still exceeds the slide's acceleration. Not re-measured.)
 
 **For the paper.** Residual ratios below 1 don't certify accurate trajectories, and two solvers with equally
 "converged" steps can differ by tens of percent in the motion that matters. That's why the benchmark measures

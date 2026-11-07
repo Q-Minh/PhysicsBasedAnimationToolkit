@@ -127,6 +127,8 @@ def _vertex_solve_kernel(
         params.hess_zero,
     )  # pyright: ignore[reportArgumentType]
     fem.x[i] -= dxi  # pyright: ignore[reportIndexIssue]
+    # The vertex Hessian's norm, as AAAVBD stores it, for the convergence test's float32 floor
+    params.Hnk[i] = wp.sqrt(wp.ddot(Hi, Hi))  # pyright: ignore[reportIndexIssue]
 
 
 @wp.kernel(launch_bounds=32)
@@ -187,7 +189,7 @@ def check_convergence(
     """
     if params.convergence is None:
         return False
-    params.convergence.gradient_norm.compute(wp.get_stream())
+    params.convergence.measure_outer_gradient()
     return params.convergence.converged(params.data.gtol)
 
 
@@ -358,6 +360,7 @@ def solve_outer_loop(
         with profiling.scope("solve.finalize_subproblem"):
             contact.commit_decay()
 
+    check.set_hessian_norms(params.data.Hnk)  # the float32 floor (every sweep stores |H_i|_F)
     check.start(gtol, n_max_iters)
     for k in range(n_max_iters):
         check.begin_outer()

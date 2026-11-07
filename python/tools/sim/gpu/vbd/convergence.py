@@ -19,8 +19,12 @@ after re-detection). The step must also be feasible: no contact may penetrate it
 margin by more than ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, i.e.
 ``max_j max(0, dmin - c_j(x)) <= ftol * max(|dmin|, FEASIBILITY_FLOOR)`` over the
 re-detected contacts (the maintainer's choice; C++ has no feasibility test), measured by ``end_outer``, which
-decides the stop once both are known. Inside a subproblem only the
-gradient is tested: passing ends the subproblem, and both tests follow its finalization. Its outcome stays on the device in flags that conditional graph nodes
+decides the stop once both are known. Inside a subproblem only the gradient is tested, and with the stationarity
+test (``rstol`` or ``astol`` > 0) it is the subproblem's own residual, its augmented-Lagrangian gradient, which with
+``multiplier_step`` 1 the next outer test measures again after the dual update (:meth:`ConvergenceCheck.after_block`):
+passing ends the subproblem only, never the solve, and both outer tests follow its finalization. With dynamic problems
+the test's tolerance is relative to each node's forces and can pass at the float32 floor (:class:`ConvergenceParams`).
+Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
 ``vbd.solver.solve_outer_loop`` for how the flags drive the loops.
 
@@ -57,21 +61,56 @@ class ConvergenceParams(SerializableMixin):
     problems, each solver's absolute ``gtol`` applies instead (``Solver.<solver>.gtol``; Newton's ``gtol2``).
     GPU Newton uses the same test (see ``gpu.newton.solver.check_convergence``).
 
-    Stationarity test: the gradient g of the time step's Lagrangian is turned into a position-like residual
-    by the inverse lumped mass, M^-1 g (the correction an inertia-only Newton step would make), and passes
-    when ``RMS_M(M^-1 g) <= max(rstol * RMS_M(d), astol * |a| * h^2)``, with d = x~ - x^t the step's
-    free-flight displacement (h v^t + h^2 a_ext for BDF1), mass-weighted RMS over free nodes, h the solve's
-    time step (dt / substeps) and |a| the scene's external acceleration (:func:`external_acceleration`: the
-    gravity's norm, or :data:`STANDARD_GRAVITY` without a load), i.e.
-    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |d_i|^2, (astol |a| h^2)^2 sum m_i)``. Neither term depends on
-    the mesh's resolution, mass or size, and both rstol and astol are dimensionless: astol |a| is the tolerated
-    residual acceleration (unbalanced force per mass). The absolute term is a fallback for steps with little
-    free-flight motion, where the relative term would ask for a zero residual. It scales with h^2 like the
-    step's gravity sag (h^2 |a|) and like the float32 noise floor of stiff scenes, about (h omega)^2 ulps for a
-    node's stiffness-to-mass frequency omega, so it's time-step and scene-size invariant, and a step that
-    hasn't moved can't pass with astol < 1, with or without substeps. The default 0.5 matches the former
-    astol * L = 0.57 mm of the 5.66 m trampolines at h = 1e-2. Static problems have no inertial displacement
-    and use the absolute ``gtol``.
+    Stationarity test, in acceleration units (the gradient g = h^2 f_res over h^2 and the lumped mass): node i's
+    residual acceleration r_i = f_res,i / m_i may exceed a relative allowance rstol s_i / m_i, and what's left over,
+    mass-weighted RMS over free nodes, must be within the absolute tolerance:
+
+        RMS_M(e) <= astol |a|,   e_i = max(0, |r_i|^2 - (rstol s_i / m_i)^2)^(1/2),
+        s_i = max(|m_i (x_i - x~_i)| / h^2, |f_el,i|, |f_c,i|, |f_ext,i|),
+
+    s_i being the largest of the terms whose sum is node i's force residual: the inertial term (the net force the
+    motion needs; it holds -f_ext for BDF1, so f_ext also counts on its own and a free fall, x = x~, keeps a scale),
+    the elastic force, the contact force (normal and friction as one term) and the external load, each net at the
+    node (gpu.gradient.Gradient, ``force_scale``; maintainer, 2026-11-06: the largest term rather than their sum). h is the solve's time step (dt / substeps) and |a| the scene's external
+    acceleration (:func:`external_acceleration`: the gravity's norm, or :data:`STANDARD_GRAVITY` without a load). In
+    the gradient's units: ``sum max(0, |g_i|^2 - (rstol h^2 s_i)^2) / m_i <= stol2 = (astol |a| h^2)^2 sum m_i``.
+    The relative part is a componentwise relative residual, |f_res,i| <= rstol max_k |f_k,i| (cf. the componentwise
+    backward error of Oettli and Prager, Numer. Math. 1964, used as a stopping test by Arioli, Duff and Ruiz, SIAM J.
+    Matrix Anal. Appl. 1992; Higham, Accuracy and Stability of Numerical Algorithms, ch. 7), with the forces netted
+    per node rather than per element, so that internal stresses that balance don't loosen it. Every term is a force,
+    so for a fixed physical motion the test doesn't depend on h. The allowances depend on the iterate, so each test
+    measures them with the gradient. A normwise form, RMS_M(r) <= rstol RMS_M(s / m), was tried first and rejected:
+    contact-loaded light surface nodes dominate its scale (ArmadilloSpaghetti.DragonImpact at 7 s: RMS_M(s / m) =
+    1.2e5 m/s^2 from elastic and contact forces of ~1e7 m/s^2 that cancel at the top 1% of nodes, against a median
+    node's 105 m/s^2), so it accepted the substeps' initial guesses. astol |a| is the tolerated residual
+    acceleration where the forces are small; with rstol^2 + astol^2 < 1, a step that hasn't moved (r = a, s = m a
+    for a free node at rest) can't pass. Changed meaning (2026-11-06): the test used to be RMS_M(r) <=
+    max(rstol RMS_M(x~ - x^t) / h^2, astol |a|), whose relative term rstol |v^t / h + a| grew as 1/h for a moving
+    body (Trampoline.SoftSoft, first 0.3 s, median 1e-2 RMS_M(x~ - x^t) / h^2: 0.97, 1.91 and 9.5 m/s^2 at h = 10, 5
+    and 1 ms, the last above astol |a| = 4.9; 2e-2 RMS_M(s / m): 0.25, 0.23, 0.20). rstol 2e-2 (from 1e-2): at the
+    scenes' production h the former relative term was below the absolute one on the soft scenes, and their traced
+    pass points are the same for rstol 1e-2 to 1e-1 (Trampoline.SoftSoft, CapsulesIntoBowl); 2e-2 gives the former
+    sum-of-forces form's allowance at 1e-2 where two forces balance. On DragonImpact the floor test below decides
+    the exits, the same at 1e-2 and 2e-2. Static problems use the absolute ``gtol``.
+
+    Float32 floor: a position error of one float32 spacing makes the force f_i = |H_i|_F eps32 |x_i| / h^2 (H_i node
+    i's Hessian block in the gradient's units, inertia included, from the last sweep; eps32 = 2^-23), the
+    acceleration phi_i = f_i / m_i. No float32 iterate reduces the residual below it (stiff bodies near rest, large
+    coordinates: the residual of the exactly rounded solution is about 0.15 RMS_M(phi), 2026-11-06). The test also
+    passes when both
+
+        RMS_M(e') <= astol |a|,   e'_i = max(0, |r_i|^2 - max(rstol s_i / m_i, kl phi_i)^2)^(1/2),
+        RMS_M(r) <= kg RMS_M(phi),
+
+    i.e. the residual beyond each node's relative allowance or floor is within the absolute tolerance, and the
+    residual is near the floor overall, kl = ``floor_local_kappa`` 1.5 and kg = ``floor_kappa`` 0.2. The first alone
+    stops smooth (bending) modes whose residual is coherent but below each node's floor; the second alone stops soft
+    bodies early when stiff ones set the floor. The floor ratio RMS_M(phi) / (astol |a|) is recorded in the solve
+    status. GPU Newton has no floor (TODO in gpu/newton/solver.py).
+
+    Inside a subproblem the test measures the subproblem's own residual, its augmented-Lagrangian gradient (see
+    :meth:`ConvergenceCheck.after_block`), and passing ends the subproblem only; between subproblems, the Lagrangian
+    gradient at the new multipliers, and passing it (and feasibility) ends the solve.
 
     ``early_exit`` (default on) lets passing the tests end a solve. Off, solves run their full budgets (fixed
     compute) while the tests still run and the status still records their ratios to the tolerances, unlike
@@ -87,21 +126,35 @@ class ConvergenceParams(SerializableMixin):
         "fraction of |dmin| (at least 1e-6 m, so a zero or negative margin still has a positive tolerance)",
     )
     rstol = DocField(
-        1e-2,
-        "Relative stationarity tolerance: the gradient test passes when the mass-normalized residual RMS(M^-1 g) is "
-        "at most max(rstol * RMS(x~ - x^t), astol * |a| * h^2), x~ - x^t being the step's free-flight displacement "
-        "(h v^t + h^2 a_ext for BDF1), both mass-weighted over free nodes. With rstol = astol = 0, the solver's "
-        "absolute gtol applies instead",
+        2e-2,
+        "Relative stationarity tolerance, relative to the forces in each node's balance: node i's residual "
+        "acceleration may exceed rstol s_i / m_i, s_i = max(|m_i (x_i - x~_i)| / h^2, |f_el,i|, |f_c,i|, |f_ext,i|) the "
+        "largest of its inertial, elastic, contact and external forces, and the mass-weighted RMS of what's left "
+        "over must be at most astol * |a|. Every term is a force, so it doesn't depend on the time step. With rstol = "
+        "astol = 0, the solver's absolute gtol applies instead. Changed meaning (2026-11-06): the test used to pass at "
+        "RMS(M^-1 f_res) <= max(rstol * RMS(x~ - x^t) / h^2, astol * |a|), rstol |v / h + a|, default 1e-2",
     )
     astol = DocField(
         0.5,
         "Absolute stationarity tolerance, as a fraction of the scene's external acceleration |a| (its gravity's "
-        "norm, or 9.81 m/s^2 without a load): the gradient test passes when the mass-normalized residual "
-        "RMS(M^-1 g) is at most max(rstol * RMS(x~ - x^t), astol * |a| * h^2), h being the solve's time step. "
-        "astol * |a| is the tolerated residual acceleration. The term scales with h^2 like the step's gravity sag, "
-        "so it's time-step and scene-size invariant, and with astol < 1 a step that hasn't moved can't pass. "
+        "norm, or 9.81 m/s^2 without a load): the mass-weighted RMS of the residual acceleration beyond each node's "
+        "relative allowance (see rstol) must be at most astol * |a|. Time-step and scene-size invariant; with "
+        "rstol^2 + astol^2 < 1 a step that hasn't moved can't pass. "
         "Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
         "file's astol = 1e-4 is now extremely strict",
+    )
+    floor_kappa = DocField(
+        0.2,
+        "Float32 floor, global factor kg (0: no floor): the gradient test also passes when the residual RMS(M^-1 "
+        "f_res) is at most kg times the float32 floor RMS(M^-1 f) and the residual beyond each node's larger "
+        "allowance, max(rstol s_i, floor_local_kappa f_i), is within astol * |a| (RMS). f_i = |H_i|_F eps32 |x_i| / "
+        "h^2 is the force a position error of one float32 spacing makes through node i's Hessian block (the last "
+        "sweep's; VBD family only). The floor ratio is recorded in the solve status either way",
+    )
+    floor_local_kappa = DocField(
+        1.5,
+        "Float32 floor, per-node factor kl (0: no floor): the floor test allows each node kl times its float32 floor "
+        "force f_i (see floor_kappa)",
     )
     early_exit = DocField(
         True,
@@ -145,6 +198,7 @@ class SolveStatus:
     reason: wp.int32  # SolveEnd
     gradient_ratio: wp.float32  # gradient measure / tolerance at the end (<= 1 passes)
     feasibility_ratio: wp.float32  # penetration / (ftol max(|dmin|, floor)) at the end (<= 1 passes)
+    floor_ratio: wp.float32  # float32 floor / tolerance, sqrt(sum f_i^2/m_i / stol2), of the same test (0: none)
 
 
 class SweepLayout(NamedTuple):
@@ -180,16 +234,17 @@ def select_new_status_rows(rows: np.ndarray, next_solve: int) -> tuple[np.ndarra
 def _gradient_ratio(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
-    gm2: wp.array[wp.float32],
+    sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
 ) -> wp.float32:
-    """The gradient test's measure over its tolerance, sqrt(sum |g|^2/m / stol2) or |g| / gtol (see
-    :func:`_is_converged`): at most 1 when it passes."""
+    """The gradient test's measure over its tolerance (see :func:`_is_converged`): the residual beyond the relative
+    allowances over the absolute tolerance, sqrt(sum max(0, |g_i|^2 - (rstol s_i)^2) / m_i / stol2), or |g| / gtol. At
+    most 1 passes; above 1, the stationarity test can still pass at the float32 floor."""
     num = gnorm2[0]
     den = gtol2
     if relative != 0:
-        num = gm2[0]
+        num = sums[1]  # SUM_RELATIVE
         den = stol2[0]
     ratio = wp.float32(0)
     if den > wp.float32(0):
@@ -237,12 +292,16 @@ def external_acceleration(fext: np.ndarray, m: np.ndarray, dmask: np.ndarray) ->
 def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float) -> float:
     """The absolute term of the stationarity test, ``astol * |a| * h^2`` (m), for the external
     acceleration ``acceleration`` (m/s^2) and the time step ``h`` (s)."""
-    # TODO: A residual-based float32 noise floor, backward-error style: estimate the rounding noise of g
-    # from the absolute values of the force terms that sum to it (inertial, elastic, contact), e.g.
-    # ulp * sum_i (|m_i (x_i - x~_i)| + |h^2 f_el,i| + |h^2 f_c,i|), and let the test pass below it. Why:
-    # stiff scenes near rest can have a float32 floor, about (h omega)^2 ulps, above both of the test's
-    # terms, so they run their full budget. Not implemented (2026-10-20); see python/tools/sim/CLAUDE.md
-    # ("Convergence and early exit").
+    # The float32 floor (2026-11-06): the backward-error bound of the force sums, eps32 * sum_i (|m_i (x_i - x~_i)| +
+    # |h^2 f_el,i| + |h^2 f_c,i|), proposed here before, is 1000-10000x below the attainable residual. The floor is
+    # the quantization of x, f_i = |H_i|_F eps32 |x_i| through the vertex Hessian (the residual of the exactly rounded
+    # solution is ~0.15 RMS_M(M^-1 f) on BendingBeam.100MPa and DragonImpact, also translated by 32 m), so the test
+    # passes at it (ConvergenceParams.floor_kappa, floor_local_kappa; _is_converged). The force sum became the
+    # relative term's scale instead (ConvergenceParams). Evidence: investigate/float32-residual-floor (8eadc920).
+    # TODO: Solve for the increment dx = x - x^t instead of x, F = F(x^t) + grad dx: |dx| ~ 1 mm instead of |x| ~ 1 m
+    # would lower the position quantization, and with it the floor, ~1000x. Why: the floor, not the tolerance, ends
+    # stiff scenes' solves (BendingBeam.100MPa, DragonImpact at 7 s: floor 18-100x the tolerance). Solver-wide change
+    # (elastic, contact and inertia kernels; 9 floats per element to cache D_s(x^t)); not tried.
     # TODO: A stall exit for the in-subproblem checks: stop when, at one check, the residual stopped falling
     # (r_k >= (1 - X) r_prev) AND no free vertex moved since the previous check by more than
     # max(rxtol * P, kappa eps32 |x_i|), P = max_i |x_i - x_i^start| the subproblem's progress. Why: on DragonImpact
@@ -299,62 +358,96 @@ def _solve_end(converged: bool, feasible: bool, iterations_left: bool) -> wp.int
     return reason
 
 
+# The stationarity test's sums over free nodes (ConvergenceCheck.sums), each in the gradient's units squared per mass
+SUM_RESIDUAL = wp.constant(0)  # sum |g_i|^2 / m_i
+SUM_RELATIVE = wp.constant(1)  # sum max(0, |g_i|^2 - (rstol s_i)^2) / m_i: beyond the relative allowances
+SUM_FLOOR = wp.constant(2)  # sum f_i^2 / m_i, f_i = |H_i|_F EPS32 |x_i| the float32 floor (0 without Hessian norms)
+SUM_EXCESS = wp.constant(3)  # sum max(0, |g_i|^2 - max(rstol s_i, kl f_i)^2) / m_i: beyond the floors too
+N_SUMS = 4
+
+EPS32 = 1.1920928955078125e-07
+"""float32 machine epsilon 2^-23: the spacing of float32 numbers at x is between 0.5 and 1 times EPS32 |x|."""
+
+
 @wp.func
 def _is_converged(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
-    gm2: wp.array[wp.float32],
+    sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
+    floor_kappa2: wp.float32,
 ) -> bool:
-    """Stationarity test ``sum |g|^2/m <= stol2 = max(rstol^2 sum m |d|^2, (astol |a| h^2)^2 M)`` if enabled
-    (``relative``), else ``|g|^2 <= gtol^2``."""
+    """Stationarity test if enabled (``relative``), else ``|g|^2 <= gtol^2``. The stationarity test passes when the
+    residual beyond each vertex's relative allowance rstol s_i is within the absolute tolerance, sum max(0, |g_i|^2
+    - (rstol s_i)^2) / m_i <= stol2, or at the float32 floor: the residual beyond each vertex's larger allowance
+    max(rstol s_i, kl f_i) is within it and the residual is at most kg times the floor, sum |g_i|^2 / m_i <= kg^2
+    sum f_i^2 / m_i (see :class:`ConvergenceParams`)."""
     if relative != 0:
-        return gm2[0] <= stol2[0]
+        tol2 = stol2[0]
+        at_floor = sums[SUM_EXCESS] <= tol2 and sums[SUM_RESIDUAL] <= floor_kappa2 * sums[SUM_FLOOR]
+        return sums[SUM_RELATIVE] <= tol2 or at_floor
     return gnorm2[0] <= gtol2
 
 
-@wp.kernel
-def _mass_normalized_residual_terms(
-    g: wp.array[wp.vec3f], fem: FemElastoDynamicsData, terms: wp.array[wp.float32]
-):
-    i = wp.tid()
-    terms[i] = wp.float32(0)
-    if not is_dirichlet_node(fem.dmask, i):
-        terms[i] = wp.dot(g[i], g[i]) / fem.m[i]
+@wp.func
+def _floor_ratio(sums: wp.array[wp.float32], stol2: wp.array[wp.float32]) -> wp.float32:
+    """The float32 floor over the absolute tolerance, sqrt(sum f_i^2 / m_i / stol2) (0 without a floor)."""
+    num = sums[SUM_FLOOR]
+    ratio = wp.float32(0)
+    if stol2[0] > wp.float32(0):
+        ratio = wp.sqrt(num / stol2[0])
+    elif num > wp.float32(0):
+        ratio = wp.float32(wp.inf)
+    return ratio
 
 
 @wp.kernel
-def _free_flight_displacement_terms(
-    fem: FemElastoDynamicsData, terms: wp.array[wp.float32], masses: wp.array[wp.float32]
+def _stationarity_terms(
+    g: wp.array[wp.vec3f],
+    scale: wp.array[wp.float32],
+    hnorm: wp.array[wp.float32],
+    use_floor: wp.int32,
+    rstol: wp.float32,
+    local_kappa: wp.float32,
+    fem: FemElastoDynamicsData,
+    terms: wp.array2d[wp.float32],
 ):
+    """Free node i's terms of the stationarity sums (``SUM_*``). Its relative allowance is rstol s_i, s_i the largest
+    magnitude of the terms of its force balance (``scale``, gpu.gradient.Gradient's force scale), and its float32
+    floor f_i = |H_i|_F EPS32 |x_i|: the force (in the gradient's units) that a position error of about one float32
+    spacing at x_i makes through the vertex's own Hessian block |H_i|_F (``hnorm``, the last sweep's, inertia
+    included)."""
     i = wp.tid()
-    terms[i] = wp.float32(0)
+    for k in range(N_SUMS):
+        terms[k, i] = wp.float32(0)
+    if is_dirichlet_node(fem.dmask, i):
+        return
+    mi = fem.m[i]
+    g2 = wp.dot(g[i], g[i])
+    a = rstol * scale[i]
+    f = wp.float32(0)
+    if use_floor != 0:
+        f = hnorm[i] * wp.float32(EPS32) * wp.length(fem.x[i])
+    af = wp.max(a, local_kappa * f)
+    terms[SUM_RESIDUAL, i] = g2 / mi
+    terms[SUM_RELATIVE, i] = wp.max(g2 - a * a, wp.float32(0)) / mi
+    terms[SUM_FLOOR, i] = f * f / mi
+    terms[SUM_EXCESS, i] = wp.max(g2 - af * af, wp.float32(0)) / mi
+
+
+@wp.kernel
+def _free_mass_terms(fem: FemElastoDynamicsData, masses: wp.array[wp.float32]):
+    i = wp.tid()
     masses[i] = wp.float32(0)
     if not is_dirichlet_node(fem.dmask, i):
-        d = fem.xtilde[i] - fem.xt[i]
-        terms[i] = fem.m[i] * wp.dot(d, d)
         masses[i] = fem.m[i]
 
 
-@wp.func
-def _stationarity_tol2(
-    dm2: wp.float32, free_mass: wp.float32, rstol2: wp.float32, atol2: wp.float32
-) -> wp.float32:
-    """Squared stationarity tolerance on sum |g|^2/m: max(rstol^2 sum m |d|^2, atol^2 sum m), atol = astol |a| h^2
-    being the absolute tolerance in m."""
-    return wp.max(rstol2 * dm2, atol2 * free_mass)
-
-
 @wp.kernel
-def _stationarity_tolerance(
-    dm2: wp.array[wp.float32],
-    free_mass: wp.array[wp.float32],
-    rstol2: wp.float32,
-    atol2: wp.float32,
-    stol2: wp.array[wp.float32],
-):
-    stol2[0] = _stationarity_tol2(dm2[0], free_mass[0], rstol2, atol2)
+def _stationarity_tolerance(free_mass: wp.array[wp.float32], atol2: wp.float32, stol2: wp.array[wp.float32]):
+    """Squared absolute tolerance on the sums, stol2 = atol^2 sum m_i, atol = astol |a| h^2 (m)."""
+    stol2[0] = atol2 * free_mass[0]
 
 
 @wp.func
@@ -455,10 +548,11 @@ def _ee_penetration(
 def _start_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
-    gm2: wp.array[wp.float32],
+    sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -469,7 +563,7 @@ def _start_kernel(
     solves: wp.array[wp.int32],
 ):
     k[0] = 0
-    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
+    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible and early_exit != 0
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
@@ -481,8 +575,9 @@ def _start_kernel(
     row.outer = 0
     row.sweeps = 0
     row.reason = _solve_end(converged, feasible, n_max_iters > 0)
-    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, stol2, relative)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    row.floor_ratio = wp.where(relative != 0, _floor_ratio(sums, stol2), wp.float32(0))
     status[n % status.shape[0]] = row
 
 
@@ -507,10 +602,11 @@ def _begin_inner_kernel(
 def _after_block_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
-    gm2: wp.array[wp.float32],
+    sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     inner_keep: wp.array[wp.int32],
@@ -518,7 +614,7 @@ def _after_block_kernel(
 ):
     b = blocks[0] + 1
     blocks[0] = b
-    stop = _is_converged(gnorm2, gtol2, gm2, stol2, relative) and early_exit != 0
+    stop = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2) and early_exit != 0
     subproblem_keep[0] = wp.where(stop, 0, 1)
     inner_keep[0] = wp.where(not stop and b < n_blocks, 1, 0)
 
@@ -527,10 +623,11 @@ def _after_block_kernel(
 def _end_outer_kernel(
     gnorm2: wp.array[wp.float32],
     gtol2: wp.float32,
-    gm2: wp.array[wp.float32],
+    sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -548,7 +645,7 @@ def _end_outer_kernel(
 ):
     kk = k[0] + 1
     k[0] = kk
-    converged = _is_converged(gnorm2, gtol2, gm2, stol2, relative)
+    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible and early_exit != 0
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
@@ -561,8 +658,9 @@ def _end_outer_kernel(
     else:
         row.sweeps = row.sweeps + sweeps_prefix + blocks[0] * sweeps_block
     row.reason = _solve_end(converged, feasible, kk < n_max_iters)
-    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, gm2, stol2, relative)
+    row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    row.floor_ratio = wp.where(relative != 0, _floor_ratio(sums, stol2), wp.float32(0))
     status[idx] = row
 
 
@@ -617,28 +715,26 @@ class ConvergenceCheck:
         self._next_solve = 0
         self._fem = fem
         self._contact = contact
-        self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False)
-        # Stationarity test (rstol or astol > 0): sum |g_i|^2 / m_i against
-        # stol2 = max(rstol^2 sum m_i |d_i|^2, (astol |a| h^2)^2 sum m_i), sums over free nodes
+        # The outer test's Lagrangian gradient, and the subproblem's augmented one for the tests inside it, each with
+        # its per-node force scale (the stationarity test's relative term)
+        self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False, force_scale=True)
+        self.augmented_norm = GradientNorm(fem, contact, augmented_lagrangian=True, force_scale=True)
+        # Stationarity test (rstol or astol > 0), sums over free nodes (SUM_*) against stol2 = (astol |a| h^2)^2 sum m_i
         n_nodes = fem.data.x.shape[0]
-        self._terms = wp.zeros(n_nodes, dtype=wp.float32)
+        self._terms = wp.zeros((N_SUMS, n_nodes), dtype=wp.float32)
         self._masses = wp.zeros(n_nodes, dtype=wp.float32)
-        self.residual_m2 = wp.zeros(1, dtype=wp.float32)
-        self.displacement_m2 = wp.zeros(1, dtype=wp.float32)  # sum m_i |d_i|^2, the relative term's scale
+        self.sums = wp.zeros(N_SUMS, dtype=wp.float32)
+        self.residual_m2 = self.sums[0:1]  # sum |g_i|^2 / m_i (a view of sums)
         self.stationarity_tol2 = wp.zeros(1, dtype=wp.float32)  # stol2, see ConvergenceParams
         self.free_mass = wp.zeros(1, dtype=wp.float32)
-        self._reduce_residual = Reduce(
-            d_in=cp.asarray(self._terms),
-            d_out=cp.asarray(self.residual_m2),
-            num_items=n_nodes,
-            op=cuda.compute.OpKind.PLUS,
-        )
-        self._reduce_displacement = Reduce(
-            d_in=cp.asarray(self._terms),
-            d_out=cp.asarray(self.displacement_m2),
-            num_items=n_nodes,
-            op=cuda.compute.OpKind.PLUS,
-        )
+        # The solver's (N,) vertex Hessian norms |H_i|_F for the float32 floor (set_hessian_norms); None: no floor
+        self._hessian_norms = None
+        self._no_hessian_norms = wp.zeros(1, dtype=wp.float32)
+        terms, sums = cp.asarray(self._terms), cp.asarray(self.sums)
+        self._reduce_sums = [
+            Reduce(d_in=terms[k], d_out=sums[k : k + 1], num_items=n_nodes, op=cuda.compute.OpKind.PLUS)
+            for k in range(N_SUMS)
+        ]
         self._reduce_free_mass = Reduce(
             d_in=cp.asarray(self._masses),
             d_out=cp.asarray(self.free_mass),
@@ -666,52 +762,80 @@ class ConvergenceCheck:
         ``fem``'s integrator (dt / substeps)."""
         return absolute_stationarity_tolerance(self.params.astol, self.acceleration, self._fem.bdf.h)
 
+    def set_hessian_norms(self, hnorm: wp.array | None) -> None:
+        """Use the solver's (N,) vertex Hessian norms |H_i|_F (``Params.data.Hnk``, written by every sweep) for the
+        float32 floor; None: no floor. Host-side: recorded kernels read the array, so it must stay the same while a
+        captured graph replays."""
+        self._hessian_norms = hnorm
+
     def _test(self) -> None:
+        """Measure the Lagrangian gradient at the current multipliers (the outer test's), and with the stationarity
+        test its sums and tolerance."""
         stream = wp.get_stream()
         self.gradient_norm.compute(stream)
         if self.relative:
-            self._measure_residual(self.gradient_norm.g)
+            self._measure_residual(self.gradient_norm)
 
-    def _measure_residual(self, g: wp.array) -> None:
+    def _test_subproblem(self) -> None:
+        """Measure the test inside a subproblem. With the stationarity test, that is the subproblem's own residual,
+        the augmented-Lagrangian gradient the sweeps minimize: multipliers max(0, lambda_k - sigma_n c(x)) (one-sided
+        as the vertex solves with ``vbd_slack_at_evaluation``, otherwise with the stored slack), friction capped at
+        mu_f times that normal force, re-evaluated at this test (the Coulomb limits are unfrozen first; the
+        augmented gradient freezes them, GPU Newton's rule), at the subproblem's decay weights. With
+        ``multiplier_step`` 1 it is the next outer test's quantity before the dual update's Coulomb projection and
+        the feasibility filter. With the absolute ``gtol``, the Lagrangian gradient, as between subproblems (C++)."""
+        if not self.relative:
+            self._test()
+            return
+        a = self.augmented_norm
+        a.one_sided = bool(int(self._contact.data.vbd_slack_at_evaluation))
+        self._contact.reset_friction_limits()
+        a.compute_gradient(wp.get_stream())
+        self._measure_residual(a)
+
+    def _measure_residual(self, gradient: GradientNorm) -> None:
+        """The stationarity sums of ``gradient`` (``g`` and its force ``scale``)."""
+        stream = wp.get_stream()
+        hnorm = self._hessian_norms
         wp.launch(
-            _mass_normalized_residual_terms,
-            dim=self._terms.shape[0],
-            inputs=[g, self._fem.data, self._terms],
+            _stationarity_terms,
+            dim=self._terms.shape[1],
+            inputs=[
+                gradient.g,
+                gradient.scale,
+                hnorm if hnorm is not None else self._no_hessian_norms,
+                int(hnorm is not None),
+                float(self.params.rstol),
+                float(self.params.floor_local_kappa),
+                self._fem.data,
+                self._terms,
+            ],
         )
-        self._reduce_residual(wp.get_stream())
+        for reduce in self._reduce_sums:
+            reduce(stream)
 
     def measure_scale(self) -> None:
-        """Measure the stationarity tolerance for the time step, ``stol2 = max(rstol^2 sum m_i |x~_i -
-        x^t_i|^2, (astol |a| h^2)^2 sum m_i)`` over free nodes. No-op unless :attr:`relative`. Capturable."""
+        """Measure the time step's absolute tolerance on the stationarity sums, ``stol2 = (astol |a| h^2)^2 sum m_i``
+        over free nodes (the relative allowances come from each test's forces). No-op unless :attr:`relative`.
+        Capturable."""
         if self.relative:
-            stream = wp.get_stream()
-            wp.launch(
-                _free_flight_displacement_terms,
-                dim=self._terms.shape[0],
-                inputs=[self._fem.data, self._terms, self._masses],
-            )
-            self._reduce_displacement(stream)
-            self._reduce_free_mass(stream)
+            wp.launch(_free_mass_terms, dim=self._masses.shape[0], inputs=[self._fem.data, self._masses])
+            self._reduce_free_mass(wp.get_stream())
             wp.launch(
                 _stationarity_tolerance,
                 dim=1,
-                inputs=[
-                    self.displacement_m2,
-                    self.free_mass,
-                    float(self.params.rstol) ** 2,
-                    self.absolute_tolerance**2,
-                    self.stationarity_tol2,
-                ],
+                inputs=[self.free_mass, self.absolute_tolerance**2, self.stationarity_tol2],
             )
 
     def _tolerance_inputs(self, gtol: float) -> list:
         return [
             self.gradient_norm.gnorm2,
             float(gtol) ** 2,
-            self.residual_m2,
+            self.sums,
             self.stationarity_tol2,
             int(self.relative),
             int(bool(self.params.early_exit)),
+            float(self.params.floor_kappa) ** 2,
         ]
 
     def _measure_penetration(self) -> None:
@@ -771,13 +895,15 @@ class ConvergenceCheck:
         """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps (unless
         ``early_exit`` is off).
 
-        Only the gradient is tested here; feasibility is tested between outer iterations.
+        Only the subproblem's residual is tested here (:meth:`_test_subproblem`): passing ends the subproblem, never
+        the solve, which is decided between outer iterations only (:meth:`end_outer`), after the full dual update,
+        the filter, the solved set's gradient, the re-detection and feasibility.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
             n_blocks (int): Number of blocks in the subproblem.
         """
-        self._test()
+        self._test_subproblem()
         wp.launch(
             _after_block_kernel,
             dim=1,
@@ -866,7 +992,10 @@ class ConvergenceCheck:
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
 
     def _relative_passes(self) -> bool:
-        return float(self.residual_m2.numpy()[0]) <= float(self.stationarity_tol2.numpy()[0])
+        sums, tol2 = self.sums.numpy(), float(self.stationarity_tol2.numpy()[0])
+        kg2 = float(self.params.floor_kappa) ** 2
+        at_floor = float(sums[3]) <= tol2 and float(sums[0]) <= kg2 * float(sums[2])
+        return float(sums[1]) <= tol2 or at_floor
 
     def test_gradient(self) -> bool:
         """Host-side gradient test of the current positions (relative or absolute with ``gtol``
@@ -906,16 +1035,16 @@ class ConvergenceCheck:
         return float(self.penetration.numpy()[0]) <= tol
 
     def gradient_ratio(self) -> float:
-        """Host-side stationarity measure of the last test over its tolerance,
-        ``sqrt(sum |g_i|^2 / m_i / stol2)``, as the status ring's ``gradient_ratio``: at most 1 when it
-        passes. Synchronizes.
+        """Host-side stationarity measure of the last test over its tolerance, the residual beyond the relative
+        allowances ``sqrt(sum max(0, |g_i|^2 - (rstol s_i)^2) / m_i / stol2)``, as the status ring's
+        ``gradient_ratio``: at most 1 passes. Synchronizes.
 
         Returns:
             float: The ratio (from the last :meth:`test_gradient`, :meth:`test_outer` or
             :meth:`relative_test`).
         """
         den = float(self.stationarity_tol2.numpy()[0])
-        return float(np.sqrt(ratio_to_tolerance(float(self.residual_m2.numpy()[0]), den)))
+        return float(np.sqrt(ratio_to_tolerance(float(self.sums.numpy()[1]), den)))
 
     def feasibility_ratio(self, measure: bool = False) -> float:
         """Host-side largest penetration into the contact margin over its tolerance
@@ -934,21 +1063,21 @@ class ConvergenceCheck:
         tol = feasibility_tolerance(self.params.ftol, self._contact.data.dmin)
         return ratio_to_tolerance(float(self.penetration.numpy()[0]), tol)
 
-    def relative_test(self, g: wp.array) -> bool:
-        """Host-side stationarity test of a given gradient, ``sum |g_i|^2 / m_i <= stol2``, against the
-        tolerance from the last :meth:`measure_scale`. Synchronizes, so not capturable.
+    def relative_test(self, gradient: GradientNorm) -> bool:
+        """Host-side stationarity test of a given gradient against its tolerance, which comes from the gradient's
+        own force scale (see :class:`ConvergenceParams`). Synchronizes, so not capturable.
 
         Newton uses it for its augmented-Lagrangian subproblem gradient.
 
         Args:
-            g (wp.array): (N,) vec3f gradient.
+            gradient (GradientNorm): A gradient computed with ``force_scale``.
 
         Returns:
-            bool: Whether ``g`` passes (False if the relative test is off).
+            bool: Whether it passes (False if the relative test is off).
         """
         if not self.relative:
             return False
-        self._measure_residual(g)
+        self._measure_residual(gradient)
         return self._relative_passes()
 
 
@@ -1006,46 +1135,49 @@ class TestFeasibilityTolerance(unittest.TestCase):
 
 
 class TestStationarityTolerance(unittest.TestCase):
-    def test_relative_and_absolute_terms(self):
+    def test_decision(self):
         wp.init()
 
         @wp.kernel
         def k(
-            dm2: wp.array[wp.float32],
-            free_mass: wp.array[wp.float32],
-            gm2: wp.array[wp.float32],
-            rstol2: wp.float32,
-            atol2: wp.float32,
+            sums: wp.array2d[wp.float32],
             stol2: wp.array[wp.float32],
+            floor_kappa2: wp.float32,
             converged: wp.array[wp.int32],
             ratio: wp.array[wp.float32],
+            floor: wp.array[wp.float32],
         ):
             i = wp.tid()
-            g = wp.array(ptr=gm2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
-            s = wp.array(ptr=stol2.ptr + wp.uint64(i * 4), shape=(1,), dtype=wp.float32)
-            s[0] = _stationarity_tol2(dm2[i], free_mass[i], rstol2, atol2)
+            si = wp.array(ptr=sums.ptr + wp.uint64(i * N_SUMS * 4), shape=(N_SUMS,), dtype=wp.float32)
             # The absolute-test inputs (gnorm2, gtol2) are unused by the stationarity branch
-            converged[i] = wp.where(_is_converged(g, wp.float32(0), g, s, 1), 1, 0)
-            ratio[i] = _gradient_ratio(g, wp.float32(0), g, s, 1)
+            converged[i] = wp.where(_is_converged(si, wp.float32(0), si, stol2, 1, floor_kappa2), 1, 0)
+            ratio[i] = _gradient_ratio(si, wp.float32(0), si, stol2, 1)
+            floor[i] = _floor_ratio(si, stol2)
 
-        # Free mass 2 kg; RMS residual r and RMS free-flight displacement D give gm2 = 2 r^2, dm2 = 2 D^2
-        rstol, atol = 1e-2, 1e-4  # atol = astol |a| h^2, in m
-        cases = [  # (D, r)
-            (1e-1, 0.9e-3),  # relative term (1e-3) dominates: passes
-            (1e-1, 1.1e-3),
-            (1e-3, 0.9e-4),  # near rest: the absolute term (1e-4) dominates over rstol D = 1e-5
-            (1e-3, 1.1e-4),
-            (0.0, 0.5e-4),  # no displacement at all: astol alone
+        # Free mass 2 kg, so stol2 = 2 atol^2; RMS values x (residual r, residual beyond the relative allowances R,
+        # float32 floor F, residual beyond the larger of the relative and floor allowances X) give each sum as 2 x^2
+        atol, kg = 1e-4, 0.2  # atol = astol |a| h^2, in m
+        cases = [  # (r, R, F, X)
+            (5e-3, 0.9e-4, 0.0, 0.9e-4),  # within the relative allowances but for 0.9 atol: passes
+            (5e-3, 1.1e-4, 0.0, 1.1e-4),
+            (0.9e-4, 0.9e-4, 0.0, 0.9e-4),  # no allowance (no force): the absolute tolerance alone
+            (3e-4, 1.1e-4, 2e-3, 0.9e-4),  # at the float32 floor: r <= kg F = 4e-4 and beyond the floors within: passes
+            (3e-4, 1.1e-4, 2e-3, 1.1e-4),  # beyond the floors more than the tolerance
+            (5e-4, 1.1e-4, 2e-3, 0.9e-4),  # r above kg F
         ]
-        D, r = (np.array(c, dtype=np.float64) for c in zip(*cases))
+        r, R, F, X = (np.array(c, dtype=np.float64) for c in zip(*cases))
         n = len(cases)
-        dm2, gm2 = wp.array((2 * D**2).astype(np.float32)), wp.array((2 * r**2).astype(np.float32))
-        mass = wp.array(np.full(n, 2.0, dtype=np.float32))
-        stol2, converged, ratio = wp.zeros(n, dtype=wp.float32), wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32)
-        wp.launch(k, dim=n, inputs=[dm2, mass, gm2, rstol**2, atol**2, stol2, converged, ratio])
-        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0, 1])
-        expected = r / np.maximum(rstol * D, atol)
-        np.testing.assert_allclose(ratio.numpy(), expected, rtol=1e-5)
+        sums = np.zeros((n, N_SUMS), dtype=np.float32)
+        sums[:, 0], sums[:, 1], sums[:, 2], sums[:, 3] = 2 * r**2, 2 * R**2, 2 * F**2, 2 * X**2
+        stol2 = wp.array(np.array([2 * atol**2], dtype=np.float32))
+        converged, ratio, floor = wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32), wp.zeros(n, dtype=wp.float32)
+        wp.launch(k, dim=n, inputs=[wp.array(sums), stol2, kg**2, converged, ratio, floor])
+        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 1, 0, 0])
+        np.testing.assert_allclose(ratio.numpy(), R / atol, rtol=1e-5)
+        np.testing.assert_allclose(floor.numpy(), F / atol, rtol=1e-5)
+        # Without a floor factor, the floor case fails like any ratio above 1
+        wp.launch(k, dim=n, inputs=[wp.array(sums), stol2, 0.0, converged, ratio, floor])
+        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0, 0, 0])
 
     def test_external_acceleration(self):
         # Uniform gravity on unequal masses: its norm; fixed and massless nodes don't count
@@ -1069,7 +1201,7 @@ class TestStationarityTolerance(unittest.TestCase):
 
 def _two_resting_cubes(solver_name: str = "VBD"):
     """A test scene: a free cube resting on a fixed one, settled into contact with one outer iteration per
-    step and early exit off. Returns the ``SimulationState``."""
+    step, early exit off and rstol 0. Returns the ``SimulationState``."""
     from pbatoolkit import pbat, pypbat
     from ...state import SimulationState, SolverType, load_params
 
@@ -1086,6 +1218,8 @@ def _two_resting_cubes(solver_name: str = "VBD"):
     state = SimulationState(fem_cpu, load_params(fem_cpu))
     state.solver = SolverType[solver_name]
     state.convergence_params.early_exit = False
+    # No relative allowances, so that the recorded gradient ratios are the residual itself over the absolute tolerance
+    state.convergence_params.rstol = 0.0
     state.reset()
     state.params[state.solver].data.n_max_iters = 1
     for _ in range(5):  # settle into contact
@@ -1118,7 +1252,7 @@ class TestOuterGradientBeforeRedetection(unittest.TestCase):
                 detect_contacts, commit_decay = cd.detect_contacts, contact.commit_decay
 
                 def ratio() -> float:
-                    return float(np.sqrt(probe.residual_m2.numpy()[0] / probe.stationarity_tol2.numpy()[0]))
+                    return probe.gradient_ratio()
 
                 def hooked_detect_contacts(*args, **kwargs):
                     if kwargs.get("from_xt"):  # the time step's first detection
@@ -1158,12 +1292,12 @@ class TestOuterTestDecayWeights(unittest.TestCase):
         for cs in sets:
             cs.gamma.current.fill_(0.5)
 
-        augmented = GradientNorm(state.fem, contact, augmented_lagrangian=True)
+        augmented = GradientNorm(state.fem, contact, augmented_lagrangian=True, force_scale=True)
         measured = {}
         update_dual, commit_decay = contact.update_dual, contact.commit_decay
 
         def ratio() -> float:
-            return float(np.sqrt(check.residual_m2.numpy()[0] / check.stationarity_tol2.numpy()[0]))
+            return check.gradient_ratio()
 
         def hooked_update_dual(x, xt, **kwargs):
             full = kwargs.get("request_decay_update", True)
@@ -1173,7 +1307,7 @@ class TestOuterTestDecayWeights(unittest.TestCase):
                 update_dual(x, xt, request_decay_update=False, request_lagrange_multiplier_update=False)
                 contact.reset_friction_limits()
                 augmented.compute(wp.get_stream())
-                check._measure_residual(augmented.g)
+                check._measure_residual(augmented)
                 measured["augmented"] = ratio()
                 contact.reset_friction_limits()
             update_dual(x, xt, **kwargs)
@@ -1201,6 +1335,142 @@ class TestOuterTestDecayWeights(unittest.TestCase):
         np.testing.assert_allclose(status, measured["augmented"], rtol=1e-3)
         # The next subproblem solves with the reset weights
         self.assertTrue(all(np.all(cs.gamma.current.numpy() == cs.gamma_next.current.numpy()) for cs in sets))
+
+
+class TestForceRelativeTolerance(unittest.TestCase):
+    """The relative term is relative to the forces in the balance, so in acceleration units it doesn't depend on the
+    time step: a deformed free cube moving at constant velocity v (x = x^t + h v, so x - x~ = -h^2 a for BDF1), no
+    contact, at h and h/2. Its force scale per mass, RMS_M(M^-1 s) / h^2, is the same at both; the former term,
+    RMS_M(x~ - x^t) / h^2 = RMS |v / h + a|, doubles with v dominating."""
+
+    @staticmethod
+    def _tolerances(dt: float) -> tuple[float, float]:
+        from pbatoolkit import pbat, pypbat
+        from ...state import SimulationState, load_params
+
+        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+        X = np.vstack([V, V + [0.0, 0.0, 3.0]]).astype(np.float64)  # the free cube well above the fixed one
+        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+        fem_cpu.set_mass_matrix(1e3)
+        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+        fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+        fem_cpu.set_time_integration_scheme(dt=dt, s=1)
+        fem_cpu.constrain(np.repeat([1, 0], 8))
+        state = SimulationState(fem_cpu, load_params(fem_cpu))
+        state.dt = dt
+        state.reset()
+        fem, check = state.fem, state.convergence
+        assert abs(float(fem.bdf.h) - dt) < 1e-9
+        rng = np.random.default_rng(3)
+        xt = X + np.vstack([np.zeros((8, 3)), 0.02 * rng.standard_normal((8, 3))])  # deformed free cube
+        v = np.zeros_like(X)
+        v[8:] = [2.0, -1.0, 0.5]
+        a = np.array([0.0, 0.0, -9.81])
+        h = float(fem.bdf.h)
+        fem.data.xt.assign(xt.astype(np.float32))
+        fem.data.x.assign((xt + h * v).astype(np.float32))
+        xtilde = xt + h * v
+        xtilde[8:] += h * h * a
+        fem.data.xtilde.assign(xtilde.astype(np.float32))
+        check.measure_scale()
+        check._test()
+        m = fem.data.m.numpy()[8:].astype(np.float64)
+        allowance = check.gradient_norm.scale.numpy()[8:] / m / h**2  # s_i / (m_i h^2), m/s^2, free nodes
+        former = float(np.sqrt(np.mean(np.sum((xtilde[8:] - xt[8:]) ** 2, axis=1)))) / h**2
+        return allowance, former
+
+    def test_h_independent(self):
+        wp.init()
+        s1, f1 = self._tolerances(1e-2)
+        s2, f2 = self._tolerances(5e-3)
+        np.testing.assert_allclose(s2, s1, rtol=5e-3)  # float32 rounding of x - x~ (h^2 |a| = 0.25 mm at h/2)
+        self.assertTrue(np.all(s1 > 9.81 * (1 - 1e-3)))  # the largest of |a| (inertial, external) and the elastic force
+        self.assertGreater(f2 / f1, 1.8)
+
+
+def _block_check_state(n_max_iters: int, n_sub: int, early_exit: bool):
+    """Two resting cubes (VBD, see :func:`_two_resting_cubes`) set to ``n_max_iters`` x ``n_sub`` sweeps with one test
+    block of ``check_interval`` = 20 sweeps per 20 (VBD's schedule has no prefix)."""
+    state = _two_resting_cubes("VBD")
+    params = state.params[state.solver].data
+    params.n_max_iters = n_max_iters
+    params.n_subproblem_max_iters = n_sub
+    state.convergence_params.check_interval = 20
+    state.convergence_params.early_exit = early_exit
+    return state
+
+
+class TestInnerTestEndsSubproblemOnly(unittest.TestCase):
+    """A pass inside a subproblem ends that subproblem only: the solve is decided between subproblems, after the full
+    dual update, the filter, the solved set's gradient, the re-detection and feasibility (``end_outer``). Resting
+    cubes, VBD 3 x 40 with a test every 20 sweeps and a huge rstol, so every test's gradient part passes; feasibility
+    is forced to fail. Each subproblem stops after its first block, yet the solve runs all 3 outer iterations, each
+    with its full dual update and outer test, and ends infeasible."""
+
+    def test_inner_pass_doesnt_end_solve(self):
+        state = _block_check_state(3, 40, early_exit=True)
+        state.convergence_params.rstol = 1e6
+        contact, check = state.contact, state.convergence
+        calls = {"dual": 0, "end_outer": 0, "after_block": 0}
+        update_dual, end_outer, after_block = contact.update_dual, check.end_outer, check.after_block
+
+        def hooked_update_dual(*args, **kwargs):
+            calls["dual"] += int(kwargs.get("request_decay_update", True) and kwargs.get(
+                "request_lagrange_multiplier_update", True))
+            return update_dual(*args, **kwargs)
+
+        def hooked_end_outer(*args, **kwargs):
+            calls["end_outer"] += 1
+            return end_outer(*args, **kwargs)
+
+        def hooked_after_block(*args, **kwargs):
+            calls["after_block"] += 1
+            return after_block(*args, **kwargs)
+
+        def infeasible():
+            check.penetration.fill_(1.0)  # 1 m into the margin
+
+        contact.update_dual, check.end_outer, check.after_block = hooked_update_dual, hooked_end_outer, hooked_after_block
+        check._measure_penetration = infeasible
+        state._advance()  # eager, so the hooks run on the host
+        check.enqueue_status_readback()
+        wp.synchronize()
+        row = check.read_status()[0][-1]
+        self.assertEqual(int(row["outer"]), 3)
+        self.assertEqual(int(row["sweeps"]), 3 * 20)  # each subproblem stopped after its first block
+        self.assertEqual(int(row["reason"]), int(SolveEnd.FEASIBILITY_UNMET))
+        self.assertEqual(calls, {"dual": 3, "end_outer": 3, "after_block": 3})
+
+
+class TestInnerRatioMatchesOuter(unittest.TestCase):
+    """With ``multiplier_step`` 1, the test inside a subproblem (its augmented gradient, multipliers max(0, lambda_k -
+    sigma c) and friction capped from them) measures what the next outer test measures after the full dual update
+    (Lagrangian gradient at lambda_k+1, Coulomb-projected friction), up to that projection and the feasibility filter.
+    Resting cubes, VBD 1 x 20 with its one test block at the end of the subproblem, early exit off."""
+
+    def test_inner_equals_outer(self):
+        state = _block_check_state(1, 20, early_exit=False)
+        self.assertEqual(float(state.contact.params.multiplier_step), 1.0)
+        check = state.convergence
+        inner = {}
+        after_block = check.after_block
+
+        def hooked_after_block(*args, **kwargs):
+            after_block(*args, **kwargs)
+            inner["ratio"] = check.gradient_ratio()
+            inner["floor"] = float(np.sqrt(check.sums.numpy()[2] / check.stationarity_tol2.numpy()[0]))
+
+        check.after_block = hooked_after_block
+        state._advance()
+        check.enqueue_status_readback()
+        wp.synchronize()
+        row = check.read_status()[0][-1]
+        outer = float(row["gradient_ratio"])
+        self.assertGreater(inner["floor"], 0.0)  # VBD stores its vertex Hessian norms for the floor
+        # Measured: equal to the last bit, with mu_f 0.2 and 0 (2026-11-06)
+        np.testing.assert_allclose(outer, inner["ratio"], rtol=1e-3)
 
 
 if __name__ == "__main__":
