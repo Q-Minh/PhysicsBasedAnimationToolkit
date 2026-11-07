@@ -102,7 +102,9 @@ class ConvergenceParams(SerializableMixin):
     its residual must be balanced by its other forces through the relative term, or stay at the float32 floor.
     Free fall from x^t still fails at every loaded node: for a body at rest (v^t = 0, no elastic force) left at
     x = x^t, r_i = -f_ext,i / m_i (the inertial term m_i (x_i - x~_i) = -h^2 f_ext,i) and s_i = |f_ext,i|, so
-    q_i = 1 / max(rstol, astol) = 1 / astol = 10 per node, whatever the load's distribution.
+    q_i = 1 / max(rstol, astol) = 1 / astol = 10 per node, whatever the load's distribution. Measured against the
+    scene-wide |a| (2026-11-07): Trampoline.SoftSoft 0-1 s at 10 ms, early exit on, bit-identical positions and
+    exits; every scene config's scenes have a uniform gravity (python/tools/sim/CLAUDE.md).
 
     q_i is node i's residual over its allowance: relative to its forces (a componentwise relative residual,
     |f_res,i| <= rstol max_k |f_k,i|; cf. Oettli and Prager, Numer. Math. 1964; Arioli, Duff and Ruiz, SIAM J. Matrix
