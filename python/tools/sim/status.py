@@ -32,7 +32,10 @@ VBD_DTYPE = np.dtype(
         ("feasibility_ratio", np.float32),
         ("max_outer", np.int32),
         ("max_sweeps", np.int32),  # n_max_iters * n_subproblem_max_iters
-        ("floor_ratio", np.float32),  # the gradient test's float32 floor / tolerance (0: none)
+        # The stationarity test's other ratios (0: absolute test): max_i q_i, RMS_M(q0), RMS_M(r) / (kg RMS_M(phi))
+        ("max_ratio", np.float32),
+        ("no_floor_ratio", np.float32),
+        ("floor_clause_ratio", np.float32),
     ]
 )
 """One VBD-family solve."""
@@ -129,8 +132,9 @@ class StatusLog:
         out["solver"] = solver
         for f in ("outer", "sweeps", "reason", "gradient_ratio", "feasibility_ratio"):
             out[f] = rows[f]
-        if "floor_ratio" in rows.dtype.names:
-            out["floor_ratio"] = rows["floor_ratio"]
+        for f in ("max_ratio", "no_floor_ratio", "floor_clause_ratio"):
+            if f in rows.dtype.names:
+                out[f] = rows[f]
         out["max_outer"] = max_outer
         out["max_sweeps"] = max_sweeps
         self._vbd.append(out)

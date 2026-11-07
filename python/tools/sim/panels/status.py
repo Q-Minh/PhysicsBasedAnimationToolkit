@@ -66,18 +66,25 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(e) / (astol * |a|), mass-weighted, e_i node i's\n"
-    "residual acceleration beyond its allowance rstol * s_i / m_i, s_i the largest of its forces (inertial, elastic,\n"
-    "contact, external) in the step's Lagrangian gradient, |a| the scene's gravity. Above 1 the test can still\n"
-    "pass at the float32 floor (Float32 floor / tol).\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or\n"
+    "RMS_M(r) <= floor_kappa * RMS_M(phi)). This row is RMS_M(q), the mass-weighted RMS over free nodes of\n"
+    "q_i = |r_i| / max(rstol * s_i / m_i, astol * |a|, floor_local_kappa * phi_i): r_i node i's residual\n"
+    "acceleration, s_i the largest of its forces (inertial, elastic, contact, external) in the step's Lagrangian\n"
+    "gradient, |a| the scene's gravity, phi_i its float32 floor |H_i|_F eps32 |x_i| / (m_i h^2).\n"
     "Absolute test (both 0, or static): |g| / gtol."
 )
-_FLOOR_TIP = (
-    "The float32 floor RMS(M^-1 f) over the absolute tolerance astol * |a|, f_i = |H_i|_F eps32 |x_i| / h^2 the force\n"
-    "a position error of one float32 spacing makes through node i's Hessian block. The gradient test also passes when\n"
-    "the residual RMS(M^-1 g) / h^2 is at most floor_kappa times the floor and each node's residual beyond\n"
-    "max(rstol * s_i, floor_local_kappa * f_i) is within the tolerance (Solver.Convergence.floor_kappa,\n"
-    "floor_local_kappa). 0: no floor (GPU Newton)."
+_MAX_TIP = (
+    "The largest node ratio max_i q_i (information only; single nodes at their float32 floor exceed 1).\n"
+    "0: absolute test."
+)
+_NO_FLOOR_TIP = (
+    "RMS_M(q0), the node ratios without the float32 floor, q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|).\n"
+    "At most 1 passes without the floor clause. 0: absolute test."
+)
+_FLOOR_CLAUSE_TIP = (
+    "RMS_M(r) / (floor_kappa * RMS_M(phi)): the floor clause, needed when Without floor / tol is above 1,\n"
+    "passes at most 1 (the residual near the float32 floor overall). inf: no floor (GPU Newton, floor_kappa 0).\n"
+    "0: absolute test."
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -86,8 +93,9 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS(e) / (astol * |a|), e_i node i's residual acceleration beyond rstol * s_i / m_i, s_i the largest of its\n"
-    "forces, in the step's Lagrangian gradient, |a| the scene's gravity (no float32 floor).\n"
+    "RMS_M(q0), the mass-weighted RMS of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|), r_i node i's residual\n"
+    "acceleration, s_i the largest of its forces in the step's Lagrangian gradient, |a| the scene's gravity\n"
+    "(no float32 floor).\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (
@@ -166,8 +174,10 @@ def _draw_vbd_solve(r, rows: _Rows):
     ratio = float(r["gradient_ratio"])
     passed = reason in (SolveEnd.CONVERGED, SolveEnd.FEASIBILITY_UNMET)
     rows.row("Residual / tol", _ratio(ratio), _RESIDUAL_TIP, None if ratio <= 1 or passed else _WARN)
-    if "floor_ratio" in r.dtype.names:
-        rows.row("Float32 floor / tol", _ratio(float(r["floor_ratio"])), _FLOOR_TIP)
+    if "max_ratio" in r.dtype.names:
+        rows.row("Largest node / tol", _ratio(float(r["max_ratio"])), _MAX_TIP)
+        rows.row("Without floor / tol", _ratio(float(r["no_floor_ratio"])), _NO_FLOOR_TIP)
+        rows.row("Residual / floor", _ratio(float(r["floor_clause_ratio"])), _FLOOR_CLAUSE_TIP)
     ratio = float(r["feasibility_ratio"])
     rows.row("Penetration / tol", _ratio(ratio), _PENETRATION_TIP, None if ratio <= 1 else _WARN)
 

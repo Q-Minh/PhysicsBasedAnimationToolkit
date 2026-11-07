@@ -54,13 +54,13 @@
 #   feasibility violations; others within noise. Median feasibility ratios rise 2-5x where contact matters,
 #   staying below 1 (measurements: gpu/contact/dynamics.py, at adapt_penalty_parameters_to_hessian).
 #     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
-# - Relative stationarity tolerance rstol = 2e-2, the code default since 2026-11-06 (maintainer: make the
-#   relative tolerance h-independent; the paper files' 1e-2 had the former meaning): each node's residual
-#   acceleration may exceed rstol times its largest force (inertial, elastic, contact, external) per mass, and
-#   the RMS of what's left over must be within astol |a|. Calibrated so the soft scenes' early exits match the
-#   former test: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for rstol 1e-2 to
-#   1e-1; 2e-2 matches the former sum-of-forces form's 1e-2 where two forces balance (gpu/vbd/convergence.py,
-#   ConvergenceParams).
+# - Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the
+#   paper files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual
+#   acceleration over the largest of rstol times its largest force per mass, astol |a| and its float32 floor
+#   must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for 1e-2
+#   to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for
+#   35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams).
+#     Solver.Convergence.astol = 0.1 (source 0.5)
 #     Solver.Convergence.rstol = 0.02 (source 0.01)
 # - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
 #   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
@@ -178,7 +178,7 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.5
+astol = 0.1
 check_interval = 20
 early_exit = 1
 floor_kappa = 0.2

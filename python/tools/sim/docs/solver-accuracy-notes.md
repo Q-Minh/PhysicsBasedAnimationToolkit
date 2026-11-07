@@ -45,7 +45,8 @@ acceleration. The relative term also grows with speed, because the free-flight d
 rigid translation. The test is a stationarity tolerance for the step's deformation, not an accuracy bound on slow
 rigid motion such as sliding, rolling or settling. (Since 2026-11-06 the relative term is relative to each node's
 forces instead, rstol max(|f_inertial|, |f_el|, |f_c|, |f_ext|) per node, so it no longer grows with speed or 1/h; the
-absolute term, 4.9 m/s² here, still exceeds the slide's acceleration. Not re-measured.)
+absolute term, 4.9 m/s² here, still exceeds the slide's acceleration. Since then, too, the test is the mass-weighted
+RMS of each node's residual over its own allowance, the same for a uniform residual. Not re-measured.)
 
 **For the paper.** Residual ratios below 1 don't certify accurate trajectories, and two solvers with equally
 "converged" steps can differ by tens of percent in the motion that matters. That's why the benchmark measures
