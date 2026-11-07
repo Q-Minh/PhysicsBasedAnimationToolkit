@@ -192,6 +192,12 @@ class ConvergenceParams(SerializableMixin):
         "/ (m_i h^2) the acceleration a position error of one float32 spacing makes through node i's Hessian block "
         "(the last sweep's; VBD family only)",
     )
+    # TODO: A per-body norm, the largest of each body's (connected component's) mass-weighted RMS, would keep a heavy
+    # body from hiding a light stiff one without the max's single-node sensitivity. Measured offline (2026-11-07,
+    # Celebration step 100, production budget): the letters' own RMS_M(q) is 1.46 / 1.68 / 1.36 (AAAVBD / Chebyshev /
+    # Anderson) and the confetti's 2.24 / 1.38 / 1.55 where the whole scene's is 0.41 / 0.35 / 0.33, so it would fail
+    # all three but not rank AAAVBD best either; MAX gives 31.4 / 29.4 / 35.3, set by single light confetti nodes.
+    # Not implemented: needs a per-body segmented reduction; data/profiling/investigations/max-node-norm.
     node_norm = DocField(
         NodeNorm.RMS,
         "Norm over free nodes in the stationarity test: RMS, the mass-weighted RMS (RMS_M(q) <= 1 and (RMS_M(q0) <= 1 "
