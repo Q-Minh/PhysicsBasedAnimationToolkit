@@ -59,6 +59,11 @@ DEPRECATED = {
         "external acceleration |a|: the gradient test now passes below max(rstol * RMS(x~ - x^t), astol * |a| * "
         "h^2), so the former floor f corresponds to astol = rstol * f / (|a| h^2)"
     ),
+    "Solver.Convergence.floor_kappa": (
+        "removed with the RMS form of the stationarity test: each node's residual is now bounded by its own "
+        "allowance, at least Solver.Convergence.floor_local_kappa times its float32 floor, so the global floor "
+        "factor has no counterpart"
+    ),
 }
 
 # Keys renamed without a change of meaning: their values move to the new key, with a ConfigWarning
