@@ -127,9 +127,10 @@ class ConvergenceParams(SerializableMixin):
     one (Celebration: the base plate's mass hides the letters, whose residuals are 6-9x their float32 floor when
     every solver passes the RMS test); the max catches it, at the cost of the single-node failures above.
 
-    ``smoothing_passes`` k > 0 (not the default; k = 0 adds no work) smooths the residual before the test: r_i
-    becomes r_bar_i, k passes of mass-weighted averaging over each free node's closed 1-ring of the tet mesh (free
-    nodes only: fixed nodes neither contribute nor receive), and phi_i a floor under the same filter, phi_bar_i:
+    ``smoothing_passes`` k > 0 (not the default; k = 0 adds no work) adds a smoothed test, which must pass too: the
+    same test with r_i replaced by r_bar_i, k passes of mass-weighted averaging over each free node's closed 1-ring
+    of the tet mesh (free nodes only: fixed nodes neither contribute nor receive), and phi_i by a floor under the
+    same filter, phi_bar_i:
 
         r_bar_i^(t+1) = sum_j m_j r_bar_j^(t) / sum_j m_j         j in {i} and i's mesh neighbours, free
         phi_bar_i     = c |S_k(p)|_i,   p_i = (g(x + xi) - g(x))_i / (m_i h^2)
@@ -138,7 +139,12 @@ class ConvergenceParams(SerializableMixin):
     gradient in float32 (contact left out: its Lagrangian force doesn't depend on x), c = :data:`SMOOTHED_FLOOR_SCALE`
     = 1.4. p is measured once per solve (time step or substep), at its initial positions (:meth:`ConvergenceCheck.
     measure_scale`), and only where the floor applies (the VBD family). rho_i, alpha, kl, kg and the test's form are
-    unchanged, so the status ratios are those of the smoothed test. Why: float32 rounding noise is high-frequency
+    unchanged. A solve passes only if the unsmoothed test and the smoothed one both pass, and the status records the
+    ratios of the one whose decisive ratio is larger (``_keep_stricter_sums``), so ``status_ratio.
+    stationarity_test_ratio`` stays exact. The smoothed test alone isn't safe: the filter also averages away real
+    high-frequency residual, and on Trampoline.SoftSoft (AAAVBD 5 x 20, 0-1 s, k = 16) it passed every step after
+    5000 sweeps instead of 9500, 1.0-5.0 mm from an early-exit-off reference instead of 0.10-0.29 mm. Why smooth:
+    float32 rounding noise is high-frequency
     and dominates the per-node residual of stiff bodies, so no per-node norm of r ranks the solvers on Celebration
     (the letters sag under Chebyshev, Anderson and VBD), while it averages away under the filter and the solvers'
     smooth error doesn't: RMS r_bar_16 at step 100 is 0.56 g for AAAVBD, 5.5 (Chebyshev), 4.8 (Anderson) and 15.9
@@ -150,9 +156,14 @@ class ConvergenceParams(SerializableMixin):
     :data:`SMOOTHED_FLOOR_SCALE`), so the floor clause can't accept more than the real noise, where the unsmoothed
     test's kg phi is 1.16 F_0. Predicted offline (Celebration step 100, k = 16), decisive ratio: AAAVBD 1.72,
     Chebyshev 23.8, Anderson 18.5, VBD 52.2; AAAVBD 5 x 400 1.43, 5 x 6000 1.30 (k = 4: 2.73, 21.7, 18.6, 54.0;
-    1.49, 1.44), so a fully converged AAAVBD state still fails narrowly (accepted: more work, never less). Data:
-    data/profiling/investigations/residual-smoothing. Each test costs k filter passes more, and each solve two
-    gradient evaluations and k passes. GPU Newton smooths r too, without a floor (as without smoothing).
+    1.49, 1.44), so a fully converged AAAVBD state still fails narrowly (accepted: more work, never less). Measured
+    (2026-11-07, 1-step resumes at step 100, 5 x 80 sweeps, k = 16): AAAVBD 1.71, Chebyshev 23.8, Anderson 18.5, an
+    AAAVBD 5 x 2000 1.36 (the unsmoothed test passes the three 5 x 80 states at 0.78-0.85); Trampoline.SoftSoft 0-1 s at 10 ms
+    bit-identical to k = 0 (the unsmoothed test is the stricter at every pass). Data:
+    data/profiling/investigations/residual-smoothing. Each test costs k filter passes (82 us each on Celebration's
+    196k nodes) and one more ratio kernel and reductions, 0.22 sweep at k = 4 and 0.77 at k = 16, and each solve two
+    elastic gradients and k passes: +1.3% and +4.1% per Celebration step (21 tests). GPU Newton smooths r too,
+    without a floor (as without smoothing).
 
     astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
     (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
@@ -235,12 +246,13 @@ class ConvergenceParams(SerializableMixin):
     )
     smoothing_passes = DocField(
         0,
-        "Residual smoothing passes k (0: off, no extra work): the stationarity test uses r_bar_i, k passes of "
-        "mass-weighted averaging of the residual acceleration over each free node's closed 1-ring of the tet mesh, "
-        "in place of r_i, and a float32 floor under the same filter (1.4 |S_k(g(x + xi) - g(x))| / (m h^2), xi a "
-        "random +-1 float32 spacing, measured once per solve) in place of phi_i. Float32 noise averages away, the "
-        "solvers' smooth errors don't, so the test ranks solvers on stiff bodies whose per-node residual sits at the "
-        "floor. Each test costs k filter passes (VBD family and GPU Newton; Newton has no floor)",
+        "Residual smoothing passes k (0: off, no extra work): the stationarity test must also pass with r_bar_i, k "
+        "passes of mass-weighted averaging of the residual acceleration over each free node's closed 1-ring of the "
+        "tet mesh, in place of r_i, and a float32 floor under the same filter (1.4 |S_k(g(x + xi) - g(x))| / (m h^2), "
+        "xi a random +-1 float32 spacing, measured once per solve) in place of phi_i; the status shows the stricter "
+        "test. Float32 noise averages away, the solvers' smooth errors don't, so it fails solvers whose stiff bodies "
+        "hide a smooth error under the per-node floor. Each test costs k filter passes (VBD family and GPU Newton; "
+        "Newton has no floor)",
     )
     early_exit = DocField(
         True,
@@ -623,6 +635,37 @@ def _stationarity_ratios_smoothed(
         terms[SUM_FLOOR, i] = f * f / mi
 
 
+@wp.func
+def _decisive_ratio(sums: wp.array[wp.float32], weight: wp.array[wp.float32], floor_kappa2: wp.float32) -> wp.float32:
+    """The stationarity test's decisive ratio from its reductions, max(||q||, min(||q0||, ||r|| / (kg ||phi||))): at
+    most 1 iff it passes (as ``status_ratio.stationarity_test_ratio``)."""
+    return wp.max(
+        _mass_rms(sums, SUM_RATIO, weight),
+        wp.min(_mass_rms(sums, SUM_RATIO_NO_FLOOR, weight), _floor_clause_ratio(sums, floor_kappa2)),
+    )
+
+
+@wp.kernel
+def _keep_stricter_sums(
+    unsmoothed: wp.array[wp.float32],
+    weight: wp.array[wp.float32],
+    floor_kappa2: wp.float32,
+    sums: wp.array[wp.float32],
+):
+    """With smoothing, a test passes only if the unsmoothed and the smoothed tests both pass: ``sums`` (the smoothed
+    test's reductions) becomes the unsmoothed test's where its decisive ratio is larger, so every reader of ``sums``
+    (decisions, status rows, the host) sees the stricter of the two."""
+    # The decisions first (as _is_converged), so rounding of the ratios at 1 can't pick a passing test over a failing one
+    passes = _is_converged(sums, wp.float32(0), sums, weight, 1, floor_kappa2)
+    unsmoothed_passes = _is_converged(unsmoothed, wp.float32(0), unsmoothed, weight, 1, floor_kappa2)
+    stricter = passes and not unsmoothed_passes
+    if passes == unsmoothed_passes:
+        stricter = _decisive_ratio(unsmoothed, weight, floor_kappa2) > _decisive_ratio(sums, weight, floor_kappa2)
+    if stricter:
+        for k in range(N_SUMS):
+            sums[k] = unsmoothed[k]
+
+
 @wp.kernel
 def _smoothing_pass(
     src: wp.array[wp.vec3f],
@@ -635,6 +678,10 @@ def _smoothing_pass(
     dst_i = m_i sum_j src_j / sum_j m_j over j in {i} and i's mesh neighbours (``GVVp``/``GVVadj``, which may list i
     itself), free nodes only (``masses`` the free masses, 0 on fixed nodes), i.e. m_i h^2 times the mass-weighted
     average of v. Fixed and massless nodes get 0."""
+    # TODO: A cheaper filter. Why: a pass takes 82 us on Celebration (196k nodes, 13.1-node rings; memory-bound at
+    # ~0.6 TB/s), so a k = 16 test costs 0.77 sweep (k = 4: 0.22; 2026-11-07, CUPTI). Ideas: store each ring's mass
+    # sum once per solve (drops the neighbours' mass loads), fuse several passes per block through shared memory, or
+    # a wider stencil with fewer passes. Not tried.
     i = wp.tid()
     mi = masses[i]
     out = wp.vec3f(0.0)
@@ -1061,6 +1108,17 @@ class ConvergenceCheck:
         self._smooth = (wp.zeros(n_nodes, dtype=wp.vec3f), wp.zeros(n_nodes, dtype=wp.vec3f))
         self._probe_x = wp.zeros(n_nodes, dtype=wp.vec3f)
         self._smoothed_floor = wp.zeros(n_nodes, dtype=wp.float32)
+        # The unsmoothed test's reductions, kept beside the smoothed test's (sums): the stricter one decides
+        self._unsmoothed_sums = wp.zeros(N_SUMS, dtype=wp.float32)
+        terms, sums = cp.asarray(self._terms), cp.asarray(self._unsmoothed_sums)
+        maximum, plus = cuda.compute.OpKind.MAXIMUM, cuda.compute.OpKind.PLUS
+        self._reduce_unsmoothed_sums = {
+            norm: [
+                Reduce(d_in=terms[k], d_out=sums[k : k + 1], num_items=n_nodes, op=op)
+                for k, op in [(SUM_RATIO_MAX, maximum)] + [(k, rest) for k in range(SUM_RATIO, N_SUMS)]
+            ]
+            for norm, rest in ((NodeNorm.RMS, plus), (NodeNorm.MAX, maximum))
+        }
 
     def _smooth_field(self, src: wp.array, k: int) -> wp.array:
         """k filter passes of ``src`` (gradient units, see :func:`_smoothing_pass`) through the ping-pong buffers,
@@ -1076,6 +1134,10 @@ class ConvergenceCheck:
         """The smoothed test's float32 floor c |S_k(p)|_i in the gradient's units (:class:`ConvergenceParams`), p =
         g(x + xi) - g(x) of the elastic and inertial gradient at the current positions, xi a random step of one
         float32 spacing per coordinate. Reads the free masses (:meth:`measure_scale`). Capturable."""
+        # TODO: Include the contact penalty's response in the probe (the subproblems' augmented contact stiffness).
+        # Why: an AAAVBD Celebration step solved to 5 x 2000 sweeps still fails the smoothed test at 1.36 (offline:
+        # 5 x 6000 at 1.30), its filtered residual 1.4x the elastic-and-inertial floor; the probe leaves contact out
+        # (the strict side), which may be the missing noise. Not measured.
         fem = self._fem
         h2 = wp.float32(fem.h2)
         g0, g1 = self._smooth
@@ -1150,13 +1212,34 @@ class ConvergenceCheck:
         self._measure_residual(a)
 
     def _measure_residual(self, gradient: GradientNorm) -> None:
-        """The stationarity reductions of ``gradient``'s node ratios (``g`` and its force ``scale``), of its smoothed
-        residual with ``smoothing_passes`` > 0 (``g`` itself is left as it is)."""
+        """The stationarity reductions of ``gradient``'s node ratios (``g`` and its force ``scale``). With
+        ``smoothing_passes`` > 0, also those of its smoothed residual (``g`` itself is left as it is), and ``sums``
+        keeps the stricter test's (both must pass)."""
         stream = wp.get_stream()
         hnorm = self._hessian_norms
         k = self.smoothing_passes
         if k > 0:
             self.prepare_smoothing()
+            # The unsmoothed test, as with k = 0, into its own reductions
+            wp.launch(
+                _stationarity_ratios,
+                dim=self._terms.shape[1],
+                inputs=[
+                    gradient.g,
+                    gradient.scale,
+                    hnorm if hnorm is not None else self._no_hessian_norms,
+                    int(hnorm is not None),
+                    float(self.params.rstol),
+                    self.absolute_tolerance,
+                    float(self.params.floor_local_kappa),
+                    int(self.node_norm.value),
+                    self._fem.data,
+                    self._terms,
+                ],
+            )
+            for reduce in self._reduce_unsmoothed_sums[self.node_norm]:
+                reduce(stream)
+            # The smoothed test
             wp.launch(
                 _stationarity_ratios_smoothed,
                 dim=self._terms.shape[1],
@@ -1175,6 +1258,12 @@ class ConvergenceCheck:
             )
             for reduce in self._reduce_sums[self.node_norm]:
                 reduce(stream)
+            # Both must pass: keep the reductions of the test with the larger decisive ratio
+            wp.launch(
+                _keep_stricter_sums,
+                dim=1,
+                inputs=[self._unsmoothed_sums, self.norm_weight, float(self.params.floor_kappa) ** 2, self.sums],
+            )
             return
         wp.launch(
             _stationarity_ratios,
@@ -1744,7 +1833,8 @@ class TestResidualSmoothing(unittest.TestCase):
         # same values, bit for bit, as the unsmoothed kernel launched directly; no smoothing buffer is allocated
         state, check = self._state()
         self.assertEqual(ConvergenceParams().smoothing_passes, 0)
-        smoothing = {_stationarity_ratios_smoothed, _smoothing_pass, _perturb_positions, _subtract, _floor_from_probe}
+        smoothing = {_stationarity_ratios_smoothed, _smoothing_pass, _perturb_positions, _subtract, _floor_from_probe,
+                     _keep_stricter_sums}
         launched = []
         launch = wp.launch
 
@@ -1832,9 +1922,10 @@ class TestResidualSmoothing(unittest.TestCase):
         self.assertTrue(np.all(check._smoothed_floor.numpy() == 0.0))
 
     def test_smoothed_test(self):
-        # k = 4: the test's ratios are those of the smoothed residual against the smoothed floor (a float64 reference
-        # from the device's gradient, force scale and floor), under both norms; the device's decision, the host's and
-        # status_ratio.stationarity_test_ratio agree; the test leaves the gradient as it was
+        # k = 4: the test passes only if the unsmoothed test and the smoothed one (the smoothed residual against the
+        # smoothed floor) both pass, and records the ratios of the one with the larger decisive ratio (float64
+        # references from the device's gradient, force scale and floors), under both norms; the device's decision,
+        # the host's and status_ratio.stationarity_test_ratio agree; the test leaves the gradient as it was
         from ...status_ratio import stationarity_test_ratio
 
         state, check = self._state()
@@ -1852,27 +1943,56 @@ class TestResidualSmoothing(unittest.TestCase):
                 m = check._masses.numpy().astype(np.float64)
                 free = m > 0
                 GVVp, GVVadj = (a.numpy() for a in check._vertex_adjacency)
-                gbar = np.linalg.norm(_smooth_reference(g, m, GVVp, GVVadj, 4), axis=1)[free]
-                s, f, mf = check.gradient_norm.scale.numpy()[free], check._smoothed_floor.numpy()[free], m[free]
+                s, mf = check.gradient_norm.scale.numpy()[free], m[free]
                 allowance = np.maximum(float(params.rstol) * s, check.absolute_tolerance * mf)
-                q, q0 = gbar / np.maximum(allowance, kl * f), gbar / allowance
-                if norm == NodeNorm.RMS:
-                    expected = [np.sqrt(np.sum(mf * q**2) / mf.sum()), np.sqrt(np.sum(mf * q0**2) / mf.sum()),
-                                np.sqrt(np.sum(gbar**2 / mf) / (kg**2 * np.sum(f**2 / mf)))]
-                else:
-                    expected = [q.max(), q0.max(), np.sqrt(np.max(gbar**2 / mf**2) / (kg**2 * np.max(f**2 / mf**2)))]
+
+                def ratios(r, f):  # (||q||, ||q0||, floor clause), max q, decisive; r, f in the gradient's units
+                    q, q0 = r / np.maximum(allowance, kl * f), r / allowance
+                    if norm == NodeNorm.RMS:
+                        out = [np.sqrt(np.sum(mf * q**2) / mf.sum()), np.sqrt(np.sum(mf * q0**2) / mf.sum()),
+                               np.sqrt(np.sum(r**2 / mf) / (kg**2 * np.sum(f**2 / mf)))]
+                    else:
+                        out = [q.max(), q0.max(), np.sqrt(np.max(r**2 / mf**2) / (kg**2 * np.max(f**2 / mf**2)))]
+                    return out, q.max(), max(out[0], min(out[1], out[2]))
+
+                x = state.fem.data.x.numpy()
+                phi = (check._hessian_norms.numpy() * EPS32 * np.linalg.norm(x, axis=1))[free]
+                unsmoothed = ratios(np.linalg.norm(g, axis=1)[free], phi)
+                smoothed = ratios(np.linalg.norm(_smooth_reference(g, m, GVVp, GVVadj, 4), axis=1)[free],
+                                  check._smoothed_floor.numpy()[free])
+                expected = max(unsmoothed, smoothed, key=lambda e: e[2])
                 check.penetration.zero_()
                 check.k.zero_()
                 wp.launch(_end_outer_kernel, dim=1, inputs=check._outer_test_inputs(1.0, 1) + [
                     check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep])
                 row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
                 np.testing.assert_allclose(
-                    [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], expected, rtol=1e-4)
-                np.testing.assert_allclose(row["max_ratio"], q.max(), rtol=1e-4)
+                    [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], expected[0], rtol=1e-4)
+                np.testing.assert_allclose(row["max_ratio"], expected[1], rtol=1e-4)
+                np.testing.assert_allclose(stationarity_test_ratio(row), max(unsmoothed[2], smoothed[2]), rtol=1e-4)
                 passes = check._relative_passes()
                 self.assertEqual(int(row["reason"]) == int(SolveEnd.CONVERGED), passes)
                 self.assertEqual(stationarity_test_ratio(row) <= 1.0, passes)
         params.node_norm = NodeNorm.RMS
+
+    def test_keep_stricter(self):
+        # The combined decision passes iff both tests pass, and keeps the stricter test's reductions
+        wp.init()
+        kg = 0.2
+
+        def sums(q, q0, r, F):  # one free node of unit mass: the RMS sums are the squares
+            out = np.zeros(N_SUMS, dtype=np.float32)
+            out[SUM_RATIO_MAX], out[SUM_RATIO], out[SUM_RATIO_NO_FLOOR] = q, q**2, q0**2
+            out[SUM_RESIDUAL], out[SUM_FLOOR] = r**2, F**2
+            return out
+
+        passing, failing, worse = sums(0.5, 0.9, 1.0, 1.0), sums(0.5, 2.0, 0.5, 1.0), sums(0.5, 3.0, 0.9, 1.0)
+        weight = wp.array(np.ones(1, dtype=np.float32))
+        for unsmoothed, smoothed, kept in [(passing, failing, failing), (failing, passing, failing),
+                                           (failing, worse, worse), (worse, failing, worse), (passing, passing, passing)]:
+            out = wp.array(smoothed.copy())
+            wp.launch(_keep_stricter_sums, dim=1, inputs=[wp.array(unsmoothed.copy()), weight, kg**2, out])
+            np.testing.assert_array_equal(out.numpy(), kept)
 
     def test_steps(self):
         # Whole steps with k = 4: VBD-family solvers under graph capture, and GPU Newton (no floor, so its floor clause
