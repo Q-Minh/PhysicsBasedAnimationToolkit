@@ -1193,9 +1193,9 @@ def check_convergence(
     re-detection instead (:func:`outer_gradient_test` before it, :func:`outer_feasibility_test` after it).
 
     With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
-    dynamic problems), it's the VBD family's outer test: the Lagrangian gradient, every free node within its
-    allowance, ``max_i |g_i| / max(rstol s_i, astol |a| h^2 m_i) <= 1`` (s_i node i's largest force term; no float32
-    floor; see ``vbd.convergence.ConvergenceParams``), and feasibility
+    dynamic problems), it's the VBD family's outer test without the float32 floor: the Lagrangian gradient,
+    ``RMS_M(q0) <= 1``, q0_i = |g_i| / max(rstol h^2 s_i, astol |a| h^2 m_i) (s_i node i's largest force term; see
+    ``vbd.convergence.ConvergenceParams``), and feasibility
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the

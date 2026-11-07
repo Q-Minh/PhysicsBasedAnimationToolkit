@@ -99,7 +99,9 @@ class ConvergenceParams(SerializableMixin):
     The RMS decides, not the largest ratio: max_i q_i <= 1 is held by single nodes at their float32 floor (light
     surface nodes, a node next to a clamped rim, an interior beam node). Measured (2026-11-06, AAAVBD, against the
     former test): Trampoline.SoftSoft passed 0 of 421 steps (+49% sweeps), CapsulesIntoBowl +132% sweeps,
-    ArmadilloSpaghetti.DragonImpact 0 of 30 substeps (+31%). MEASUREMENTS
+    ArmadilloSpaghetti.DragonImpact 0 of 30 substeps (+31%). The RMS form against the former test:
+    Trampoline.SoftSoft and BendingBeam.100MPa bit-identical, DragonImpact and CapsulesIntoBowl -1% sweeps with the
+    same exits; DragonImpact and the beam pass through the floor clause (python/tools/sim/CLAUDE.md).
 
     Changed form (2026-11-06): the test was RMS_M(e) <= alpha, e_i = max(0, |r_i|^2 - rho_i^2)^(1/2) the residual
     beyond the relative allowance, or RMS_M(e') <= alpha and RMS_M(r) <= kg RMS_M(phi), e'_i beyond
