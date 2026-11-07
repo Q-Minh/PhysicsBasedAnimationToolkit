@@ -418,11 +418,13 @@ class SimulationState:
     def _construct_convergence_check(self):
         """Share one device-side convergence test among the VBD-family and Newton solvers' params."""
         # step() reads the status ring every step, so it needs one row per substep
+        vbd = self.params[SolverType.VBD].data
         self.convergence = gpu.vbd.convergence.ConvergenceCheck(
             self.fem,
             self.contact,
             self.convergence_params,
             status_capacity=self.substeps,
+            vertex_adjacency=(vbd.GVVp, vbd.GVVadj),  # the residual smoothing's 1-rings
         )
         for s in (
             SolverType.VBD,
@@ -487,6 +489,8 @@ class SimulationState:
                 self.fem.step()
 
     def step(self):
+        # Captured work must not allocate: the residual smoothing's buffers, if it's on, are allocated here
+        self.convergence.prepare_smoothing()
         # Profiling times eager launches (see gpu/common/profiling.py), so profiled steps bypass the
         # captured graph.
         if (

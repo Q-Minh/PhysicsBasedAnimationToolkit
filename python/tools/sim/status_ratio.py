@@ -8,7 +8,9 @@ The VBD family's stationarity test (``gpu/vbd/convergence.py``, ``_is_converged`
 
 and the status records RMS_M(q) as ``gradient_ratio``, RMS_M(q0) as ``no_floor_ratio`` and
 RMS_M(r) / (kg RMS_M(phi)) as ``floor_clause_ratio``. With ``Solver.Convergence.node_norm`` MAX every RMS_M is the
-largest value over free nodes instead, in the test and in the recorded ratios alike, so the same formula decides. So ``max(gradient_ratio, min(no_floor_ratio,
+largest value over free nodes instead, in the test and in the recorded ratios alike, so the same formula decides.
+With ``Solver.Convergence.smoothing_passes`` > 0 the unsmoothed and the smoothed test must both pass and the row
+records the stricter one's ratios, so it still decides. So ``max(gradient_ratio, min(no_floor_ratio,
 floor_clause_ratio))`` is at most 1 exactly when the test passes, whereas ``gradient_ratio`` alone can be below 1 on
 a step that failed the second clause.
 

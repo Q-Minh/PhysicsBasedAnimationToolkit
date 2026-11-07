@@ -107,6 +107,7 @@ floor_local_kappa = 1.5
 ftol = 0.5
 node_norm = 0
 rstol = 0.02
+smoothing_passes = 0
 
 [Solver.Newton]
 init_strategy = 0

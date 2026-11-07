@@ -68,7 +68,10 @@ _SUBPROBLEM = {
 
 _NORM_TIP = (
     "||.|| is the norm over free nodes, Solver.Convergence.node_norm: RMS (default), the mass-weighted RMS,\n"
-    "or MAX, the largest node value."
+    "or MAX, the largest node value.\n"
+    "With Solver.Convergence.smoothing_passes k > 0 the test must also pass with r_i and phi_i smoothed\n"
+    "(k passes of mass-weighted 1-ring averaging; the floor from a +-1 float32 spacing probe), and these\n"
+    "rows show the stricter of the two tests."
 )
 _STATIONARITY_TIP = (
     "The stationarity test's ratio at the end of the solve: at most 1 exactly when the test passed.\n"
@@ -112,7 +115,9 @@ _NEWTON_RESIDUAL_TIP = (
     "scene's gravity (no float32 floor).\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient.\n"
     "||.|| is the norm over free nodes, Solver.Convergence.node_norm: RMS (default), the mass-weighted RMS,\n"
-    "or MAX, the largest node value."
+    "or MAX, the largest node value.\n"
+    "With Solver.Convergence.smoothing_passes k > 0 the test must also pass with r_i smoothed (k passes of\n"
+    "mass-weighted 1-ring averaging), and this shows the stricter of the two tests."
 )
 _NEWTON_PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
