@@ -26,6 +26,7 @@
 #   Contact.CDType.VertexSdf.freeze_within_solve
 #   Contact.ContactDynamics.vbd_slack_at_evaluation
 #   Solver.Convergence.early_exit
+#   Solver.Convergence.floor_kappa
 #   Solver.Convergence.floor_local_kappa
 #   Solver.Newton.one_sided_contact
 #
@@ -138,6 +139,7 @@ vls_max_iters = 25
 astol = 0.5
 check_interval = 20
 early_exit = 1
+floor_kappa = 0.2
 floor_local_kappa = 1.5
 ftol = 0.5
 rstol = 0.02
