@@ -4,8 +4,9 @@ GUI panel for per-solve statuses (see status.py), for interactive tuning.
 Two tree nodes, read top to bottom:
 
 - **Last step**: per substep, how the solve ended and what it used, one fact per row. VBD family: result,
-  outer iterations and sweeps against their budgets, and the final ratios of the gradient residual and
-  the penetration to their tolerances (at most 1 passes). Newton: the outer test with the same two ratios
+  outer iterations and sweeps against their budgets, and the final ratios of the stationarity test
+  (``status_ratio.stationarity_test_ratio``, then its parts) and the penetration to their tolerances (at most 1
+  passes). Newton: the outer test with the same two ratios
   (at the end and at the first test), counts of subproblems that converged, hit the CG cap or rejected a
   step, and, in a "Subproblems" node (closed by default), one subproblem at a time, picked with a slider: its
   status, Newton steps, CG iterations, line-search backtracks and the outer test after it. With substeps,
@@ -22,6 +23,7 @@ import polyscope.imgui as imgui
 
 from ..gpu.newton.solver import SubproblemStatus
 from ..gpu.vbd.convergence import SolveEnd
+from ..status_ratio import stationarity_test_ratio
 
 _window = {"steps": 10}
 _subproblem = {}  # substep -> the subproblem picked in its browser (else the last one)
@@ -64,8 +66,16 @@ _SUBPROBLEM = {
     ),
 }
 
+_STATIONARITY_TIP = (
+    "The stationarity test's ratio at the end of the solve: at most 1 exactly when the test passed.\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or\n"
+    "RMS_M(r) <= floor_kappa * RMS_M(phi)), so this is max(RMS_M(q), min(RMS_M(q0), RMS_M(r) / (floor_kappa *\n"
+    "RMS_M(phi)))), from the rows below (RMS node, Without floor, Residual / floor). RMS_M(q) alone can be below 1\n"
+    "on a solve that failed the second condition. Absolute test (both 0, or static): |g| / gtol.\n"
+    "Solves recorded without the other ratios, and GPU Newton's (no floor): RMS_M(q) (Newton: RMS_M(q0))."
+)
 _RESIDUAL_TIP = (
-    "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
+    "RMS_M(q), the stationarity test's first condition (at most 1 meets it; the test's ratio is the row above).\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or\n"
     "RMS_M(r) <= floor_kappa * RMS_M(phi)). This row is RMS_M(q), the mass-weighted RMS over free nodes of\n"
     "q_i = |r_i| / max(rstol * s_i / m_i, astol * |a|, floor_local_kappa * phi_i): r_i node i's residual\n"
@@ -91,9 +101,9 @@ _PENETRATION_TIP = (
     "at the end of the solve; at most 1 is feasible."
 )
 _NEWTON_RESIDUAL_TIP = (
-    "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS_M(q0), the mass-weighted RMS of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|), r_i node i's residual\n"
+    "The outer test's stationarity ratio, {when}; at most 1 exactly when the gradient test passes.\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's without\n"
+    "the float32 floor, so its ratio is RMS_M(q0), the mass-weighted RMS of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|), r_i node i's residual\n"
     "acceleration, s_i the largest of its forces in the step's Lagrangian gradient, |a| the scene's gravity\n"
     "(no float32 floor).\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
@@ -141,9 +151,9 @@ def _ratio(value: float) -> str:
 
 
 def _ratio_rows(rows: _Rows, prefix: str, gradient: float, feasibility: float, when: str):
-    """Residual and penetration rows of one Newton outer test, ``when`` naming it in the tooltips."""
+    """Stationarity and penetration rows of one Newton outer test, ``when`` naming it in the tooltips."""
     rows.row(
-        f"{prefix}Residual / tol",
+        f"{prefix}Stationarity / tol",
         _ratio(gradient),
         _NEWTON_RESIDUAL_TIP.format(when=when),
         _WARN if gradient > 1 else None,
@@ -171,10 +181,11 @@ def _draw_vbd_solve(r, rows: _Rows):
         "VBD sweeps used / budget (outer iterations x sweeps per subproblem).\n"
         "A subproblem stops early once its gradient test passes (tested every check_interval sweeps).",
     )
-    ratio = float(r["gradient_ratio"])
+    ratio = float(stationarity_test_ratio(r))
     passed = reason in (SolveEnd.CONVERGED, SolveEnd.FEASIBILITY_UNMET)
-    rows.row("Residual / tol", _ratio(ratio), _RESIDUAL_TIP, None if ratio <= 1 or passed else _WARN)
+    rows.row("Stationarity / tol", _ratio(ratio), _STATIONARITY_TIP, None if ratio <= 1 or passed else _WARN)
     if "max_ratio" in r.dtype.names:
+        rows.row("RMS node / tol", _ratio(float(r["gradient_ratio"])), _RESIDUAL_TIP)
         rows.row("Largest node / tol", _ratio(float(r["max_ratio"])), _MAX_TIP)
         rows.row("Without floor / tol", _ratio(float(r["no_floor_ratio"])), _NO_FLOOR_TIP)
         rows.row("Residual / floor", _ratio(float(r["floor_clause_ratio"])), _FLOOR_CLAUSE_TIP)
@@ -278,7 +289,8 @@ def _draw_subproblem_browser(subproblems, key: int):
 def _draw_substeps_summary(vbd, solves, n: int):
     """The time step's substeps at a glance: how many passed their tests and the worst final ratios."""
     passed = int(np.sum(vbd["reason"] == int(SolveEnd.CONVERGED))) + int(np.sum(solves["converged"]))
-    gradient = max(np.max(vbd["gradient_ratio"], initial=0.0), np.max(solves["gradient_ratio"], initial=0.0))
+    # The stationarity test's ratio (GPU Newton's gradient ratio is its own, without a floor)
+    gradient = max(np.max(stationarity_test_ratio(vbd), initial=0.0), np.max(solves["gradient_ratio"], initial=0.0))
     feasibility = max(
         np.max(vbd["feasibility_ratio"], initial=0.0), np.max(solves["feasibility_ratio"], initial=0.0)
     )
@@ -290,7 +302,9 @@ def _draw_substeps_summary(vbd, solves, n: int):
             "Substeps whose solve passed its tests (gradient and feasibility) within the budget.",
             _GOOD if passed == n else _WARN,
         )
-        rows.row("  Worst residual / tol", _ratio(float(gradient)), _RESIDUAL_TIP, None if gradient <= 1 else _WARN)
+        rows.row(
+            "  Worst stationarity / tol", _ratio(float(gradient)), _STATIONARITY_TIP, None if gradient <= 1 else _WARN
+        )
         rows.row(
             "  Worst penetration / tol",
             _ratio(float(feasibility)),
@@ -370,7 +384,7 @@ def _draw_window(log):
                 "Most VBD sweeps of one solve / budget.",
             )
             ratio = v["test_ratio_max"]
-            rows.row("Worst residual / tol", _ratio(ratio), _RESIDUAL_TIP, None if ratio <= 1 else _WARN)
+            rows.row("Worst stationarity / tol", _ratio(ratio), _STATIONARITY_TIP, None if ratio <= 1 else _WARN)
             ratio = v["feasibility_ratio_max"]
             rows.row("Worst penetration / tol", _ratio(ratio), _PENETRATION_TIP, None if ratio <= 1 else _WARN)
             if v["lost"]:
@@ -523,7 +537,7 @@ class TestStatusPanel(unittest.TestCase):
         self.assertIn("Converged", shown)
         self.assertIn("0 / 5", shown)
         # Newton's outer-test ratios: initial, after the subproblem and at the end
-        self.assertIn("Initial Residual / tol", shown)
+        self.assertIn("Initial Stationarity / tol", shown)
         self.assertIn("40", shown)
         self.assertIn("n/a", shown)
         # The solve's result and after subproblem 0 (first draw), the window's worst (first two draws)
@@ -533,6 +547,38 @@ class TestStatusPanel(unittest.TestCase):
         tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)
         self.assertIn("ftol * max(|dmin|", tips)
         self.assertNotIn("%", tips)
+
+    def test_stationarity_ratio(self):
+        """The solve's and the window's ratio is the stationarity test's: a failed floor clause shows above 1,
+        warned, even with RMS_M(q) below 1."""
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from ..status import StatusLog
+
+        rows = np.zeros(
+            1,
+            dtype=[("solve", np.int32), ("outer", np.int32), ("sweeps", np.int32), ("reason", np.int32),
+                   ("gradient_ratio", np.float32), ("feasibility_ratio", np.float32), ("max_ratio", np.float32),
+                   ("no_floor_ratio", np.float32), ("floor_clause_ratio", np.float32)],
+        )
+        rows["reason"] = int(SolveEnd.GRADIENT_UNMET)
+        rows["gradient_ratio"], rows["max_ratio"] = 0.25, 3.0
+        rows["no_floor_ratio"], rows["floor_clause_ratio"] = 1.5, 4.5
+        log = StatusLog()
+        log.add_vbd(0, 0, rows, 0, 5, 500)
+        fake = mock.MagicMock()
+        fake.TreeNode.return_value = True
+        fake.TreeNodeEx.return_value = True
+        fake.SliderInt.side_effect = lambda label, v, lo, hi: (False, v)
+        with mock.patch(f"{__name__}.imgui", fake):
+            draw_status_panel(SimpleNamespace(status_log=log), None)
+        labels = [str(c.args[0]) for c in fake.Text.call_args_list]
+        warned = [str(c.args[-1]) for c in fake.TextColored.call_args_list]
+        self.assertIn("Stationarity / tol", labels)
+        self.assertIn("Worst stationarity / tol", labels)
+        self.assertEqual(warned.count("1.5"), 2)  # the solve's and the window's worst, both warned
+        self.assertIn("0.25", labels)  # RMS node / tol, information
 
     def test_subproblem_browser(self):
         """Newton's summary counts its subproblems; the browser shows one at a time, the last by default."""
