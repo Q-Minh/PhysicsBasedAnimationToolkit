@@ -19,9 +19,11 @@ after re-detection). The step must also be feasible: no contact may penetrate it
 margin by more than ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, i.e.
 ``max_j max(0, dmin - c_j(x)) <= ftol * max(|dmin|, FEASIBILITY_FLOOR)`` over the
 re-detected contacts (the maintainer's choice; C++ has no feasibility test), measured by ``end_outer``, which
-decides the stop once both are known. Inside a subproblem only the gradient is tested: passing ends the
-subproblem, and both tests follow its finalization. With dynamic problems the test's tolerance is relative to each
-node's forces and can pass at the float32 floor (:class:`ConvergenceParams`).
+decides the stop once both are known. Inside a subproblem only the gradient is tested, and with the stationarity
+test (``rstol`` or ``astol`` > 0) it is the subproblem's own residual, its augmented-Lagrangian gradient, which with
+``multiplier_step`` 1 the next outer test measures again after the dual update (:meth:`ConvergenceCheck.after_block`):
+passing ends the subproblem only, never the solve, and both outer tests follow its finalization. With dynamic problems
+the test's tolerance is relative to each node's forces and can pass at the float32 floor (:class:`ConvergenceParams`).
 Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
 ``vbd.solver.solve_outer_loop`` for how the flags drive the loops.
@@ -104,6 +106,10 @@ class ConvergenceParams(SerializableMixin):
     stops smooth (bending) modes whose residual is coherent but below each node's floor; the second alone stops soft
     bodies early when stiff ones set the floor. The floor ratio RMS_M(phi) / (astol |a|) is recorded in the solve
     status. GPU Newton has no floor (TODO in gpu/newton/solver.py).
+
+    Inside a subproblem the test measures the subproblem's own residual, its augmented-Lagrangian gradient (see
+    :meth:`ConvergenceCheck.after_block`), and passing ends the subproblem only; between subproblems, the Lagrangian
+    gradient at the new multipliers, and passing it (and feasibility) ends the solve.
 
     ``early_exit`` (default on) lets passing the tests end a solve. Off, solves run their full budgets (fixed
     compute) while the tests still run and the status still records their ratios to the tolerances, unlike
@@ -708,8 +714,10 @@ class ConvergenceCheck:
         self._next_solve = 0
         self._fem = fem
         self._contact = contact
-        # The Lagrangian gradient, with its per-node force scale (the stationarity test's relative term)
+        # The outer test's Lagrangian gradient, and the subproblem's augmented one for the tests inside it, each with
+        # its per-node force scale (the stationarity test's relative term)
         self.gradient_norm = GradientNorm(fem, contact, augmented_lagrangian=False, force_scale=True)
+        self.augmented_norm = GradientNorm(fem, contact, augmented_lagrangian=True, force_scale=True)
         # Stationarity test (rstol or astol > 0), sums over free nodes (SUM_*) against stol2 = (astol |a| h^2)^2 sum m_i
         n_nodes = fem.data.x.shape[0]
         self._terms = wp.zeros((N_SUMS, n_nodes), dtype=wp.float32)
@@ -766,6 +774,23 @@ class ConvergenceCheck:
         self.gradient_norm.compute(stream)
         if self.relative:
             self._measure_residual(self.gradient_norm)
+
+    def _test_subproblem(self) -> None:
+        """Measure the test inside a subproblem. With the stationarity test, that is the subproblem's own residual,
+        the augmented-Lagrangian gradient the sweeps minimize: multipliers max(0, lambda_k - sigma_n c(x)) (one-sided
+        as the vertex solves with ``vbd_slack_at_evaluation``, otherwise with the stored slack), friction capped at
+        mu_f times that normal force, re-evaluated at this test (the Coulomb limits are unfrozen first; the
+        augmented gradient freezes them, GPU Newton's rule), at the subproblem's decay weights. With
+        ``multiplier_step`` 1 it is the next outer test's quantity before the dual update's Coulomb projection and
+        the feasibility filter. With the absolute ``gtol``, the Lagrangian gradient, as between subproblems (C++)."""
+        if not self.relative:
+            self._test()
+            return
+        a = self.augmented_norm
+        a.one_sided = bool(int(self._contact.data.vbd_slack_at_evaluation))
+        self._contact.reset_friction_limits()
+        a.compute_gradient(wp.get_stream())
+        self._measure_residual(a)
 
     def _measure_residual(self, gradient: GradientNorm) -> None:
         """The stationarity sums of ``gradient`` (``g`` and its force ``scale``)."""
@@ -869,13 +894,15 @@ class ConvergenceCheck:
         """Test after a sweep block: a converged subproblem stops, and so do its remaining sweeps (unless
         ``early_exit`` is off).
 
-        Only the gradient is tested here; feasibility is tested between outer iterations.
+        Only the subproblem's residual is tested here (:meth:`_test_subproblem`): passing ends the subproblem, never
+        the solve, which is decided between outer iterations only (:meth:`end_outer`), after the full dual update,
+        the filter, the solved set's gradient, the re-detection and feasibility.
 
         Args:
             gtol (float): Gradient-norm tolerance (absolute).
             n_blocks (int): Number of blocks in the subproblem.
         """
-        self._test()
+        self._test_subproblem()
         wp.launch(
             _after_block_kernel,
             dim=1,
@@ -1360,6 +1387,89 @@ class TestForceRelativeTolerance(unittest.TestCase):
         np.testing.assert_allclose(s2, s1, rtol=5e-3)  # float32 rounding of x - x~ (h^2 |a| = 0.25 mm at h/2)
         self.assertTrue(np.all(s1 > 2 * 9.81 * (1 - 1e-4)))  # inertial and external terms (2 |a|) plus elastic forces
         self.assertGreater(f2 / f1, 1.8)
+
+
+def _block_check_state(n_max_iters: int, n_sub: int, early_exit: bool):
+    """Two resting cubes (VBD, see :func:`_two_resting_cubes`) set to ``n_max_iters`` x ``n_sub`` sweeps with one test
+    block of ``check_interval`` = 20 sweeps per 20 (VBD's schedule has no prefix)."""
+    state = _two_resting_cubes("VBD")
+    params = state.params[state.solver].data
+    params.n_max_iters = n_max_iters
+    params.n_subproblem_max_iters = n_sub
+    state.convergence_params.check_interval = 20
+    state.convergence_params.early_exit = early_exit
+    return state
+
+
+class TestInnerTestEndsSubproblemOnly(unittest.TestCase):
+    """A pass inside a subproblem ends that subproblem only: the solve is decided between subproblems, after the full
+    dual update, the filter, the solved set's gradient, the re-detection and feasibility (``end_outer``). Resting
+    cubes, VBD 3 x 40 with a test every 20 sweeps and a huge rstol, so every test's gradient part passes; feasibility
+    is forced to fail. Each subproblem stops after its first block, yet the solve runs all 3 outer iterations, each
+    with its full dual update and outer test, and ends infeasible."""
+
+    def test_inner_pass_doesnt_end_solve(self):
+        state = _block_check_state(3, 40, early_exit=True)
+        state.convergence_params.rstol = 1e6
+        contact, check = state.contact, state.convergence
+        calls = {"dual": 0, "end_outer": 0, "after_block": 0}
+        update_dual, end_outer, after_block = contact.update_dual, check.end_outer, check.after_block
+
+        def hooked_update_dual(*args, **kwargs):
+            calls["dual"] += int(kwargs.get("request_decay_update", True) and kwargs.get(
+                "request_lagrange_multiplier_update", True))
+            return update_dual(*args, **kwargs)
+
+        def hooked_end_outer(*args, **kwargs):
+            calls["end_outer"] += 1
+            return end_outer(*args, **kwargs)
+
+        def hooked_after_block(*args, **kwargs):
+            calls["after_block"] += 1
+            return after_block(*args, **kwargs)
+
+        def infeasible():
+            check.penetration.fill_(1.0)  # 1 m into the margin
+
+        contact.update_dual, check.end_outer, check.after_block = hooked_update_dual, hooked_end_outer, hooked_after_block
+        check._measure_penetration = infeasible
+        state._advance()  # eager, so the hooks run on the host
+        check.enqueue_status_readback()
+        wp.synchronize()
+        row = check.read_status()[0][-1]
+        self.assertEqual(int(row["outer"]), 3)
+        self.assertEqual(int(row["sweeps"]), 3 * 20)  # each subproblem stopped after its first block
+        self.assertEqual(int(row["reason"]), int(SolveEnd.FEASIBILITY_UNMET))
+        self.assertEqual(calls, {"dual": 3, "end_outer": 3, "after_block": 3})
+
+
+class TestInnerRatioMatchesOuter(unittest.TestCase):
+    """With ``multiplier_step`` 1, the test inside a subproblem (its augmented gradient, multipliers max(0, lambda_k -
+    sigma c) and friction capped from them) measures what the next outer test measures after the full dual update
+    (Lagrangian gradient at lambda_k+1, Coulomb-projected friction), up to that projection and the feasibility filter.
+    Resting cubes, VBD 1 x 20 with its one test block at the end of the subproblem, early exit off."""
+
+    def test_inner_equals_outer(self):
+        state = _block_check_state(1, 20, early_exit=False)
+        self.assertEqual(float(state.contact.params.multiplier_step), 1.0)
+        check = state.convergence
+        inner = {}
+        after_block = check.after_block
+
+        def hooked_after_block(*args, **kwargs):
+            after_block(*args, **kwargs)
+            inner["ratio"] = check.gradient_ratio()
+            inner["floor"] = float(np.sqrt(check.sums.numpy()[2] / check.stationarity_tol2.numpy()[0]))
+
+        check.after_block = hooked_after_block
+        state._advance()
+        check.enqueue_status_readback()
+        wp.synchronize()
+        row = check.read_status()[0][-1]
+        outer = float(row["gradient_ratio"])
+        self.assertGreater(inner["floor"], 0.0)  # VBD stores its vertex Hessian norms for the floor
+        # Measured: equal to the last bit, with mu_f 0.2 and 0 (2026-11-06)
+        np.testing.assert_allclose(outer, inner["ratio"], rtol=1e-3)
 
 
 if __name__ == "__main__":
