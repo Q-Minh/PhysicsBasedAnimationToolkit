@@ -24,7 +24,7 @@ from . import results
 
 # Metadata the legs of one run share; the others (date, commit, warm-up) go to each leg's ``legs`` entry
 SAME_METADATA = ("scene", "solver", "cd", "dt", "substeps", "bdf_order", "n_nodes", "n_elements", "execution",
-                 "solver_params", "contact_params", "cd_params")
+                 "solver_params", "contact_params", "cd_params", "convergence_params")
 SPEED_KEYS = ("peak_speed", "rms_speed")  # profiling/trajectory.py's annotations
 
 

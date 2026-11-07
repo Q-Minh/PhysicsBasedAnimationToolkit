@@ -294,6 +294,8 @@ def collect_metadata(state, scene: str, warmup_steps: int) -> dict:
         "solver_params": reflect_params(state.params_cpu[state.solver]),
         "contact_params": reflect_params(state.contact_params),
         "cd_params": reflect_params(state.cd_params[state.cd_type]),
+        # The convergence test (node_norm decides what the status ratios measure)
+        "convergence_params": reflect_params(state.convergence_params),
     }
 
 
