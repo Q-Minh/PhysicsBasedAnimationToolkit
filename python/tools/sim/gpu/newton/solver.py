@@ -1104,8 +1104,8 @@ def initialize_solve(
         adapt_penalty_parameters(fem, contact, params)
     check = _relative_check(params)
     if check is not None:
-        # TODO: The float32 floor of the stationarity test (ConvergenceParams.floor_kappa) for GPU Newton: its vertex
-        # Hessian norms |H_ii|_F would come from the assembled Hessian's diagonal 3x3 blocks (the previous
+        # TODO: The float32 floor of the stationarity test (ConvergenceParams.floor_local_kappa) for GPU Newton: its
+        # vertex Hessian norms |H_ii|_F would come from the assembled Hessian's diagonal 3x3 blocks (the previous
         # iterate's, as the VBD sweeps' are). Not done (2026-11-06): no Newton scene was measured at its floor.
         check.set_hessian_norms(None)
         check.measure_scale()
@@ -1193,8 +1193,9 @@ def check_convergence(
     re-detection instead (:func:`outer_gradient_test` before it, :func:`outer_feasibility_test` after it).
 
     With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
-    dynamic problems), it's the VBD family's outer test: the Lagrangian gradient,
-    ``sum |g_i|^2 / m_i <= max(rstol^2 sum m_i |x~_i - x^t_i|^2, (astol |a| h^2)^2 sum m_i)``, and feasibility
+    dynamic problems), it's the VBD family's outer test: the Lagrangian gradient, every free node within its
+    allowance, ``max_i |g_i| / max(rstol s_i, astol |a| h^2 m_i) <= 1`` (s_i node i's largest force term; no float32
+    floor; see ``vbd.convergence.ConvergenceParams``), and feasibility
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
