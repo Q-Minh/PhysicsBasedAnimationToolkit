@@ -1242,7 +1242,8 @@ class Ogc(ContactDetection):
         self.enable_adaptive_query_radius(xt, xtilde)
 
     @profiling.scoped("contact.detect")
-    def on_time_step_started(self):
+    def on_time_step_started(self, widen_by_inertial_target: bool = True):
+        # The query radius is always widened by max |xtilde - xt| (C++ ComputeQueryRadius)
         if self._params.deactivate:
             return
         main_stream = wp.get_stream()

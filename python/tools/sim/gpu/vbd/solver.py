@@ -434,7 +434,8 @@ def initialize_solve(
     before the first call to :func:`solve`.
     """
     # Compute contact set from current state
-    cd.on_time_step_started()
+    # Static problems have no inertia: their first detection isn't widened by xtilde
+    cd.on_time_step_started(widen_by_inertial_target=not fem.static)
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     cd.filter_step()
