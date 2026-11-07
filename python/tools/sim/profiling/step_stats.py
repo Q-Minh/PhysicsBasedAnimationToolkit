@@ -200,14 +200,15 @@ def summarize_slice(table: dict, mask: np.ndarray) -> dict:
     """A slice of :func:`per_step` arrays: step count, mean phase times (ms/step), medians of the step
     time, iterations, time per iteration (``ms_per_iteration``, separating more iterations from more
     expensive ones), outer iterations and peak speed, the early-exit fraction of its solves, and the
-    worst and median per-step gradient ratios and the worst feasibility ratio."""
+    worst and median per-step stationarity test ratios (``test_ratio``: at most 1 iff the test passed; the
+    gradient ratio for results without the test's other ratios) and the worst feasibility ratio."""
 
     def median(key):
         d = describe(table[key][mask])
         return d["median"] if d else None
 
     solves = float(np.nansum(table["solves"][mask]))
-    grad = describe(table["gradient_ratio"][mask])
+    grad = describe(table["test_ratio"][mask])
     feas = describe(table["feasibility_ratio"][mask])
     n = int(mask.sum())
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -222,8 +223,8 @@ def summarize_slice(table: dict, mask: np.ndarray) -> dict:
         "peak_speed": median("peak_speed"),
         "solves": int(solves),
         "early_exit": float(np.nansum(table["converged"][mask])) / solves if solves > 0 else None,
-        "gradient_ratio_median": grad["median"] if grad else None,
-        "gradient_ratio_max": grad["max"] if grad else None,
+        "test_ratio_median": grad["median"] if grad else None,
+        "test_ratio_max": grad["max"] if grad else None,
         "feasibility_ratio_max": feas["max"] if feas else None,
     }
 
@@ -288,6 +289,10 @@ class TestStepStats(unittest.TestCase):
         self.assertEqual(table["gradient_ratio"][0], 0.5)
         self.assertAlmostEqual(table["test_ratio"][0], 1.1)
         self.assertAlmostEqual(table["test_ratio"][1], 0.8)
+        # Slices summarize the test's ratio: step 0's 1.1 is the worst of the first two (gradient 0.5 and 0.1)
+        two = summarize_slice(table, np.arange(10) < 2)
+        self.assertAlmostEqual(two["test_ratio_max"], 1.1)
+        self.assertAlmostEqual(two["test_ratio_median"], 0.95)
         newton = solve_outcome({"t": 0, "status": {"newton": [
             {"substep": 0, "outer": 2, "converged": False, "newton_steps": 3, "gradient_ratio": 1.5,
              "feasibility_ratio": 0.1}]}})
