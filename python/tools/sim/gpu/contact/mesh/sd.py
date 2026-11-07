@@ -168,6 +168,7 @@ def _detect_vertex_mesh_contacts(
     threshold: wp.float32,
     widen: wp.int32,
     x0: wp.array[wp.vec3f],
+    x1: wp.array[wp.vec3f],
     motion: wp.array[wp.float32],
     sds: wp.array[wp.float32],
     x: wp.array[wp.vec3f],
@@ -189,19 +190,22 @@ def _detect_vertex_mesh_contacts(
     Notation:
 
     - i = meshes.V[v] is the vertex's node; x[i] its position where detection runs (xt_i at a time step's first
-      detection, widen != 0, else the current iterate), and x0_i = x0[i] the step's starting iterate (the init
-      strategy's predictor for the VBD family, xt for Newton's Position).
+      detection, widen != 0, else the current iterate), x0_i = x0[i] the step's starting iterate (the init
+      strategy's predictor for the VBD family, xt for Newton's Position), and x1_i = x1[i] the inertial target
+      xtilde_i (x0_i when the step isn't widened by it, e.g. static problems).
     - For each partner component m: c is the vertex's closest point on m at x, on the face with nodes j, k, l and
       barycentrics b0, b1, b2 (c = b0 x_j + b1 x_k + b2 x_l); sd is the signed distance to it (or to the plane, for
       plane colliders) and n the plane's normal.
-    - delta = (x0_i - xt_i) - sum_a b_a (x0_a - xt_a), a over j, k, l: the vertex's motion relative to c from xt
-      to x0.
-    - gap0 = sd - |delta| on meshes, a lower bound of the distance from x0_i to c's position at x0, and
-      sd + n . delta on planes, the exact distance at x0. The detection gap is gap = sd, or min(sd, gap0) with
-      widen; a pair is detected when gap < threshold (dmin + band).
-    - The query radius of the pair (v, m) is max(max_dist, threshold + |x0_i - xt_i| + motion[m]) with widen, else
-      max_dist: motion[m] = max |x0_a - xt_a| over m's vertices, so it reaches every face the relative motion can
-      bring within the threshold.
+    - delta_p = (xp_i - xt_i) - sum_a b_a (xp_a - xt_a), a over j, k, l, for p = 0, 1: the vertex's motion relative
+      to c from xt to x0 or x1.
+    - gap_p = sd - |delta_p| on meshes, a lower bound of the distance from xp_i to c's position at xp, and
+      sd + n . delta_p on planes, the exact distance at xp. The detection gap is gap = sd, or min(sd, gap0, gap1)
+      with widen; a pair is detected when gap < threshold (dmin + band).
+    - The query radius of the pair (v, m) is max(max_dist, threshold + max_p |xp_i - xt_i| + motion[m]) with widen,
+      else max_dist: motion[m] = max_p max |xp_a - xt_a| over m's vertices, so it reaches every face the relative
+      motion can bring within the threshold.
+    - The step filter's distance sds[v] is the smallest gap at x0 only (min(sd, gap0) with widen), as if detection
+      ran at the starting iterate.
     """
     tid = wp.tid()
     block_dim = wp.block_dim()
@@ -226,11 +230,20 @@ def _detect_vertex_mesh_contacts(
     # 1. Detect thread local contacts
     tsdmin = max_dist
     # With widen (a time step's first detection, at x = xt), pairs are also detected when the step's starting
-    # iterate x0 may bring them within the threshold: the vertex's own motion x0 - xt (the init strategy's
-    # predictor for the VBD family, none for Newton's Position) relative to its partner's closest point.
+    # iterate x0 or the inertial target x1 = xtilde may bring them within the threshold: the vertex's own motion
+    # x0 - xt (the init strategy's predictor for the VBD family, none for Newton's Position) or xtilde - xt relative
+    # to its partner's closest point. The inertial target is where the step's free flight heads, whatever the start:
+    # widened by x0 only, Newton's Position start (x0 = xt) wasn't widened at all, and Celebration's confetti 13 mm
+    # apart at xt (threshold 8 mm), closing at ~19 mm per step, had no contact in the first subproblem and went 17 mm
+    # through each other (step 91, a tangle that never resolved; widened by xtilde, step-end feasibility 0.24-0.47
+    # instead of 6.5-7 over 4 steps, 2026-11-07). C++ widens its OGC query radius, within which it creates contacts,
+    # by max |xtilde - xt| (vbd::InitializeSolve, newton::InitializeSolve). For the VBD family's default start
+    # (TrajectoryWithExternalLoad: x0 = xtilde, bit for bit) both terms are equal and detection is unchanged.
     di = wp.vec3f(0.0)
+    di1 = wp.vec3f(0.0)
     if widen != 0:
         di = x0[i] - xi
+        di1 = x1[i] - xi
     # The loop variable m must not be reassigned in the body (k below is a node index).
     for m in range(local_tid, mesh_ids.shape[0], block_dim):
         if m == b:
@@ -269,7 +282,7 @@ def _detect_vertex_mesh_contacts(
         # motion plus the partner's largest (motion[m]), as OGC's adaptive query radius
         query_dist = max_dist
         if widen != 0:
-            query_dist = wp.max(max_dist, threshold + wp.norm_l2(di) + motion[m])
+            query_dist = wp.max(max_dist, threshold + wp.max(wp.norm_l2(di), wp.norm_l2(di1)) + motion[m])
         # Closed meshes sign the distance by ray parity. Open ones can't, so they use the closest face's
         # normal. Planes are queried at any distance, so that fast vertices can't tunnel through them.
         kind = mesh_kind[m]
@@ -312,15 +325,21 @@ def _detect_vertex_mesh_contacts(
         # for 1513 at steps 100 and 250), and it brought ArmadilloSpaghetti.Fall's floor and ceiling planes into
         # range; this one missed none of the pairs detected at x0 and found 1-3x as many VE and VF pairs (both
         # scenes' checkpoints, surface vertices, CPU, 2026-10-22).
+        # The same for the inertial target x1 (see above); the detection gap is the smaller of the two.
         gap = sd
+        gap1 = sd
         if widen != 0:
             delta = di - (b0 * (x0[j] - xj) + b1 * (x0[k] - xk) + b2 * (x0[l] - xl))  # type: ignore
+            delta1 = di1 - (b0 * (x1[j] - xj) + b1 * (x1[k] - xk) + b2 * (x1[l] - xl))  # type: ignore
             if kind == MESH_PLANE:
                 gap = wp.min(sd, sd + wp.dot(n, delta))
+                gap1 = wp.min(sd, sd + wp.dot(n, delta1))
             else:
                 gap = sd - wp.norm_l2(delta)
+                gap1 = sd - wp.norm_l2(delta1)
         # For the step filter: with widen, the estimated gap at x0, as when detection was at x0
         tsdmin = wp.min(tsdmin, gap)
+        gap = wp.min(gap, gap1)
         # TODO: Runs aren't reproducible when vertices sit exactly over a partner's vertices: two unit cubes
         # stacked 2 mm apart with aligned grids (checkpoint.py's test scene without its xy offset) gave VBD and
         # AAAVBD runs differing from the second step, by up to 1 cm after 10 steps (2026-10-21). Suspected: the
@@ -428,14 +447,16 @@ def _detect_vertex_mesh_contacts(
 def _component_motion(
     xt: wp.array[wp.vec3f],
     x0: wp.array[wp.vec3f],
+    x1: wp.array[wp.vec3f],
     meshes: MultiMeshData,  # type: ignore
     motion: wp.array[wp.float32],
 ):
-    """motion[b] = max |x0_i - xt_i| over the vertices i of contact component b (motion zeroed before)."""
+    """motion[b] = max(|x0_i - xt_i|, |x1_i - xt_i|) over the vertices i of contact component b (motion zeroed
+    before): x0 the step's starting iterate, x1 the inertial target (or x0)."""
     v = wp.tid()
     b = lower_bound(meshes.VP, meshes.VP.shape[0], v + 1) - 1  # type: ignore
     i = meshes.V[v]
-    wp.atomic_max(motion, b, wp.norm_l2(x0[i] - xt[i]))
+    wp.atomic_max(motion, b, wp.max(wp.norm_l2(x0[i] - xt[i]), wp.norm_l2(x1[i] - xt[i])))
 
 
 @wp.func
@@ -715,8 +736,11 @@ class Sd(ContactDetection):
         # The same meshes over xt, for a time step's first detection (from_xt)
         self._wp_meshes_xt = [wp.Mesh(self._xt, wp.array(data=Fb[b], dtype=wp.int32)) for b in range(FP.shape[0] - 1)]
         self._mesh_ids_xt = wp.array([m.id for m in self._wp_meshes_xt], dtype=wp.uint64)
-        # (# meshes,) each component's largest motion |x0 - xt| from xt to the time step's starting iterate x0
+        # (# meshes,) each component's largest motion from xt to the time step's starting iterate x0 or its inertial
+        # target xtilde (see on_time_step_started)
         self._motion = wp.zeros(FP.shape[0] - 1, dtype=wp.float32)
+        # Whether the step's first detection is also widened by the inertial target xtilde (on_time_step_started)
+        self._widen_by_xtilde = True
         X = self._x.numpy()
         self._mesh_kind = wp.array(
             [_mesh_kind(Fb[b].get().reshape(-1, 3), X) for b in range(len(Fb))],
@@ -798,8 +822,9 @@ class Sd(ContactDetection):
         """Whether detection, refit and the step filter are skipped (``deactivate`` or contact-free)."""
         return bool(self.params.deactivate) or self.contact_free
 
-    def on_time_step_started(self):
+    def on_time_step_started(self, widen_by_inertial_target: bool = True):
         self.request_step_filter = True
+        self._widen_by_xtilde = bool(widen_by_inertial_target)
         if self.inactive:
             return
         # x is the step's starting iterate: the solvers call this after the time integration setup
@@ -807,8 +832,13 @@ class Sd(ContactDetection):
         wp.launch(
             _component_motion,
             dim=self._meshes.n_verts,
-            inputs=[self._xt, self._x, self._meshes.data, self._motion],  # type: ignore
+            inputs=[self._xt, self._x, self._widen_target(), self._meshes.data, self._motion],  # type: ignore
         )
+
+    def _widen_target(self) -> wp.array:
+        """The second position the step's first detection is widened by: the inertial target xtilde, or the
+        starting iterate x itself (no extra widening) when the step isn't widened by xtilde."""
+        return self._xtilde if self._widen_by_xtilde else self._x
 
     @profiling.scoped("contact.detect")
     def prepare_detection(self):
@@ -843,8 +873,8 @@ class Sd(ContactDetection):
         frozen = freeze and not (from_xt or fresh)
         # A time step's first detection (the solvers' initialize_solve, from_xt) is at xt, as C++
         # vbd::InitializeSolve builds the constraint set at xt and OGC honors from_xt, and also finds the pairs
-        # that the step's starting iterate x (the init strategy's) may bring within the threshold (see the
-        # kernel). Detecting at the predictor x instead (until 2026-10-22) started fast bodies deep inside their
+        # that the step's starting iterate x (the init strategy's) or its inertial target xtilde may bring within
+        # the threshold (see the kernel). Detecting at the predictor x instead (until 2026-10-22) started fast bodies deep inside their
         # partners, where the closest point of a thin part can be on its far side: ArmadilloSpaghetti.Fall's
         # first detection of step 58 had 923 penetrating VF contacts up to 25 mm deep (pillars 5 cm in radius),
         # and step 60 diverged; CubeFallingOnCube's top cube fell through the bottom one (aligned grids: the
@@ -868,6 +898,7 @@ class Sd(ContactDetection):
                 self._contact_dmin + self.params.band,  # detection threshold
                 int(from_xt),  # widen
                 self._x,  # x0: the iterate
+                self._widen_target(),  # x1: the inertial target (or x0)
                 self._motion,
                 self._sds,
                 x,
@@ -1206,6 +1237,65 @@ class TestFirstDetection(unittest.TestCase):
         for c in range(len(u)):
             self.assertGreater(abs(float(normals[c][2])), 0.99)  # the cubes' facing vertices
             self.assertAlmostEqual(float(np.dot(xt[V[u[c]]] - xt[V[w[c]]], normals[c])), self.gap, delta=1e-5)
+
+    def _first_detection(self, state, widen_by_inertial_target: bool = True):
+        """Run the step's first detection; returns the VV, VE, VF counts, the VV pairs and the step filter's
+        distances."""
+        state.detector.on_time_step_started(widen_by_inertial_target)
+        state.detector.detect_contacts(from_xt=True)
+        contacts = state.detector._contacts
+        u, w = contacts.vv_contacts
+        counts = tuple(int(c) for c in contacts.num_contacts)[:3]
+        return counts, (np.asarray(u).copy(), np.asarray(w).copy()), state.detector._sds.numpy().copy()
+
+    def test_position_start_widens_by_inertial_target(self):
+        """Newton's Position start (x0 = xt) is widened by the inertial target xtilde: its free flight brings
+        the facing vertices within the threshold, so the first detection has their pairs. Widened by x0 alone
+        (none), it had none, and Celebration's confetti went through each other in the first subproblem."""
+        from pbatoolkit import pbat
+
+        state = self._state()
+        state.fem.setup_time_integration_optimization(pbat.sim.dynamics.EFemElastoDynamicsTimeStepInitialization.Position)
+        np.testing.assert_array_equal(state.fem.data.x.numpy(), state.fem.xt.numpy())
+        self.assertLess(float(state.fem.data.xtilde.numpy()[8:, 2].min()), 1.0 - 0.02, "xtilde must penetrate")
+        counts, _, sds = self._first_detection(state)
+        self.assertEqual(counts, (8, 0, 0))
+        # The step filter's distances are those at x0 = xt (the gap, nothing penetrates there)
+        self.assertGreater(float(sds.min()), 0.0)
+        counts, _, _ = self._first_detection(state, widen_by_inertial_target=False)
+        self.assertEqual(counts, (0, 0, 0), "without xtilde, a Position start isn't widened")
+
+    def test_predictor_start_is_unchanged(self):
+        """With the VBD family's default start (TrajectoryWithExternalLoad: x0 = xtilde), widening by xtilde
+        changes nothing: the same pairs and step-filter distances, bit for bit."""
+        state = self._state()
+        state.fem.setup_time_integration_optimization(state.step_init_strategy())
+        np.testing.assert_array_equal(state.fem.data.x.numpy(), state.fem.data.xtilde.numpy())
+        counts, (u, w), sds = self._first_detection(state)
+        counts0, (u0, w0), sds0 = self._first_detection(state, widen_by_inertial_target=False)
+        self.assertEqual(counts, (8, 0, 0))
+        self.assertEqual(counts, counts0)
+        np.testing.assert_array_equal(u, u0)
+        np.testing.assert_array_equal(w, w0)
+        np.testing.assert_array_equal(sds, sds0)
+
+    def test_static_problem_is_not_widened_by_inertial_target(self):
+        """Static problems have no inertia: the solvers' initialize_solve doesn't widen their first detection by
+        xtilde (still computed from the velocity), so the falling cube's static solve detects nothing at xt."""
+        from ...newton import solver as newton_solver
+        from ...vbd import solver as vbd_solver
+        from ....state import SolverType
+
+        for solver in (SolverType.VBD, SolverType.Newton):
+            with self.subTest(solver=solver.name):
+                state = self._state()
+                state.fem.static = True
+                state.fem.setup_time_integration_optimization()
+                self.assertLess(float(state.fem.data.xtilde.numpy()[8:, 2].min()), 1.0 - 0.02)
+                module = newton_solver if solver == SolverType.Newton else vbd_solver
+                module.initialize_solve(state.fem, state.contact, state.detector, state.params[solver])
+                counts = tuple(int(c) for c in state.detector._contacts.num_contacts)[:3]
+                self.assertEqual(counts, (0, 0, 0))
 
 
 def _vf_pairs(state) -> dict:

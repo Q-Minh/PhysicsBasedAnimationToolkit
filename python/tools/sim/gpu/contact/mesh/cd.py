@@ -59,9 +59,16 @@ class ContactDetection(ABC):
             self._xk = wp.zeros_like(x)
 
     @abstractmethod
-    def on_time_step_started(self):
+    def on_time_step_started(self, widen_by_inertial_target: bool = True):
         """Callback for any one-time precomputation for the duration of the
-        current time step.
+        current time step. The solvers call it after the time integration setup, so x is the
+        step's starting iterate and xtilde its inertial target.
+
+        Args:
+            widen_by_inertial_target (bool): Whether the step's first detection (from_xt) also
+                reaches the pairs that the inertial target xtilde may bring within the detection
+                threshold, besides those of the starting iterate x. The solvers pass False for
+                static problems, which have no inertia.
         """
         pass
 

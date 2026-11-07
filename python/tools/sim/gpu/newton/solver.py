@@ -1095,7 +1095,8 @@ def initialize_solve(
     one_sided = params.gpu is not None and bool(params.gpu.one_sided_contact)
     params._data.one_sided_contact = int(one_sided)
     params._gradient_norm.one_sided = one_sided
-    cd.on_time_step_started()
+    # Static problems have no inertia: their first detection isn't widened by xtilde
+    cd.on_time_step_started(widen_by_inertial_target=not fem.static)
     cd.detect_contacts(from_xt=True)
     contact.update_constraint_set()
     contact.reset_friction_limits()
