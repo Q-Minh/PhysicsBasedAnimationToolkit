@@ -13,8 +13,8 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
   a legend entry only if it reaches 3% itself), with the step time of the paired production run and of the
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
-  the production runs' final gradient ratio to its tolerance per step (log axis, its rolling median over
-  ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
+  the production runs' final stationarity test ratio per step (:data:`TEST_RATIO`; log axis, its rolling median
+  over ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines, each with
   its own legend entry. Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
   adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
@@ -26,9 +26,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
   solver and negligible (:data:`SOLVERS_OMITTED`) are left out without renormalizing, so the bars end short of
   100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
-  the distribution per step of the final gradient ratio and of the penetration (feasibility) ratio to their
-  tolerances (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below 1e-3 drawn at 1e-3, a
-  dashed line at the tolerance), the sweeps per step (linear axis) and, with ``--step-times``, the step time.
+  the distribution per step of the final stationarity test ratio (:data:`TEST_RATIO`) and of the penetration
+  (feasibility) ratio to its tolerance (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below
+  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with ``--step-times``, the step time.
   Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
   sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
   exits aren't shown: their fraction doesn't say how soon a solver exits.
@@ -178,6 +178,13 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
 
 
 SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step residual ratios
+# The residual ratio the timeline and solvers figures plot: the stationarity test's decisive ratio, at most 1 iff
+# the test passed (status_ratio.stationarity_test_ratio, step_stats' test_ratio; the gradient ratio for runs
+# recorded before its other ratios existed, and for GPU Newton). The gradient ratio RMS_M(q) alone can be below 1
+# on a step that failed the test's floor clause (CapsulesIntoBowl VBD, 58fd2f99: median 0.23, while 389 of 591
+# steps failed).
+TEST_RATIO = "test_ratio"
+TEST_RATIO_LABEL = "Stationarity test ratio"
 # timeline: phase groups under this share of a row's GPU time fold into Other, which gets a legend entry only if
 # it reaches it too (thinner bands are under ~1 pt at print size)
 TIMELINE_MIN_SHARE = 0.03
@@ -255,10 +262,10 @@ SPEED_DOTS = (0, (1, 1.5))  # timeline: the other production runs' speeds
 
 def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
                     smooth: int) -> list:
-    """The timeline's lower strip: each production run's final gradient ratio per step (its rolling median) on a
-    log axis, over the :data:`SPEED` on a right axis (see the module docstring); ``x`` and ``kernels_speed`` are
-    the ``kernels`` run's step times (s) and speeds, drawn if the runs have none. Returns the speeds'
-    legend handles."""
+    """The timeline's lower strip: each production run's final stationarity test ratio per step
+    (:data:`TEST_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
+    docstring); ``x`` and ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the runs
+    have none. Returns the speeds' legend handles."""
     speed = strip.twinx()
     handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
@@ -272,7 +279,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
             speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
             handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
                                   label=f"{solver_name(run)} {SPEED_NAME}"))
-        ratio = np.maximum(table["gradient_ratio"], RATIO_FLOOR)
+        ratio = np.maximum(table[TEST_RATIO], RATIO_FLOOR)
         medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
         strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
     if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
@@ -284,7 +291,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
-    strip.set_ylabel("Residual /\ntolerance", fontsize=FONT_SIZE)
+    strip.set_ylabel("Stationarity\ntest ratio", fontsize=FONT_SIZE)
     speed.set_ylim(bottom=0)
     speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
     # The ratios over the speed fill: the left axes in front, without their background
@@ -308,7 +315,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     rows = len(kernels)
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
-    has_ratio = [any(np.isfinite(step_stats.per_step(run)["gradient_ratio"]).any() for run in runs)
+    has_ratio = [any(np.isfinite(step_stats.per_step(run)[TEST_RATIO]).any() for run in runs)
                  for runs in runs_per_row]
     has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
     snapshots = sorted(snapshots or [])
@@ -450,7 +457,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         if table is None:
             continue
         if column == "gradient":
-            _box(ax, yi, table["gradient_ratio"], RATIO_FLOOR)
+            _box(ax, yi, table[TEST_RATIO], RATIO_FLOOR)
         elif column == "feasibility":
             _box(ax, yi, table["feasibility_ratio"], RATIO_FLOOR)
         elif column == "early":
@@ -466,7 +473,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
     if column in ("gradient", "feasibility"):
         _log_axis(ax)
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
-        ax.set_xlabel("Residual ratio" if column == "gradient" else "Penetration ratio",
+        ax.set_xlabel(TEST_RATIO_LABEL if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
         ax.set_xlim(0, 100)
@@ -891,7 +898,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             ["Residual ratio", "Penetration ratio", "Sweeps", "Step time (ms)"])
+                             [TEST_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
