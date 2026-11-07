@@ -1,7 +1,7 @@
 # Scene config: BendingBeam.Heterogeneous, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/bending_beams/small_beam_het.h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/BendingBeam.Heterogeneous.GroundTruth.toml. Keys not listed below have the source's values.
-# Generated 2026-11-06 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-07 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -22,7 +22,9 @@
 #   acceleration over the largest of rstol times its largest force per mass, astol |a| and its float32 floor
 #   must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for 1e-2
 #   to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for
-#   35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams).
+#   35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams). The norm over
+#   nodes is the mass-weighted RMS (node_norm 0, the code default); the max (1) is stricter, as single nodes at
+#   their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421 steps under a max test).
 #     Solver.Convergence.astol = 0.1 (source 0.5)
 #     Solver.Convergence.rstol = 0.02 (source 0.01)
 #
@@ -32,6 +34,7 @@
 #   Solver.Convergence.early_exit
 #   Solver.Convergence.floor_kappa
 #   Solver.Convergence.floor_local_kappa
+#   Solver.Convergence.node_norm
 #   Solver.Newton.one_sided_contact
 #
 # Notes:
@@ -144,6 +147,7 @@ early_exit = 1
 floor_kappa = 0.2
 floor_local_kappa = 1.5
 ftol = 0.5
+node_norm = 0
 rstol = 0.02
 
 [Solver.Newton]

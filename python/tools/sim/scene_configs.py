@@ -248,8 +248,10 @@ STATIONARITY = Rule(
     "over the largest of rstol times its largest force per mass, astol |a| and its float32 floor must be at most 1. "
     "rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for 1e-2 to 1e-1. astol 0.1 "
     "(about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for 35-48% more sweeps, and "
-    "no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams).",
-    {"Solver.Convergence.rstol": 2e-2, "Solver.Convergence.astol": 0.1},
+    "no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams). The norm over nodes is the mass-weighted "
+    "RMS (node_norm 0, the code default); the max (1) is stricter, as single nodes at their float32 floor can hold "
+    "a step (Trampoline.SoftSoft passed 0 of 421 steps under a max test).",
+    {"Solver.Convergence.rstol": 2e-2, "Solver.Convergence.astol": 0.1, "Solver.Convergence.node_norm": 0},
 )
 PENALTY_FLOOR = Rule(
     "Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the effective "
