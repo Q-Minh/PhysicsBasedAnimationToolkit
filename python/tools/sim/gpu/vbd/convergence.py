@@ -21,7 +21,7 @@ margin by more than ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``, i.e.
 re-detected contacts (the maintainer's choice; C++ has no feasibility test), measured by ``end_outer``, which
 decides the stop once both are known. Inside a subproblem only the gradient is tested: passing ends the
 subproblem, and both tests follow its finalization. With dynamic problems the test's tolerance is relative to each
-node's forces (:class:`ConvergenceParams`).
+node's forces and can pass at the float32 floor (:class:`ConvergenceParams`).
 Its outcome stays on the device in flags that conditional graph nodes
 (``wp.capture_if``/``wp.capture_while``) read, so a captured step stops early too. See
 ``vbd.solver.solve_outer_loop`` for how the flags drive the loops.
@@ -87,8 +87,23 @@ class ConvergenceParams(SerializableMixin):
     body (Trampoline.SoftSoft, first 0.3 s, median 1e-2 RMS_M(x~ - x^t) / h^2: 0.97, 1.91 and 9.5 m/s^2 at h = 10, 5
     and 1 ms, the last above astol |a| = 4.9; 1e-2 RMS_M(s / m): 0.31, 0.30, 0.27). rstol keeps its value 1e-2: at
     the scenes' production h the former relative term was below the absolute one on the soft scenes, and the new
-    allowances change their early exits by under 3% (Trampoline.SoftSoft, CapsulesIntoBowl). Static problems use the
-    absolute ``gtol``.
+    allowances change their early exits by under 3% (Trampoline.SoftSoft, CapsulesIntoBowl); at 5e-2 the floor test
+    below stopped DragonImpact earlier than its accuracy warranted. Static problems use the absolute ``gtol``.
+
+    Float32 floor: a position error of one float32 spacing makes the force f_i = |H_i|_F eps32 |x_i| / h^2 (H_i node
+    i's Hessian block in the gradient's units, inertia included, from the last sweep; eps32 = 2^-23), the
+    acceleration phi_i = f_i / m_i. No float32 iterate reduces the residual below it (stiff bodies near rest, large
+    coordinates: the residual of the exactly rounded solution is about 0.15 RMS_M(phi), 2026-11-06). The test also
+    passes when both
+
+        RMS_M(e') <= astol |a|,   e'_i = max(0, |r_i|^2 - max(rstol s_i / m_i, kl phi_i)^2)^(1/2),
+        RMS_M(r) <= kg RMS_M(phi),
+
+    i.e. the residual beyond each node's relative allowance or floor is within the absolute tolerance, and the
+    residual is near the floor overall, kl = ``floor_local_kappa`` 1.5 and kg = ``floor_kappa`` 0.2. The first alone
+    stops smooth (bending) modes whose residual is coherent but below each node's floor; the second alone stops soft
+    bodies early when stiff ones set the floor. The floor ratio RMS_M(phi) / (astol |a|) is recorded in the solve
+    status. GPU Newton has no floor (TODO in gpu/newton/solver.py).
 
     ``early_exit`` (default on) lets passing the tests end a solve. Off, solves run their full budgets (fixed
     compute) while the tests still run and the status still records their ratios to the tolerances, unlike
@@ -120,6 +135,19 @@ class ConvergenceParams(SerializableMixin):
         "4 rstol^2 + astol^2 < 1 a step that hasn't moved can't pass. "
         "Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
         "file's astol = 1e-4 is now extremely strict",
+    )
+    floor_kappa = DocField(
+        0.2,
+        "Float32 floor, global factor kg (0: no floor): the gradient test also passes when the residual RMS(M^-1 "
+        "f_res) is at most kg times the float32 floor RMS(M^-1 f) and the residual beyond each node's larger "
+        "allowance, max(rstol s_i, floor_local_kappa f_i), is within astol * |a| (RMS). f_i = |H_i|_F eps32 |x_i| / "
+        "h^2 is the force a position error of one float32 spacing makes through node i's Hessian block (the last "
+        "sweep's; VBD family only). The floor ratio is recorded in the solve status either way",
+    )
+    floor_local_kappa = DocField(
+        1.5,
+        "Float32 floor, per-node factor kl (0: no floor): the floor test allows each node kl times its float32 floor "
+        "force f_i (see floor_kappa)",
     )
     early_exit = DocField(
         True,
@@ -163,6 +191,7 @@ class SolveStatus:
     reason: wp.int32  # SolveEnd
     gradient_ratio: wp.float32  # gradient measure / tolerance at the end (<= 1 passes)
     feasibility_ratio: wp.float32  # penetration / (ftol max(|dmin|, floor)) at the end (<= 1 passes)
+    floor_ratio: wp.float32  # float32 floor / tolerance, sqrt(sum f_i^2/m_i / stol2), of the same test (0: none)
 
 
 class SweepLayout(NamedTuple):
@@ -204,7 +233,7 @@ def _gradient_ratio(
 ) -> wp.float32:
     """The gradient test's measure over its tolerance (see :func:`_is_converged`): the residual beyond the relative
     allowances over the absolute tolerance, sqrt(sum max(0, |g_i|^2 - (rstol s_i)^2) / m_i / stol2), or |g| / gtol. At
-    most 1 passes."""
+    most 1 passes; above 1, the stationarity test can still pass at the float32 floor."""
     num = gnorm2[0]
     den = gtol2
     if relative != 0:
@@ -256,12 +285,16 @@ def external_acceleration(fext: np.ndarray, m: np.ndarray, dmask: np.ndarray) ->
 def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float) -> float:
     """The absolute term of the stationarity test, ``astol * |a| * h^2`` (m), for the external
     acceleration ``acceleration`` (m/s^2) and the time step ``h`` (s)."""
-    # TODO: A residual-based float32 noise floor, backward-error style: estimate the rounding noise of g
-    # from the absolute values of the force terms that sum to it (inertial, elastic, contact), e.g.
-    # ulp * sum_i (|m_i (x_i - x~_i)| + |h^2 f_el,i| + |h^2 f_c,i|), and let the test pass below it. Why:
-    # stiff scenes near rest can have a float32 floor, about (h omega)^2 ulps, above both of the test's
-    # terms, so they run their full budget. Not implemented (2026-10-20); see python/tools/sim/CLAUDE.md
-    # ("Convergence and early exit").
+    # The float32 floor (2026-11-06): the backward-error bound of the force sums, eps32 * sum_i (|m_i (x_i - x~_i)| +
+    # |h^2 f_el,i| + |h^2 f_c,i|), proposed here before, is 1000-10000x below the attainable residual. The floor is
+    # the quantization of x, f_i = |H_i|_F eps32 |x_i| through the vertex Hessian (the residual of the exactly rounded
+    # solution is ~0.15 RMS_M(M^-1 f) on BendingBeam.100MPa and DragonImpact, also translated by 32 m), so the test
+    # passes at it (ConvergenceParams.floor_kappa, floor_local_kappa; _is_converged). The force sum became the
+    # relative term's scale instead (ConvergenceParams). Evidence: investigate/float32-residual-floor (8eadc920).
+    # TODO: Solve for the increment dx = x - x^t instead of x, F = F(x^t) + grad dx: |dx| ~ 1 mm instead of |x| ~ 1 m
+    # would lower the position quantization, and with it the floor, ~1000x. Why: the floor, not the tolerance, ends
+    # stiff scenes' solves (BendingBeam.100MPa, DragonImpact at 7 s: floor 18-100x the tolerance). Solver-wide change
+    # (elastic, contact and inertia kernels; 9 floats per element to cache D_s(x^t)); not tried.
     # TODO: A stall exit for the in-subproblem checks: stop when, at one check, the residual stopped falling
     # (r_k >= (1 - X) r_prev) AND no free vertex moved since the previous check by more than
     # max(rxtol * P, kappa eps32 |x_i|), P = max_i |x_i - x_i^start| the subproblem's progress. Why: on DragonImpact
@@ -321,7 +354,12 @@ def _solve_end(converged: bool, feasible: bool, iterations_left: bool) -> wp.int
 # The stationarity test's sums over free nodes (ConvergenceCheck.sums), each in the gradient's units squared per mass
 SUM_RESIDUAL = wp.constant(0)  # sum |g_i|^2 / m_i
 SUM_RELATIVE = wp.constant(1)  # sum max(0, |g_i|^2 - (rstol s_i)^2) / m_i: beyond the relative allowances
-N_SUMS = 2
+SUM_FLOOR = wp.constant(2)  # sum f_i^2 / m_i, f_i = |H_i|_F EPS32 |x_i| the float32 floor (0 without Hessian norms)
+SUM_EXCESS = wp.constant(3)  # sum max(0, |g_i|^2 - max(rstol s_i, kl f_i)^2) / m_i: beyond the floors too
+N_SUMS = 4
+
+EPS32 = 1.1920928955078125e-07
+"""float32 machine epsilon 2^-23: the spacing of float32 numbers at x is between 0.5 and 1 times EPS32 |x|."""
 
 
 @wp.func
@@ -331,27 +369,48 @@ def _is_converged(
     sums: wp.array[wp.float32],
     stol2: wp.array[wp.float32],
     relative: wp.int32,
+    floor_kappa2: wp.float32,
 ) -> bool:
     """Stationarity test if enabled (``relative``), else ``|g|^2 <= gtol^2``. The stationarity test passes when the
     residual beyond each vertex's relative allowance rstol s_i is within the absolute tolerance, sum max(0, |g_i|^2
-    - (rstol s_i)^2) / m_i <= stol2 (see :class:`ConvergenceParams`)."""
+    - (rstol s_i)^2) / m_i <= stol2, or at the float32 floor: the residual beyond each vertex's larger allowance
+    max(rstol s_i, kl f_i) is within it and the residual is at most kg times the floor, sum |g_i|^2 / m_i <= kg^2
+    sum f_i^2 / m_i (see :class:`ConvergenceParams`)."""
     if relative != 0:
-        return sums[SUM_RELATIVE] <= stol2[0]
+        tol2 = stol2[0]
+        at_floor = sums[SUM_EXCESS] <= tol2 and sums[SUM_RESIDUAL] <= floor_kappa2 * sums[SUM_FLOOR]
+        return sums[SUM_RELATIVE] <= tol2 or at_floor
     return gnorm2[0] <= gtol2
 
 
+@wp.func
+def _floor_ratio(sums: wp.array[wp.float32], stol2: wp.array[wp.float32]) -> wp.float32:
+    """The float32 floor over the absolute tolerance, sqrt(sum f_i^2 / m_i / stol2) (0 without a floor)."""
+    num = sums[SUM_FLOOR]
+    ratio = wp.float32(0)
+    if stol2[0] > wp.float32(0):
+        ratio = wp.sqrt(num / stol2[0])
+    elif num > wp.float32(0):
+        ratio = wp.float32(wp.inf)
+    return ratio
 
 
 @wp.kernel
 def _stationarity_terms(
     g: wp.array[wp.vec3f],
     scale: wp.array[wp.float32],
+    hnorm: wp.array[wp.float32],
+    use_floor: wp.int32,
     rstol: wp.float32,
+    local_kappa: wp.float32,
     fem: FemElastoDynamicsData,
     terms: wp.array2d[wp.float32],
 ):
     """Free node i's terms of the stationarity sums (``SUM_*``). Its relative allowance is rstol s_i, s_i the sum of
-    the magnitudes of the terms of its force balance (``scale``, gpu.gradient.Gradient's force scale)."""
+    the magnitudes of the terms of its force balance (``scale``, gpu.gradient.Gradient's force scale), and its float32
+    floor f_i = |H_i|_F EPS32 |x_i|: the force (in the gradient's units) that a position error of about one float32
+    spacing at x_i makes through the vertex's own Hessian block |H_i|_F (``hnorm``, the last sweep's, inertia
+    included)."""
     i = wp.tid()
     for k in range(N_SUMS):
         terms[k, i] = wp.float32(0)
@@ -360,8 +419,14 @@ def _stationarity_terms(
     mi = fem.m[i]
     g2 = wp.dot(g[i], g[i])
     a = rstol * scale[i]
+    f = wp.float32(0)
+    if use_floor != 0:
+        f = hnorm[i] * wp.float32(EPS32) * wp.length(fem.x[i])
+    af = wp.max(a, local_kappa * f)
     terms[SUM_RESIDUAL, i] = g2 / mi
     terms[SUM_RELATIVE, i] = wp.max(g2 - a * a, wp.float32(0)) / mi
+    terms[SUM_FLOOR, i] = f * f / mi
+    terms[SUM_EXCESS, i] = wp.max(g2 - af * af, wp.float32(0)) / mi
 
 
 @wp.kernel
@@ -480,6 +545,7 @@ def _start_kernel(
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -490,7 +556,7 @@ def _start_kernel(
     solves: wp.array[wp.int32],
 ):
     k[0] = 0
-    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative)
+    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible and early_exit != 0
     keep[0] = wp.where(n_max_iters > 0 and not done, 1, 0)
@@ -504,6 +570,7 @@ def _start_kernel(
     row.reason = _solve_end(converged, feasible, n_max_iters > 0)
     row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    row.floor_ratio = wp.where(relative != 0, _floor_ratio(sums, stol2), wp.float32(0))
     status[n % status.shape[0]] = row
 
 
@@ -532,6 +599,7 @@ def _after_block_kernel(
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     inner_keep: wp.array[wp.int32],
@@ -539,7 +607,7 @@ def _after_block_kernel(
 ):
     b = blocks[0] + 1
     blocks[0] = b
-    stop = _is_converged(gnorm2, gtol2, sums, stol2, relative) and early_exit != 0
+    stop = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2) and early_exit != 0
     subproblem_keep[0] = wp.where(stop, 0, 1)
     inner_keep[0] = wp.where(not stop and b < n_blocks, 1, 0)
 
@@ -552,6 +620,7 @@ def _end_outer_kernel(
     stol2: wp.array[wp.float32],
     relative: wp.int32,
     early_exit: wp.int32,
+    floor_kappa2: wp.float32,
     penetration: wp.array[wp.float32],
     ftol: wp.float32,
     contact: MeshDynamicsData,
@@ -569,7 +638,7 @@ def _end_outer_kernel(
 ):
     kk = k[0] + 1
     k[0] = kk
-    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative)
+    converged = _is_converged(gnorm2, gtol2, sums, stol2, relative, floor_kappa2)
     feasible = _is_feasible(penetration, ftol, contact.dmin)
     done = converged and feasible and early_exit != 0
     keep[0] = wp.where(kk < n_max_iters and not done, 1, 0)
@@ -584,6 +653,7 @@ def _end_outer_kernel(
     row.reason = _solve_end(converged, feasible, kk < n_max_iters)
     row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, stol2, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
+    row.floor_ratio = wp.where(relative != 0, _floor_ratio(sums, stol2), wp.float32(0))
     status[idx] = row
 
 
@@ -648,6 +718,9 @@ class ConvergenceCheck:
         self.residual_m2 = self.sums[0:1]  # sum |g_i|^2 / m_i (a view of sums)
         self.stationarity_tol2 = wp.zeros(1, dtype=wp.float32)  # stol2, see ConvergenceParams
         self.free_mass = wp.zeros(1, dtype=wp.float32)
+        # The solver's (N,) vertex Hessian norms |H_i|_F for the float32 floor (set_hessian_norms); None: no floor
+        self._hessian_norms = None
+        self._no_hessian_norms = wp.zeros(1, dtype=wp.float32)
         terms, sums = cp.asarray(self._terms), cp.asarray(self.sums)
         self._reduce_sums = [
             Reduce(d_in=terms[k], d_out=sums[k : k + 1], num_items=n_nodes, op=cuda.compute.OpKind.PLUS)
@@ -680,6 +753,12 @@ class ConvergenceCheck:
         ``fem``'s integrator (dt / substeps)."""
         return absolute_stationarity_tolerance(self.params.astol, self.acceleration, self._fem.bdf.h)
 
+    def set_hessian_norms(self, hnorm: wp.array | None) -> None:
+        """Use the solver's (N,) vertex Hessian norms |H_i|_F (``Params.data.Hnk``, written by every sweep) for the
+        float32 floor; None: no floor. Host-side: recorded kernels read the array, so it must stay the same while a
+        captured graph replays."""
+        self._hessian_norms = hnorm
+
     def _test(self) -> None:
         """Measure the Lagrangian gradient at the current multipliers (the outer test's), and with the stationarity
         test its sums and tolerance."""
@@ -691,13 +770,17 @@ class ConvergenceCheck:
     def _measure_residual(self, gradient: GradientNorm) -> None:
         """The stationarity sums of ``gradient`` (``g`` and its force ``scale``)."""
         stream = wp.get_stream()
+        hnorm = self._hessian_norms
         wp.launch(
             _stationarity_terms,
             dim=self._terms.shape[1],
             inputs=[
                 gradient.g,
                 gradient.scale,
+                hnorm if hnorm is not None else self._no_hessian_norms,
+                int(hnorm is not None),
                 float(self.params.rstol),
+                float(self.params.floor_local_kappa),
                 self._fem.data,
                 self._terms,
             ],
@@ -726,6 +809,7 @@ class ConvergenceCheck:
             self.stationarity_tol2,
             int(self.relative),
             int(bool(self.params.early_exit)),
+            float(self.params.floor_kappa) ** 2,
         ]
 
     def _measure_penetration(self) -> None:
@@ -880,7 +964,10 @@ class ConvergenceCheck:
         return float(self.gradient_norm.gnorm2.numpy()[0]) <= float(gtol) * float(gtol)
 
     def _relative_passes(self) -> bool:
-        return float(self.sums.numpy()[1]) <= float(self.stationarity_tol2.numpy()[0])
+        sums, tol2 = self.sums.numpy(), float(self.stationarity_tol2.numpy()[0])
+        kg2 = float(self.params.floor_kappa) ** 2
+        at_floor = float(sums[3]) <= tol2 and float(sums[0]) <= kg2 * float(sums[2])
+        return float(sums[1]) <= tol2 or at_floor
 
     def test_gradient(self) -> bool:
         """Host-side gradient test of the current positions (relative or absolute with ``gtol``
@@ -1027,33 +1114,42 @@ class TestStationarityTolerance(unittest.TestCase):
         def k(
             sums: wp.array2d[wp.float32],
             stol2: wp.array[wp.float32],
+            floor_kappa2: wp.float32,
             converged: wp.array[wp.int32],
             ratio: wp.array[wp.float32],
+            floor: wp.array[wp.float32],
         ):
             i = wp.tid()
             si = wp.array(ptr=sums.ptr + wp.uint64(i * N_SUMS * 4), shape=(N_SUMS,), dtype=wp.float32)
             # The absolute-test inputs (gnorm2, gtol2) are unused by the stationarity branch
-            converged[i] = wp.where(_is_converged(si, wp.float32(0), si, stol2, 1), 1, 0)
+            converged[i] = wp.where(_is_converged(si, wp.float32(0), si, stol2, 1, floor_kappa2), 1, 0)
             ratio[i] = _gradient_ratio(si, wp.float32(0), si, stol2, 1)
+            floor[i] = _floor_ratio(si, stol2)
 
-        # Free mass 2 kg, so stol2 = 2 atol^2; RMS values x (residual r, residual beyond the relative allowances R)
-        # give each sum as 2 x^2
-        atol = 1e-4  # atol = astol |a| h^2, in m
-        cases = [  # (r, R)
-            (5e-3, 0.9e-4),  # within the relative allowances but for 0.9 atol: passes
-            (5e-3, 1.1e-4),
-            (0.9e-4, 0.9e-4),  # no allowance (no force): the absolute tolerance alone
-            (1.1e-4, 1.1e-4),
+        # Free mass 2 kg, so stol2 = 2 atol^2; RMS values x (residual r, residual beyond the relative allowances R,
+        # float32 floor F, residual beyond the larger of the relative and floor allowances X) give each sum as 2 x^2
+        atol, kg = 1e-4, 0.2  # atol = astol |a| h^2, in m
+        cases = [  # (r, R, F, X)
+            (5e-3, 0.9e-4, 0.0, 0.9e-4),  # within the relative allowances but for 0.9 atol: passes
+            (5e-3, 1.1e-4, 0.0, 1.1e-4),
+            (0.9e-4, 0.9e-4, 0.0, 0.9e-4),  # no allowance (no force): the absolute tolerance alone
+            (3e-4, 1.1e-4, 2e-3, 0.9e-4),  # at the float32 floor: r <= kg F = 4e-4 and beyond the floors within: passes
+            (3e-4, 1.1e-4, 2e-3, 1.1e-4),  # beyond the floors more than the tolerance
+            (5e-4, 1.1e-4, 2e-3, 0.9e-4),  # r above kg F
         ]
-        r, R = (np.array(c, dtype=np.float64) for c in zip(*cases))
+        r, R, F, X = (np.array(c, dtype=np.float64) for c in zip(*cases))
         n = len(cases)
         sums = np.zeros((n, N_SUMS), dtype=np.float32)
-        sums[:, 0], sums[:, 1] = 2 * r**2, 2 * R**2
+        sums[:, 0], sums[:, 1], sums[:, 2], sums[:, 3] = 2 * r**2, 2 * R**2, 2 * F**2, 2 * X**2
         stol2 = wp.array(np.array([2 * atol**2], dtype=np.float32))
-        converged, ratio = wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32)
-        wp.launch(k, dim=n, inputs=[wp.array(sums), stol2, converged, ratio])
-        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0])
+        converged, ratio, floor = wp.zeros(n, dtype=wp.int32), wp.zeros(n, dtype=wp.float32), wp.zeros(n, dtype=wp.float32)
+        wp.launch(k, dim=n, inputs=[wp.array(sums), stol2, kg**2, converged, ratio, floor])
+        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 1, 0, 0])
         np.testing.assert_allclose(ratio.numpy(), R / atol, rtol=1e-5)
+        np.testing.assert_allclose(floor.numpy(), F / atol, rtol=1e-5)
+        # Without a floor factor, the floor case fails like any ratio above 1
+        wp.launch(k, dim=n, inputs=[wp.array(sums), stol2, 0.0, converged, ratio, floor])
+        self.assertEqual(converged.numpy().tolist(), [1, 0, 1, 0, 0, 0])
 
     def test_external_acceleration(self):
         # Uniform gravity on unequal masses: its norm; fixed and massless nodes don't count

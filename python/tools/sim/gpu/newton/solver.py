@@ -1104,6 +1104,10 @@ def initialize_solve(
         adapt_penalty_parameters(fem, contact, params)
     check = _relative_check(params)
     if check is not None:
+        # TODO: The float32 floor of the stationarity test (ConvergenceParams.floor_kappa) for GPU Newton: its vertex
+        # Hessian norms |H_ii|_F would come from the assembled Hessian's diagonal 3x3 blocks (the previous
+        # iterate's, as the VBD sweeps' are). Not done (2026-11-06): no Newton scene was measured at its floor.
+        check.set_hessian_norms(None)
         check.measure_scale()
 
 
