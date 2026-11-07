@@ -833,8 +833,9 @@ class Params(SerializableMixin):
                       and the dual update are unchanged.
         penalty_stiffness : With adaptive penalties, one penalty for all contacts or one per contact,
                       C++ ``vbd::Params::ePenaltyStiffness`` (``pbat.sim.algorithm.vbd.SALPenaltyStiffness``).
-                      GlobalMaxRayleighQuotient (default): ``sigma_n = sigma_f`` = the largest contact
-                      Rayleigh quotient Q_c, floored. LocalMaxRayleighQuotient: each contact's own Q_c,
+                      GlobalMaxRayleighQuotient: ``sigma_n = sigma_f`` = the largest contact Rayleigh
+                      quotient Q_c, floored. LocalMaxRayleighQuotient (default since 2026-11-06, maintainer;
+                      C++ defaults to global): each contact's own Q_c,
                       floored, so ``gamman_adaptive * max(Q_c, floor)`` and ``gammaf_adaptive *
                       max(Q_c, floor)``, and the global penalty is the max over contacts of the local
                       ones. Q_c is the GPU's quotient of the contact's stencil (VBD family: the
@@ -894,7 +895,7 @@ class Params(SerializableMixin):
         "their sweep-start gap",
     )
     penalty_stiffness = DocField(
-        pbat.sim.algorithm.vbd.SALPenaltyStiffness.GlobalMaxRayleighQuotient,
+        pbat.sim.algorithm.vbd.SALPenaltyStiffness.LocalMaxRayleighQuotient,
         "Adaptive penalties: GlobalMaxRayleighQuotient, one penalty from the largest contact Rayleigh quotient, or "
         "LocalMaxRayleighQuotient, each contact's own (floored) quotient. Ignored with CONSTANT adaptivity",
     )
@@ -1110,14 +1111,15 @@ class MeshDynamics:
         self._compute_rayleigh_quotients(*self._penalty_hessian)
         self._reduce_penalty_parameters(wp.get_stream())
 
-    # TODO: Local penalties (Params.penalty_stiffness) are measured on Celebration, where they helped every solver
-    # (gradient ratio median, global -> local: Newton 302 -> 20 on 10 steps from 2 s, AAAVBD 40 -> 21, Anderson
-    # 104 -> 35 over 5 s), and on BasketOfFruit (2 s, AAAVBD 117 -> 51, VBD 270 -> 41), and are those scenes'
-    # settings (scene_configs.py). Elsewhere one global
-    # sigma_n set by the stiffest contact also applies to soft-side contacts, which may worsen CG conditioning and
-    # stiffen soft-on-stiff contact (suspected for Newton on the heterogeneous trampoline + sphere and its CG
-    # iteration counts), and on DragonImpact it sat 3.4x above the alternating pillar contacts' median quotient
-    # (solver notes entry 13). Whether to make local the default is open.
+    # Local penalties (Params.penalty_stiffness) are the default since 2026-11-06 (maintainer): one global sigma_n,
+    # set by the stiffest contact, also applies to soft-side contacts and slowed the sweeps. Global -> local, outer
+    # gradient ratio: Celebration median AAAVBD 40 -> 21, Anderson 104 -> 35, Newton 302 -> 20 (it also ended
+    # Newton's period-2 multiplier cycle, solver notes entry 16); BasketOfFruit 2 s median/max AAAVBD 117/1241 ->
+    # 51/306, VBD 270/2462 -> 41/220; DragonImpact impact window p90/max AAAVBD 13.7/58.5 -> 6.3/15.0;
+    # CapsulesIntoBowl early exits 93% -> 100% (AAAVBD), 78% -> 100% (VBD), feasibility violations 10/33 -> 0;
+    # Trampoline.SoftStiff Newton 14% fewer outer iterations, CG iterations per subproblem unchanged (median 1480 vs
+    # 1530); MatOnStilts and the trampolines (VBD family) within noise. The median feasibility ratio rises 2-5x where
+    # contact matters, staying below 1.
     def adapt_penalty_parameters_to_hessian(self, H, dmask: wp.array, h2: float):
         """Adapt the penalties to an assembled Hessian, as C++ ``MeshDynamics::UpdatePenaltyParameter``
         (GPU Newton): ``sigma_n = sigma_f`` = the largest contact Rayleigh quotient
