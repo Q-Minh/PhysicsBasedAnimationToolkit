@@ -54,14 +54,14 @@
 #     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
 # - Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the
 #   paper files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual
-#   acceleration over the largest of rstol times its largest force per mass, astol |a| and its float32 floor
-#   must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for 1e-2
-#   to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for
-#   35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams). The norm over
-#   nodes is the mass-weighted RMS (node_norm 0, the code default); the max (1) is stricter, as single nodes at
-#   their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421 steps under a max test). No
-#   residual smoothing (smoothing_passes 0, the code default, no extra work); k > 0 passes rank the solvers on
-#   stiff bodies at their float32 floor (Celebration) at a cost per test.
+#   acceleration over the largest of rstol times its largest force per mass, astol times its own external
+#   acceleration and its float32 floor must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces
+#   gave the same pass points for 1e-2 to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off
+#   reference than 0.5 at h = 10 ms for 35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py,
+#   ConvergenceParams). The norm over nodes is the mass-weighted RMS (node_norm 0, the code default); the max
+#   (1) is stricter, as single nodes at their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421
+#   steps under a max test). No residual smoothing (smoothing_passes 0, the code default, no extra work); k > 0
+#   passes rank the solvers on stiff bodies at their float32 floor (Celebration) at a cost per test.
 #     Solver.Convergence.astol = 0.1 (source 0.5)
 #     Solver.Convergence.rstol = 0.02 (source 0.01)
 # - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
