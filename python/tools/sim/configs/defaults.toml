@@ -1,5 +1,5 @@
 # Every parameter the GPU simulators serialize, with its code default.
-# Generated 2026-11-06 with config.params_dict on a default SimulationState. Regenerate it when
+# Generated 2026-11-07 with config.params_dict on a default SimulationState. Regenerate it when
 # parameters are added (see README.md). Useful as a reference or as an `extends` base.
 
 [Contact.CDType.OGC]
@@ -105,6 +105,7 @@ early_exit = 1
 floor_kappa = 0.2
 floor_local_kappa = 1.5
 ftol = 0.5
+node_norm = 0
 rstol = 0.02
 
 [Solver.Newton]
