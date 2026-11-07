@@ -14,7 +14,8 @@ and per body group: bodies with the same node count, i.e. copies of one mesh (``
   (the reference's checkpoints, ``simulate.py --checkpoint-every``), each run configuration takes one time step, and
   is compared to the reference's next state, relative to the reference step's displacement:
   ``e = |x(t+h) - x_ref(t+h)|_M / max(|x_ref(t+h) - x_ref(t)|_M, 1e-9 m)``, as the benchmark's e/e0. Each step's
-  solve status (residual and penetration ratios to their tolerances, early exit) and GPU time are recorded with it.
+  solve status (stationarity test, residual and penetration ratios to their tolerances, early exit) and GPU time
+  are recorded with it.
   One process per configuration restores the checkpoints in place (``checkpoint.restore``), so its CUDA graph is
   captured once. The checkpoints come from the reference's solver: a VBD-family run's own cross-step buffers
   (AAAVBD's betaG, the Chebyshev and Anderson histories, ...) start fresh at every reference state, as after
@@ -22,7 +23,9 @@ and per body group: bodies with the same node count, i.e. copies of one mesh (``
 - ``figures``: the paper's PDFs from ``global`` and ``local`` results, in the benchmark figures' style (Linux
   Biolinum, printed ``--width``, one legend on top, no titles; ``profiling/paper_figures.py``): the distance over
   time (``global``, and per body group), the one-step error distributions (``local``), and each step's final
-  residual and penetration ratios against its one-step error (``residual``, ``penetration``).
+  stationarity test and penetration ratios against its one-step error (``residual``, ``penetration``; the test's
+  ratio is ``status_ratio.stationarity_test_ratio``, at most 1 iff it passed; local results recorded without it
+  plot the gradient ratio).
 
 Usage (from the repo root):
 
@@ -51,6 +54,7 @@ import h5py
 import numpy as np
 
 from .profiling.trajectory import frame_steps
+from .status_ratio import stationarity_test_ratio
 from .trajectory_viewer import body_ids, mass_rms
 
 DISPLACEMENT_FLOOR = 1e-9  # m, floor of the reference step's displacement in the relative one-step error
@@ -162,12 +166,21 @@ def _assign(arrays: dict, values: dict):
             dst.assign(values[k])
 
 
+def _worst_test_ratio(rows: list[dict]) -> float:
+    """The worst stationarity test ratio of a step's solves (:func:`status_ratio.stationarity_test_ratio`, at most
+    1 iff the test passed; the gradient ratio for rows without its other ratios, e.g. GPU Newton's)."""
+    values = [stationarity_test_ratio(r) for r in rows]
+    return max((v for v in values if v is not None), default=np.nan)
+
+
 def _status(state, step: int) -> dict:
-    """One step's solve status: residual and penetration ratios, early exit, iterations."""
+    """One step's solve status: the stationarity test's (``test_ratio``), residual (``gradient_ratio``, RMS_M(q))
+    and penetration ratios, early exit, iterations."""
     entry = state.status_log.step_entry(step)
     if "vbd" in entry:
         rows = entry["vbd"]
         return dict(
+            test_ratio=_worst_test_ratio(rows),
             gradient_ratio=max((r["gradient_ratio"] or np.nan) for r in rows),
             feasibility_ratio=max((r["feasibility_ratio"] or np.nan) for r in rows),
             converged=all(r["reason"] == "CONVERGED" for r in rows),
@@ -176,6 +189,7 @@ def _status(state, step: int) -> dict:
         )
     rows = entry.get("newton", [])
     return dict(
+        test_ratio=_worst_test_ratio(rows),
         gradient_ratio=max(((r["gradient_ratio"] or np.nan) for r in rows), default=np.nan),
         feasibility_ratio=max(((r["feasibility_ratio"] or np.nan) for r in rows), default=np.nan),
         converged=bool(rows) and all(r["converged"] for r in rows),
@@ -184,7 +198,7 @@ def _status(state, step: int) -> dict:
     )
 
 
-STATUS_FIELDS = ("gradient_ratio", "feasibility_ratio", "converged", "outer", "iterations")
+STATUS_FIELDS = ("test_ratio", "gradient_ratio", "feasibility_ratio", "converged", "outer", "iterations")
 
 
 def local_error(args):
@@ -251,8 +265,8 @@ def local_error(args):
                 for k, v in _status(state, t).items():
                     rec[k].append(v)
                 if args.verbose:
-                    print(f"  {label} step {t}: e {rec['e_rel'][-1]:.3g} (abs {e:.3g} m), gradient ratio "
-                          f"{rec['gradient_ratio'][-1]:.3g}, feasibility {rec['feasibility_ratio'][-1]:.3g}")
+                    print(f"  {label} step {t}: e {rec['e_rel'][-1]:.3g} (abs {e:.3g} m), stationarity test ratio "
+                          f"{rec['test_ratio'][-1]:.3g}, feasibility {rec['feasibility_ratio'][-1]:.3g}")
             if label in out.get("runs", {}):
                 del out[f"runs/{label}"]
             g = out.create_group(f"runs/{label}")
@@ -361,9 +375,11 @@ def plot_local(f: h5py.File, width: float, only: list[str] | None = None):
     return fig
 
 
-def plot_residual(f: h5py.File, width: float, only: list[str] | None = None, field: str = "gradient_ratio"):
-    """(c) Each step's final residual (or penetration) ratio to its tolerance, at most 1 passes, against its one-step
-    error: filled markers for steps that passed the test, hollow ones for steps that ran out of budget."""
+def plot_residual(f: h5py.File, width: float, only: list[str] | None = None, field: str = "test_ratio"):
+    """(c) Each step's final stationarity test ratio (``test_ratio``, :func:`status_ratio.stationarity_test_ratio`;
+    or the penetration ratio, ``feasibility_ratio``) to its tolerance, at most 1 passes, against its one-step error:
+    filled markers for steps that passed the test, hollow ones for steps that ran out of budget. Runs recorded
+    before ``test_ratio`` existed plot their ``gradient_ratio``, under the former "Residual" label."""
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
 
@@ -372,9 +388,12 @@ def plot_residual(f: h5py.File, width: float, only: list[str] | None = None, fie
     runs = _runs(f, only)
     styles = _run_styles(runs)
     fig, ax = plt.subplots(figsize=(width, 0.7 * width))
+    fallback = False
     for label, _ in runs:
         g = f["runs"][label]
-        r, e, ok = g[field][()], g["e_rel"][()], g["converged"][()].astype(bool)
+        used = field if field in g or field != "test_ratio" else "gradient_ratio"  # older local results
+        fallback |= used != field
+        r, e, ok = g[used][()], g["e_rel"][()], g["converged"][()].astype(bool)
         color, marker = styles[label]["color"], styles[label]["marker"]
         ax.scatter(r[ok], e[ok], s=6, color=color, marker=marker, lw=0, alpha=0.8)
         ax.scatter(r[~ok], e[~ok], s=6, facecolor="none", edgecolor=color, marker=marker, lw=0.5, alpha=0.8)
@@ -382,8 +401,13 @@ def plot_residual(f: h5py.File, width: float, only: list[str] | None = None, fie
     ax.set_xscale("log")
     ax.set_yscale("log")
     _style(ax)
-    what = "Residual" if field == "gradient_ratio" else "Penetration"
-    ax.set_xlabel(f"{what} / tolerance at the end of the step", fontsize=FONT_SIZE)
+    if field == "feasibility_ratio":
+        xlabel = "Penetration / tolerance at the end of the step"
+    elif field == "test_ratio" and not fallback:
+        xlabel = "Stationarity test ratio at the end of the step"
+    else:
+        xlabel = "Residual / tolerance at the end of the step"
+    ax.set_xlabel(xlabel, fontsize=FONT_SIZE)
     ax.set_ylabel("One-step error", fontsize=FONT_SIZE)
     _legend(fig, [Line2D([], [], lw=0, marker=styles[r]["marker"], ms=3, color=styles[r]["color"], label=_display(r))
                   for r, _ in runs])
@@ -521,6 +545,36 @@ class TestReferenceError(unittest.TestCase):
                 np.testing.assert_allclose(g["rms"][()], [0.0, np.sqrt(4 * 0.25 / 24), 0.0], atol=1e-12)
                 np.testing.assert_allclose(g["rms_group"][1], [np.sqrt(4 * 0.25 / 8), 0.0], atol=1e-12)
                 np.testing.assert_allclose(g["rms_body"][1], [0.5, 0.0, 0.0], atol=1e-12)
+
+    def test_stationarity_test_ratio(self):
+        """The recorded and plotted residual ratio is the stationarity test's; older results plot gradient_ratio."""
+        import matplotlib
+
+        matplotlib.use("Agg")
+        from types import SimpleNamespace
+
+        entry = {"vbd": [{"reason": "GRADIENT_UNMET", "outer": 5, "sweeps": 100, "gradient_ratio": 0.25,
+                          "feasibility_ratio": 0.1, "no_floor_ratio": 1.5, "floor_clause_ratio": 4.5}]}
+        log = SimpleNamespace(step_entry=lambda step: entry)
+        s = _status(SimpleNamespace(status_log=log), 0)
+        self.assertEqual((s["test_ratio"], s["gradient_ratio"]), (1.5, 0.25))
+        newton = {"newton": [{"converged": False, "outer": 2, "newton_steps": 4, "gradient_ratio": 2.0,
+                              "feasibility_ratio": 0.1}]}
+        s = _status(SimpleNamespace(status_log=SimpleNamespace(step_entry=lambda step: newton)), 0)
+        self.assertEqual(s["test_ratio"], 2.0)
+        with h5py.File("local.h5", "w", driver="core", backing_store=False) as f:
+            for label, fields in (("A", {"test_ratio": [1.5], "gradient_ratio": [0.25]}),
+                                  ("B", {"gradient_ratio": [0.5]})):
+                g = f.create_group(f"runs/{label}")
+                g.attrs["solver"] = "VBD"
+                g["e_rel"], g["converged"] = [0.1], [False]
+                for k, v in fields.items():
+                    g[k] = v
+            fig = plot_residual(f, 3.0, ["A"])
+            self.assertEqual(fig.axes[0].get_xlabel(), "Stationarity test ratio at the end of the step")
+            np.testing.assert_allclose(fig.axes[0].collections[1].get_offsets()[0], [1.5, 0.1])
+            fig = plot_residual(f, 3.0, ["B"])
+            self.assertEqual(fig.axes[0].get_xlabel(), "Residual / tolerance at the end of the step")
 
     def test_parse_run(self):
         self.assertEqual(parse_run("A.5x10=AAAVBD,Solver.AAAVBD.n_max_iters=5"),

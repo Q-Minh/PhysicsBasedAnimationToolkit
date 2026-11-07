@@ -6,7 +6,8 @@ Takes one profiling result per solver (``simulate.py --profile kernels --profile
 summary table (busy and union time, production step time, iterations, cost per iteration), stacked
 bars of mean GPU time per step by phase, one part-to-whole donut per solver, the distribution of step
 and phase times, the steps grouped by percentiles of their GPU time and of their peak node speed (phase
-donuts, early exits, iterations and residual ratios per group), the phases over the run, a scope tree
+donuts, early exits, iterations, and stationarity test and feasibility ratios per group; the test's ratio is
+``status_ratio.stationarity_test_ratio``, at most 1 iff it passed), the phases over the run, a scope tree
 per solver with total (inclusive) and self times, a phase-by-solver table and the top GPU activities.
 
 Phase times are unions over streams (work running concurrently on several streams counts once), or busy
@@ -278,7 +279,7 @@ def _slices_section(solvers, tables, keep, colored, edges, key, unit) -> str:
                 f"<td>{_fmt(summary['outer'])}</td>"
                 f"<td>{'' if early is None else f'{100 * early:.0f}%'}"
                 f"<span class='pct'>{summary['solves']} solves</span></td>"
-                f"<td>{_fmt(summary['gradient_ratio_median'])}</td><td>{_fmt(summary['gradient_ratio_max'])}</td>"
+                f"<td>{_fmt(summary['test_ratio_median'])}</td><td>{_fmt(summary['test_ratio_max'])}</td>"
                 f"<td>{_fmt(summary['feasibility_ratio_max'])}</td><td>{_fmt(summary['peak_speed'])}</td></tr>"
             )
         unit_iter = table["unit"] or "iterations"
@@ -287,7 +288,8 @@ def _slices_section(solvers, tables, keep, colored, edges, key, unit) -> str:
             "<table class='wrap'><thead><tr><th>Slice</th><th>Range</th><th>Steps</th><th>Median step (ms)</th>"
             f"<th>Median {_esc(unit_iter)}</th><th>Median ms per {_esc(unit_iter.rstrip('s'))}</th>"
             "<th>Median outer</th><th>Early exits</th>"
-            "<th>Median gradient ratio</th><th>Worst gradient ratio</th><th>Worst feasibility ratio</th>"
+            "<th title='The stationarity test&#39;s ratio: at most 1 exactly when the test passed'>"
+            "Median stationarity test ratio</th><th>Worst stationarity test ratio</th><th>Worst feasibility ratio</th>"
             f"<th>Median peak speed (m/s)</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
         )
     return "".join(blocks)

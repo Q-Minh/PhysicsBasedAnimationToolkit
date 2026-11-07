@@ -149,7 +149,7 @@ class TestLegs(unittest.TestCase):
         self.assertEqual(grid["t"].tolist(), full["t"].tolist())
         gap = np.isin(full["t"], list(seams))
         self.assertEqual((~grid["measured"]).tolist(), gap.tolist())
-        for key in ("time_ms", "rms_speed", "gradient_ratio", "iterations"):
+        for key in ("time_ms", "rms_speed", "test_ratio", "gradient_ratio", "iterations"):
             np.testing.assert_array_equal(grid[key][~gap], full[key][~gap])
             self.assertTrue(np.isnan(grid[key][gap]).all())
 
