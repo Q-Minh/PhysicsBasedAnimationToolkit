@@ -369,7 +369,7 @@ def _draw_window(log):
                 f"{v['sweeps_max']} / {v['sweeps_budget']}",
                 "Most VBD sweeps of one solve / budget.",
             )
-            ratio = v["gradient_ratio_max"]
+            ratio = v["test_ratio_max"]
             rows.row("Worst residual / tol", _ratio(ratio), _RESIDUAL_TIP, None if ratio <= 1 else _WARN)
             ratio = v["feasibility_ratio_max"]
             rows.row("Worst penetration / tol", _ratio(ratio), _PENETRATION_TIP, None if ratio <= 1 else _WARN)
@@ -432,7 +432,7 @@ def _draw_window(log):
             _ratio_rows(
                 rows,
                 "Worst ",
-                n["gradient_ratio_max"],
+                n["test_ratio_max"],
                 n["feasibility_ratio_max"],
                 "at the end of the window's worst solve",
             )

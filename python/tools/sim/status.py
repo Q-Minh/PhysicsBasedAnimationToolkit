@@ -19,6 +19,7 @@ import numpy as np
 
 from .gpu.newton.solver import NewtonSolveRecord, SubproblemStatus
 from .gpu.vbd.convergence import SolveEnd
+from .status_ratio import stationarity_test_ratio
 
 VBD_DTYPE = np.dtype(
     [
@@ -204,7 +205,9 @@ class StatusLog:
         """Counts and means over the last ``window`` time steps (all if None).
 
         Returns:
-            dict: ``steps``, and ``vbd`` / ``newton`` sub-dicts for the solver families present.
+            dict: ``steps``, and ``vbd`` / ``newton`` sub-dicts for the solver families present. Their
+            ``test_ratio_max`` is the worst stationarity test ratio (:func:`status_ratio.stationarity_test_ratio`, at
+            most 1 iff the test passed), not the worst ``gradient_ratio``.
         """
         last = self.last_step
         if last is None:
@@ -222,7 +225,7 @@ class StatusLog:
                 "sweeps_mean": float(v["sweeps"].mean()),
                 "sweeps_max": int(v["sweeps"].max()),
                 "sweeps_budget": int(v["max_sweeps"][-1]),
-                "gradient_ratio_max": float(v["gradient_ratio"].max()),
+                "test_ratio_max": float(np.max(stationarity_test_ratio(v))),
                 "feasibility_ratio_max": float(v["feasibility_ratio"].max()),
                 "lost": int(self.lost),
             }
@@ -244,7 +247,7 @@ class StatusLog:
                 "cg_cap": int(sp["cg_cap"][-1]) if sp.shape[0] else 0,
                 "cg_capped": int(sp["cg_capped"].sum()),
                 "backtracks": int(sp["backtracks"].sum()),
-                "gradient_ratio_max": float(np.nanmax(n["gradient_ratio"], initial=0.0)),
+                "test_ratio_max": float(np.nanmax(stationarity_test_ratio(n), initial=0.0)),
                 "feasibility_ratio_max": float(np.nanmax(n["feasibility_ratio"], initial=0.0)),
             }
         return out
@@ -265,7 +268,7 @@ class StatusLog:
                 f"{r['FEASIBILITY_UNMET']}, both {r['BOTH_UNMET']})",
                 f"  outer iterations: mean {v['outer_mean']:.2f}, max {v['outer_max']} / {v['outer_budget']}",
                 f"  sweeps: mean {v['sweeps_mean']:.1f}, max {v['sweeps_max']} / {v['sweeps_budget']}",
-                f"  worst ratios to tolerance: gradient {v['gradient_ratio_max']:.3g}, feasibility "
+                f"  worst ratios to tolerance: stationarity test {v['test_ratio_max']:.3g}, feasibility "
                 f"{v['feasibility_ratio_max']:.3g}",
             ]
             if v["lost"]:
@@ -282,7 +285,7 @@ class StatusLog:
                 f"{n['newton_steps_max']} / {n['newton_steps_budget']}",
                 f"  CG: max {n['cg_iters_max']} / {n['cg_cap']} iterations, {n['cg_capped']} subproblems "
                 f"hit the cap; line-search backtracks: {n['backtracks']}",
-                f"  worst ratios to tolerance: gradient {n['gradient_ratio_max']:.3g}, feasibility "
+                f"  worst ratios to tolerance: stationarity test {n['test_ratio_max']:.3g}, feasibility "
                 f"{n['feasibility_ratio_max']:.3g}",
             ]
         return lines
@@ -399,7 +402,7 @@ class TestStatusLog(unittest.TestCase):
         self.assertEqual((n["initial_gradient_ratio"], n["initial_feasibility_ratio"]), (40.0, 3.0))
         self.assertEqual((n["gradient_ratio"], n["feasibility_ratio"]), (2.5, 0.5))
         self.assertEqual(log.newton_subproblems[0]["gradient_ratio"], 2.5)
-        self.assertEqual((s["newton"]["gradient_ratio_max"], s["newton"]["feasibility_ratio_max"]), (2.5, 0.5))
+        self.assertEqual((s["newton"]["test_ratio_max"], s["newton"]["feasibility_ratio_max"]), (2.5, 0.5))
         self.assertEqual(s["steps"], 3)
         self.assertEqual(s["vbd"]["reasons"]["CONVERGED"], 3)
         self.assertEqual(s["vbd"]["reasons"]["GRADIENT_UNMET"], 1)
@@ -446,6 +449,25 @@ class TestStatusLog(unittest.TestCase):
             log.add_vbd(t, 1, self._rows([2 * t, 2 * t + 1]), 0, 5, 400)
         self.assertEqual(log.vbd.shape[0], 204)
         self.assertEqual(log.summary(window=10)["vbd"]["solves"], 20)
+
+    def test_summary_test_ratio(self):
+        """The worst ratio is the stationarity test's: a failed floor clause counts, not just RMS_M(q)."""
+        base = self._rows([0, 1], [int(SolveEnd.CONVERGED), int(SolveEnd.GRADIENT_UNMET)])
+        rows = np.zeros(2, dtype=base.dtype.descr + [("no_floor_ratio", np.float32), ("floor_clause_ratio", np.float32)])
+        for f in base.dtype.names:
+            rows[f] = base[f]
+        rows["gradient_ratio"] = [0.2, 0.25]
+        rows["no_floor_ratio"] = [0.5, 1.1]
+        rows["floor_clause_ratio"] = [3.0, 4.6]
+        log = StatusLog()
+        log.add_vbd(0, 1, rows, 0, 5, 400)
+        v = log.summary()["vbd"]
+        self.assertAlmostEqual(v["test_ratio_max"], 1.1, places=6)
+        self.assertTrue(any("stationarity test 1.1" in line for line in log.format_summary()))
+        # Rows without the other ratios (recorded as 0): the gradient ratio
+        old = StatusLog()
+        old.add_vbd(0, 1, self._rows([0]), 0, 5, 400)
+        self.assertEqual(old.summary()["vbd"]["test_ratio_max"], 0.0)
 
     def test_device_ring_readback(self):
         import warp as wp
