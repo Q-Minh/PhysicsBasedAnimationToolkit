@@ -1198,7 +1198,8 @@ def check_convergence(
 
     With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
     dynamic problems), it's the VBD family's outer test without the float32 floor: the Lagrangian gradient,
-    ``RMS_M(q0) <= 1``, q0_i = |g_i| / max(rstol h^2 s_i, astol |a| h^2 m_i) (s_i node i's largest force term; see
+    ``RMS_M(q0) <= 1``, q0_i = |g_i| / max(rstol h^2 s_i, alpha_i h^2 m_i) (s_i node i's largest force term,
+    alpha_i = max(astol |f_ext,i| / m_i, 1e-6 m/s^2) its own absolute allowance; see
     ``vbd.convergence.ConvergenceParams``; with ``Solver.Convergence.node_norm`` MAX, ``max_i q0_i <= 1``), and
     feasibility
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
