@@ -51,6 +51,7 @@ from scipy.sparse.csgraph import connected_components
 from .benchmark_plot import solver_color
 from .benchmark_viewer import boundary_triangles, display_name, _rgb
 from .profiling.trajectory import frame_steps
+from .status_ratio import stationarity_test_ratio
 
 CACHED_FRAMES = 3  # per trajectory: the shown frame, the one before it (speeds) and one more
 REST_TOLERANCE = 1e-6  # rest positions match within this fraction of the scene's size
@@ -174,8 +175,10 @@ def mass_rms(x: np.ndarray, x_ref: np.ndarray, m: np.ndarray) -> float:
 
 def status_lines(g: h5py.Group) -> list[str]:
     """A frame's solve statuses (``status.StatusLog.write_h5``: the time steps since the previous frame), per
-    solver family: how the solves ended, then their most outer iterations and worst ratios to tolerance. Enum
-    names come from the group's attributes, so the viewer needs no Warp."""
+    solver family: how the solves ended, then their most outer iterations and worst ratios to tolerance: the
+    stationarity test's (:func:`status_ratio.stationarity_test_ratio`, at most 1 iff it passed; the gradient ratio
+    for statuses recorded without its other ratios) and the penetration's. Enum names come from the group's
+    attributes, so the viewer needs no Warp."""
     lines = []
     if "vbd" in g:
         v = g["vbd"][()]
@@ -184,13 +187,13 @@ def status_lines(g: h5py.Group) -> list[str]:
         ends = ", ".join(f"{names[r].lower().replace('_', ' ')} {c}" for r, c in enumerate(counts) if c)
         lines.append(f"{len(v)} solve{'s' if len(v) > 1 else ''}: {ends}")
         lines.append(f"  outer max {v['outer'].max()} / {v['max_outer'][-1]}, "
-                     f"residual / tol {v['gradient_ratio'].max():.3g}, "
+                     f"stationarity / tol {np.max(stationarity_test_ratio(v)):.3g}, "
                      f"penetration / tol {v['feasibility_ratio'].max():.3g}")
     if "newton_solves" in g:
         n = g["newton_solves"][()]
         lines.append(f"{len(n)} Newton solve{'s' if len(n) > 1 else ''}: {int(n['converged'].sum())} converged")
         lines.append(f"  outer max {n['outer'].max()} / {n['max_outer'][-1]}, "
-                     f"residual / tol {np.nanmax(n['gradient_ratio'], initial=0.0):.3g}, "
+                     f"stationarity / tol {np.nanmax(stationarity_test_ratio(n), initial=0.0):.3g}, "
                      f"penetration / tol {np.nanmax(n['feasibility_ratio'], initial=0.0):.3g}")
     if int(g.attrs.get("lost", 0)):
         lines.append(f"{int(g.attrs['lost'])} solves lost (status ring overwritten)")
@@ -651,6 +654,19 @@ class TestTrajectoryViewer(unittest.TestCase):
         group.attrs["solve_end"] = ["RUNNING", "CONVERGED", "GRADIENT_UNMET", "FEASIBILITY_UNMET", "BOTH_UNMET"]
         group.attrs["lost"] = 0
 
+    def test_status_lines_stationarity(self):
+        """The worst ratio is the stationarity test's: a failed floor clause shows, not RMS_M(q)."""
+        dtype = [("outer", np.int32), ("reason", np.int32), ("gradient_ratio", np.float32),
+                 ("feasibility_ratio", np.float32), ("max_outer", np.int32), ("no_floor_ratio", np.float32),
+                 ("floor_clause_ratio", np.float32)]
+        rows = np.zeros(1, dtype=dtype)
+        rows["reason"], rows["outer"], rows["max_outer"] = 2, 5, 5
+        rows["gradient_ratio"], rows["no_floor_ratio"], rows["floor_clause_ratio"] = 0.25, 1.5, 4.5
+        with h5py.File("status.h5", "w", driver="core", backing_store=False) as f:
+            f.create_dataset("vbd", data=rows)
+            f.attrs["solve_end"] = ["RUNNING", "CONVERGED", "GRADIENT_UNMET", "FEASIBILITY_UNMET", "BOTH_UNMET"]
+            self.assertEqual(status_lines(f)[1], "  outer max 5 / 5, stationarity / tol 1.5, penetration / tol 0")
+
     def files(self, root):
         """VBD: dt 0.01, a frame every 2 steps from step 0; Newton: resumed at step 4, a frame every 4 steps, moving
         twice as fast; a reference at rest, without frame step counts (the fps schedule)."""
@@ -684,7 +700,7 @@ class TestTrajectoryViewer(unittest.TestCase):
                 np.testing.assert_allclose(speeds[:8], 0.1 / 0.02)
                 np.testing.assert_allclose(speeds[8], 0.0)
                 self.assertEqual(a.status(1), ["2 solves: converged 1, both unmet 1",
-                                               "  outer max 10 / 10, residual / tol 3, penetration / tol 0.2"])
+                                               "  outer max 10 / 10, stationarity / tol 3, penetration / tol 0.2"])
                 self.assertEqual(a.status(2), ["no solves"])
                 self.assertEqual(a.status(0), [])  # no solve_status group
                 # The distances to the reference (at rest): every body node moved by 0.1 k; the collider is excluded
