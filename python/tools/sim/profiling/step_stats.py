@@ -12,6 +12,7 @@ Like ``results.py``, this module must not import the GPU stack or h5py.
 import numpy as np
 
 from . import results
+from ..status_ratio import stationarity_test_ratio
 
 # Scopes whose entries count one solver iteration, for results without solve statuses.
 ITERATION_SCOPES = ("vbd.sweep", "aaavbd.sweep", "newton.linear_solve")
@@ -49,15 +50,21 @@ def solve_outcome(step: dict) -> dict:
     Returns:
         dict: ``solves`` and ``converged`` (counts; ``converged`` is the early exits, solves that passed
         their tests within the budget), ``iterations`` (VBD-family sweeps or Newton steps), ``outer``
-        (outer iterations), ``unit`` of the iterations, and the worst ``gradient_ratio`` and
-        ``feasibility_ratio`` to their tolerances (NaN if unknown). Without a ``status``, only
-        ``iterations`` is known, counted from the iteration scopes' calls.
+        (outer iterations), ``unit`` of the iterations, the worst ``gradient_ratio`` and
+        ``feasibility_ratio`` to their tolerances, and the worst ``test_ratio``, the stationarity test's decisive
+        ratio (:func:`status_ratio.stationarity_test_ratio`: at most 1 iff the test passed; ``gradient_ratio``
+        for rows without its other ratios) (NaN if unknown). Without a ``status``, only ``iterations`` is known,
+        counted from the iteration scopes' calls.
     """
     nan = float("nan")
     status = step.get("status") or {}
 
     def worst(rows, key):
         values = [r[key] for r in rows if r.get(key) is not None]
+        return max(values) if values else nan
+
+    def worst_test(rows):
+        values = [v for v in map(stationarity_test_ratio, rows) if v is not None]
         return max(values) if values else nan
 
     if "vbd" in status:
@@ -70,6 +77,7 @@ def solve_outcome(step: dict) -> dict:
             "unit": "sweeps",
             "gradient_ratio": worst(rows, "gradient_ratio"),
             "feasibility_ratio": worst(rows, "feasibility_ratio"),
+            "test_ratio": worst_test(rows),
         }
     if "newton" in status:
         rows = status["newton"]
@@ -81,6 +89,7 @@ def solve_outcome(step: dict) -> dict:
             "unit": "Newton steps",
             "gradient_ratio": worst(rows, "gradient_ratio"),
             "feasibility_ratio": worst(rows, "feasibility_ratio"),
+            "test_ratio": worst_test(rows),
         }
     calls = step.get("calls", {})
     for name in ITERATION_SCOPES:
@@ -91,7 +100,7 @@ def solve_outcome(step: dict) -> dict:
     else:
         n, unit = nan, ""
     return {"solves": 0, "converged": 0, "iterations": n, "outer": nan, "unit": unit,
-            "gradient_ratio": nan, "feasibility_ratio": nan}
+            "gradient_ratio": nan, "feasibility_ratio": nan, "test_ratio": nan}
 
 
 def per_step(result: dict) -> dict:
@@ -100,7 +109,7 @@ def per_step(result: dict) -> dict:
     Returns:
         dict: ``t``, ``time_ms`` (:func:`step_time_ms`), ``span_ms``, ``peak_speed``, ``rms_speed``, the
         :func:`solve_outcome` fields ``solves``, ``converged``, ``iterations``, ``outer``,
-        ``gradient_ratio``, ``feasibility_ratio`` (NaN where unknown), ``unit`` (a string) and
+        ``gradient_ratio``, ``feasibility_ratio``, ``test_ratio`` (NaN where unknown), ``unit`` (a string) and
         ``phases`` (phase name -> per-step ms, 0 where a step has no work in it).
     """
     steps = result["steps"]
@@ -115,7 +124,8 @@ def per_step(result: dict) -> dict:
         "peak_speed": np.array([s.get("peak_speed", nan) for s in steps], dtype=float),
         "rms_speed": np.array([s.get("rms_speed", nan) for s in steps], dtype=float),
         **{k: np.array([o[k] for o in outcomes], dtype=float)
-           for k in ("solves", "converged", "iterations", "outer", "gradient_ratio", "feasibility_ratio")},
+           for k in ("solves", "converged", "iterations", "outer", "gradient_ratio", "feasibility_ratio",
+                     "test_ratio")},
         "unit": next((o["unit"] for o in outcomes if o["unit"]), ""),
         "phases": {p: np.array([ph.get(p, 0.0) for ph in phases_per_step]) for p in names},
     }
@@ -265,7 +275,23 @@ class TestStepStats(unittest.TestCase):
         self.assertEqual(table["iterations"][3], 20 + 50)
         self.assertEqual(table["outer"][0], 6)
         self.assertAlmostEqual(table["gradient_ratio"][9], 0.9)
+        # Rows without the stationarity test's other ratios: its ratio is the gradient ratio
+        np.testing.assert_array_equal(table["test_ratio"], table["gradient_ratio"])
         self.assertEqual(union_overlap(table), 0.0)
+
+    def test_stationarity_test_ratio(self):
+        result = self._result()
+        # A failed second clause: the gradient ratio passes, the test doesn't (worst substep per step)
+        result["steps"][0]["status"]["vbd"][1].update(no_floor_ratio=1.1, floor_clause_ratio=4.6)
+        result["steps"][1]["status"]["vbd"][1].update(no_floor_ratio=37.0, floor_clause_ratio=0.8)
+        table = per_step(result)
+        self.assertEqual(table["gradient_ratio"][0], 0.5)
+        self.assertAlmostEqual(table["test_ratio"][0], 1.1)
+        self.assertAlmostEqual(table["test_ratio"][1], 0.8)
+        newton = solve_outcome({"t": 0, "status": {"newton": [
+            {"substep": 0, "outer": 2, "converged": False, "newton_steps": 3, "gradient_ratio": 1.5,
+             "feasibility_ratio": 0.1}]}})
+        self.assertEqual(newton["test_ratio"], 1.5)
 
     def test_without_status_counts_iteration_scopes(self):
         result = self._result()

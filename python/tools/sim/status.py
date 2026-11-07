@@ -32,7 +32,8 @@ VBD_DTYPE = np.dtype(
         ("feasibility_ratio", np.float32),
         ("max_outer", np.int32),
         ("max_sweeps", np.int32),  # n_max_iters * n_subproblem_max_iters
-        # The stationarity test's other ratios (0: absolute test): max_i q_i, RMS_M(q0), RMS_M(r) / (kg RMS_M(phi))
+        # The stationarity test's other ratios (0: absolute test): max_i q_i, RMS_M(q0), RMS_M(r) / (kg RMS_M(phi)).
+        # gradient_ratio <= 1 alone doesn't mean the test passed: status_ratio.stationarity_test_ratio decides
         ("max_ratio", np.float32),
         ("no_floor_ratio", np.float32),
         ("floor_clause_ratio", np.float32),

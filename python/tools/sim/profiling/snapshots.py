@@ -20,8 +20,11 @@ Usage (from the repo root):
         [--pick] [--look-at X Y Z TX TY TZ] [--size 1200 1200] [--colors "#b9c3c9" "#e69f00" "#56b4e9"] \
         [--translucent 0 2 --opacity 0.35] [--ssaa 4] [--transparency-passes 8]
 
-The capsule bowl's paper snapshots: ``--look-at 10.6 -10.6 7 0 0 0 --colors "#b9c3c9" "#e69f00" "#56b4e9"
---translucent 0 2`` (tubes and bowl translucent, so the capsules show inside them).
+The capsule bowl's paper snapshots (the timeline's, since 2026-10-22), from the AAAVBD kernels run: ``--times 0.4
+0.9 1.55 2.88 3.94 --view data/profiling/paper/snapshots/capsules.view.json --size 1800 1421 --transparency-passes 12
+--colors "#b9c3c9" "#e69f00" "#56b4e9" --translucent 0 2`` (tubes and bowl translucent, so the capsules show inside
+them; the view was saved from ``--look-at 10.6 -10.6 7 0 0 0``), and ``paper_figures timeline --snapshots`` at the
+same times.
 
 Writes ``<prefix>_<i>.png`` (i = 1, 2, ... in time order) and prints each image's frame time.
 """
