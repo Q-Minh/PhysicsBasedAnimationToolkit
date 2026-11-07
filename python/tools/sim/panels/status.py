@@ -85,9 +85,10 @@ _RESIDUAL_TIP = (
     "||q||, the stationarity test's first condition (at most 1 meets it; the test's ratio is the row above).\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0): ||q|| <= 1 and (||q0|| <= 1 or\n"
     "||r|| <= floor_kappa * ||phi||). This row is ||q|| over free nodes of\n"
-    "q_i = |r_i| / max(rstol * s_i / m_i, astol * |a|, floor_local_kappa * phi_i): r_i node i's residual\n"
+    "q_i = |r_i| / max(rstol * s_i / m_i, alpha_i, floor_local_kappa * phi_i): r_i node i's residual\n"
     "acceleration, s_i the largest of its forces (inertial, elastic, contact, external) in the step's Lagrangian\n"
-    "gradient, |a| the scene's gravity, phi_i its float32 floor |H_i|_F eps32 |x_i| / (m_i h^2).\n"
+    "gradient, alpha_i = max(astol * |f_ext,i| / m_i, 1e-6 m/s^2) its own absolute allowance, phi_i its\n"
+    "float32 floor |H_i|_F eps32 |x_i| / (m_i h^2).\n"
     "Absolute test (both 0, or static): |g| / gtol.\n" + _NORM_TIP
 )
 _MAX_TIP = (
@@ -95,7 +96,7 @@ _MAX_TIP = (
     "0: absolute test."
 )
 _NO_FLOOR_TIP = (
-    "||q0||, the node ratios without the float32 floor, q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|).\n"
+    "||q0||, the node ratios without the float32 floor, q0_i = |r_i| / max(rstol * s_i / m_i, alpha_i).\n"
     "At most 1 passes without the floor clause. 0: absolute test.\n" + _NORM_TIP
 )
 _FLOOR_CLAUSE_TIP = (
@@ -110,9 +111,9 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "The outer test's stationarity ratio, {when}; at most 1 exactly when the gradient test passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's without\n"
-    "the float32 floor, so its ratio is ||q0|| over free nodes of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|),\n"
-    "r_i node i's residual acceleration, s_i the largest of its forces in the step's Lagrangian gradient, |a| the\n"
-    "scene's gravity (no float32 floor).\n"
+    "the float32 floor, so its ratio is ||q0|| over free nodes of q0_i = |r_i| / max(rstol * s_i / m_i, alpha_i),\n"
+    "r_i node i's residual acceleration, s_i the largest of its forces in the step's Lagrangian gradient,\n"
+    "alpha_i = max(astol * |f_ext,i| / m_i, 1e-6 m/s^2) its own absolute allowance (no float32 floor).\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient.\n"
     "||.|| is the norm over free nodes, Solver.Convergence.node_norm: RMS (default), the mass-weighted RMS,\n"
     "or MAX, the largest node value.\n"
@@ -477,13 +478,14 @@ def draw_status_panel(state, ui_state):
     # The node norm of the stationarity test (labels the ratio rows; rows recorded under another norm aren't marked)
     norm = check.params.node_norm.name if check is not None else "RMS"
     if check is not None:
-        astol, a = float(check.params.astol), check.acceleration
-        imgui.Text(f"Absolute stationarity tolerance: {check.absolute_tolerance:.3g} m ({astol * a:.3g} m/s^2)")
+        astol = float(check.params.astol)
+        imgui.Text(f"Absolute allowance: {astol:.3g} |f_ext,i| / m_i per node")
         _tooltip(
-            f"astol * |a| * h^2 = {astol:.3g} * {a:.3g} m/s^2 * h^2: the residual RMS(M^-1 g) below which the\n"
-            "gradient test always passes (dynamic problems), |a| being the scene's external acceleration (its\n"
-            "gravity, or 9.81 m/s^2 without a load) and h the solve's time step; astol * |a| is the tolerated\n"
-            "residual acceleration. It scales with h^2 like a step's gravity sag, so it's time-step invariant."
+            "Each free node's absolute allowance alpha_i = max(astol * |f_ext,i| / m_i, 1e-6 m/s^2), astol times\n"
+            "its own external acceleration: astol * |g| on every node under a uniform gravity g, only the floor on\n"
+            "a node without a load. It's the residual acceleration the stationarity test tolerates where a node's\n"
+            "forces are small (dynamic problems), independent of the time step. A step left at x^t under its load\n"
+            "has q_i = 1 / astol at every loaded node, so it can't pass."
         )
     log = state.status_log
     if log.last_step is None:
@@ -596,14 +598,14 @@ class TestStatusPanel(unittest.TestCase):
         # With the max norm the node row is labeled so, and the decisive ratio is the same helper's
         from ..gpu.vbd.convergence import NodeNorm
 
-        check = SimpleNamespace(params=SimpleNamespace(node_norm=NodeNorm.MAX, astol=0.1), acceleration=9.81,
-                                absolute_tolerance=1e-5)
+        check = SimpleNamespace(params=SimpleNamespace(node_norm=NodeNorm.MAX, astol=0.1))
         fake.reset_mock()
         with mock.patch(f"{__name__}.imgui", fake):
             draw_status_panel(SimpleNamespace(status_log=log, convergence=check), None)
         labels = [str(c.args[0]) for c in fake.Text.call_args_list]
         self.assertIn("MAX node / tol", labels)
         self.assertNotIn("RMS node / tol", labels)
+        self.assertIn("Absolute allowance: 0.1 |f_ext,i| / m_i per node", labels)
         tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)
         self.assertIn("node_norm", tips)
 

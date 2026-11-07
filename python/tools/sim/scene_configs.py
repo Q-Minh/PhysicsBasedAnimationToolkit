@@ -245,7 +245,8 @@ LOCAL_PENALTY = Rule(
 STATIONARITY = Rule(
     "Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the paper "
     "files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual acceleration "
-    "over the largest of rstol times its largest force per mass, astol |a| and its float32 floor must be at most 1. "
+    "over the largest of rstol times its largest force per mass, astol times its own external acceleration and its "
+    "float32 floor must be at most 1. "
     "rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for 1e-2 to 1e-1. astol 0.1 "
     "(about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for 35-48% more sweeps, and "
     "no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams). The norm over nodes is the mass-weighted "

@@ -78,12 +78,12 @@ class ConvergenceParams(SerializableMixin):
 
         RMS_M(q) <= 1   and   (RMS_M(q0) <= 1   or   RMS_M(r) <= kg RMS_M(phi))
 
-        q_i      = |r_i| / max(rho_i, alpha, kl phi_i)
-        q0_i     = |r_i| / max(rho_i, alpha)
+        q_i      = |r_i| / max(rho_i, alpha_i, kl phi_i)
+        q0_i     = |r_i| / max(rho_i, alpha_i)
         r_i      = f_res,i / m_i = g_i / (m_i h^2)                                 residual acceleration
         rho_i    = rstol s_i / m_i                                                  relative allowance
         s_i      = max(|m_i (x_i - x~_i)| / h^2, |f_el,i|, |f_c,i|, |f_ext,i|)       largest force term
-        alpha    = max(astol |a|, ACCELERATION_FLOOR)                               absolute allowance
+        alpha_i  = max(astol |f_ext,i| / m_i, ACCELERATION_FLOOR)                   absolute allowance
         phi_i    = |H_i|_F eps32 |x_i| / (m_i h^2)                                  float32 floor
         RMS_M(v) = (sum_i m_i v_i^2 / sum_i m_i)^(1/2)                              over free nodes
 
@@ -91,9 +91,20 @@ class ConvergenceParams(SerializableMixin):
     whose sum is node i's force residual, each net at the node (gpu.gradient.Gradient, ``force_scale``): the inertial term (it holds
     -f_ext for BDF1, so f_ext also counts on its own and a free fall, x = x~, keeps a scale), the elastic force, the
     contact force (normal and friction as one term) and the external load. h is the solve's time step (dt /
-    substeps), |a| the scene's external acceleration (:func:`external_acceleration`: the gravity's norm, or
-    :data:`STANDARD_GRAVITY` without a load), H_i node i's Hessian block in the gradient's units (inertia included,
-    from the last sweep) and eps32 = 2^-23.
+    substeps), f_ext,i node i's external force (``fem.data.fext``, read on the device by the ratio kernels, so a
+    changed load applies at once), H_i node i's Hessian block in the gradient's units (inertia included, from the
+    last sweep) and eps32 = 2^-23.
+
+    The absolute allowance alpha_i is node i's own external acceleration times astol (:func:`absolute_allowance`;
+    maintainer, 2026-11-07): under a uniform gravity g it is astol |g| on every free node, as the former scene-wide
+    |a| (the mass-weighted RMS of |f_ext,i| / m_i, or 9.81 m/s^2 without a load), and under a non-uniform load each
+    node is held to its own. A node without an external load gets only ACCELERATION_FLOOR (no 9.81 fallback), so
+    its residual must be balanced by its other forces through the relative term, or stay at the float32 floor.
+    Free fall from x^t still fails at every loaded node: for a body at rest (v^t = 0, no elastic force) left at
+    x = x^t, r_i = -f_ext,i / m_i (the inertial term m_i (x_i - x~_i) = -h^2 f_ext,i) and s_i = |f_ext,i|, so
+    q_i = 1 / max(rstol, astol) = 1 / astol = 10 per node, whatever the load's distribution. Measured against the
+    scene-wide |a| (2026-11-07): Trampoline.SoftSoft 0-1 s at 10 ms, early exit on, bit-identical positions and
+    exits; every scene config's scenes have a uniform gravity (python/tools/sim/CLAUDE.md).
 
     q_i is node i's residual over its allowance: relative to its forces (a componentwise relative residual,
     |f_res,i| <= rstol max_k |f_k,i|; cf. Oettli and Prager, Numer. Math. 1964; Arioli, Duff and Ruiz, SIAM J. Matrix
@@ -102,10 +113,10 @@ class ConvergenceParams(SerializableMixin):
     0.15 RMS_M(phi)). The floor clause stops a solve at the floor only when the residual is near the floor overall:
     the per-node floor alone stops stiff bodies' smooth modes early (BendingBeam.100MPa), and the global clause alone
     stops soft bodies when stiff ones set the floor. Every term is a force, so for a fixed physical motion the test
-    doesn't depend on h; with rstol < 1 and astol < 1 a step that hasn't moved (r = a, s = m a for a free node at
-    rest) can't pass. The status records RMS_M(q) (``gradient_ratio``), max_i q_i, RMS_M(q0) and RMS_M(r) / (kg
-    RMS_M(phi)) (:class:`SolveStatus`). In the gradient's units the node ratio is |g_i| / max(rstol h^2 s_i,
-    alpha h^2 m_i, kl |H_i|_F eps32 |x_i|). GPU Newton has no floor (TODO in gpu/newton/solver.py), so it tests
+    doesn't depend on h; with rstol < 1 and astol < 1 a step that hasn't moved (r_i = f_ext,i / m_i, s_i = |f_ext,i|
+    for a loaded free node at rest) can't pass. The status records RMS_M(q) (``gradient_ratio``), max_i q_i,
+    RMS_M(q0) and RMS_M(r) / (kg RMS_M(phi)) (:class:`SolveStatus`). In the gradient's units the node ratio is |g_i| / max(rstol h^2 s_i,
+    alpha_i h^2 m_i, kl |H_i|_F eps32 |x_i|). GPU Newton has no floor (TODO in gpu/newton/solver.py), so it tests
     RMS_M(q0) <= 1. Static problems use the absolute ``gtol``.
 
     The RMS decides, not the largest ratio: max_i q_i <= 1 is held by single nodes at their float32 floor (light
@@ -130,7 +141,7 @@ class ConvergenceParams(SerializableMixin):
     ``smoothing_passes`` k > 0 (not the default; k = 0 adds no work) adds a smoothed test, which must pass too: the
     same test with r_i replaced by r_bar_i, k passes of mass-weighted averaging over each free node's closed 1-ring
     of the tet mesh (free nodes only: fixed nodes neither contribute nor receive), and phi_i by a floor under the
-    same filter, phi_bar_i:
+    same filter, phi_bar_i (each node keeps its own alpha_i):
 
         r_bar_i^(t+1) = sum_j m_j r_bar_j^(t) / sum_j m_j         j in {i} and i's mesh neighbours, free
         phi_bar_i     = c |S_k(p)|_i,   p_i = (g(x + xi) - g(x))_i / (m_i h^2)
@@ -138,7 +149,7 @@ class ConvergenceParams(SerializableMixin):
     S_k the same k passes, xi a random step of one float32 spacing (+-) per coordinate, g the elastic and inertial
     gradient in float32 (contact left out: its Lagrangian force doesn't depend on x), c = :data:`SMOOTHED_FLOOR_SCALE`
     = 1.4. p is measured once per solve (time step or substep), at its initial positions (:meth:`ConvergenceCheck.
-    measure_scale`), and only where the floor applies (the VBD family). rho_i, alpha, kl, kg and the test's form are
+    measure_scale`), and only where the floor applies (the VBD family). rho_i, alpha_i, kl, kg and the test's form are
     unchanged. A solve passes only if the unsmoothed test and the smoothed one both pass, and the status records the
     ratios of the one whose decisive ratio is larger (``_keep_stricter_sums``), so ``status_ratio.
     stationarity_test_ratio`` stays exact. The smoothed test alone isn't safe: the filter also averages away real
@@ -206,17 +217,20 @@ class ConvergenceParams(SerializableMixin):
         "Relative stationarity tolerance: node i's relative allowance is rstol s_i / m_i, s_i = max(|m_i (x_i - x~_i)| "
         "/ h^2, |f_el,i|, |f_c,i|, |f_ext,i|) the largest of its inertial, elastic, contact and external forces. The "
         "gradient test passes at RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or RMS_M(r) <= floor_kappa RMS_M(phi)), q_i = |r_i| "
-        "/ max(rstol s_i / m_i, astol |a|, floor_local_kappa phi_i), q0_i the same without the float32 floor phi_i, "
+        "/ max(rstol s_i / m_i, alpha_i, floor_local_kappa phi_i) (alpha_i see astol), q0_i the same without the "
+        "float32 floor phi_i, "
         "r_i the residual acceleration. With rstol = astol = 0, the solver's absolute gtol applies instead. Changed "
         "meaning (2026-11-06): the relative term used to be rstol * RMS(x~ - x^t) / h^2, default 1e-2",
     )
     astol = DocField(
         0.1,
-        "Absolute stationarity tolerance, as a fraction of the scene's external acceleration |a| (its gravity's "
-        "norm, or 9.81 m/s^2 without a load): node i's absolute allowance is astol * |a| (at least 1e-6 m/s^2), see "
-        "rstol. With rstol < 1 and astol < 1 a step that hasn't moved can't pass. Default 0.1 since 2026-11-06 (was "
-        "0.5). Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
-        "file's astol = 1e-4 is now extremely strict",
+        "Absolute stationarity tolerance, as a fraction of each node's own external acceleration: node i's absolute "
+        "allowance is alpha_i = max(astol |f_ext,i| / m_i, 1e-6 m/s^2), so a node without a load gets only the 1e-6 "
+        "floor; see rstol. With rstol < 1 and astol < 1 a step that hasn't moved can't pass (a free fall from x^t has "
+        "q_i = 1 / astol at every loaded node). Default 0.1 since 2026-11-06 (was 0.5). Per node since 2026-11-07 "
+        "(was astol times one scene-wide |a|, the mass-weighted RMS of |f_ext,i| / m_i, or 9.81 m/s^2 without a load; "
+        "the same under a uniform gravity). Changed meaning (2026-10-20): astol used to be a fraction of the scene's "
+        "size L (astol * L), so an old file's astol = 1e-4 is now extremely strict",
     )
     floor_kappa = DocField(
         0.2,
@@ -360,38 +374,35 @@ def feasibility_tolerance(ftol: float, dmin: float) -> float:
     return float(ftol) * max(abs(float(dmin)), FEASIBILITY_FLOOR)
 
 
-STANDARD_GRAVITY = 9.81
-"""External acceleration (m/s^2) the absolute stationarity tolerance uses for a scene without a load."""
-
 ACCELERATION_FLOOR = 1e-6
-"""Smallest absolute stationarity tolerance (m/s^2), ``max(astol * |a|, ACCELERATION_FLOOR)``: with astol = 0 (the
-relative test alone), a node without forces still has a positive allowance, so its ratio stays finite."""
+"""Smallest absolute allowance (m/s^2) of a node in the stationarity test, ``max(astol |f_ext,i| / m_i,
+ACCELERATION_FLOOR)``: a node without an external load, or astol = 0 (the relative test alone), still has a positive
+allowance, so its ratio stays finite."""
 
 
-def external_acceleration(fext: np.ndarray, m: np.ndarray, dmask: np.ndarray) -> float:
-    """The scene's external acceleration |a| (m/s^2), the scale of the absolute stationarity tolerance
-    ``astol * |a| * h^2``: the mass-weighted RMS of f_i / m_i over free nodes, sqrt(sum |f_i|^2 / m_i /
-    sum m_i), which is the gravity's norm for a uniform gravity; :data:`STANDARD_GRAVITY` without a load.
+def absolute_allowance(fext: np.ndarray, m: np.ndarray, astol: float) -> np.ndarray:
+    """Host-side mirror of :func:`_absolute_allowance` in acceleration units: each node's absolute allowance
+    alpha_i = max(astol |f_ext,i| / m_i, ACCELERATION_FLOOR) (m/s^2) of the stationarity test.
 
     Args:
         fext (np.ndarray): (N, 3) external forces.
-        m (np.ndarray): (N,) lumped masses.
-        dmask (np.ndarray): (N,) Dirichlet mask (nonzero: fixed node, excluded).
+        m (np.ndarray): (N,) lumped masses (positive where it's evaluated; massless nodes get the floor).
+        astol (float): Absolute stationarity tolerance (``ConvergenceParams.astol``).
 
     Returns:
-        float: |a|.
+        np.ndarray: (N,) alpha_i.
     """
     m = np.asarray(m, dtype=np.float64).reshape(-1)
-    free = (np.asarray(dmask).reshape(-1) == 0) & (m > 0)
-    f = np.asarray(fext, dtype=np.float64).reshape(-1, 3)[free]
-    mass = m[free].sum()
-    a = np.sqrt(np.sum(f * f, axis=1) @ (1.0 / m[free]) / mass) if mass > 0 else 0.0
-    return float(a) if a > 0 else STANDARD_GRAVITY
+    f = np.linalg.norm(np.asarray(fext, dtype=np.float64).reshape(-1, 3), axis=1)
+    a = np.divide(f, m, out=np.zeros_like(f), where=m > 0)
+    return np.maximum(float(astol) * a, ACCELERATION_FLOOR)
 
 
-def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float) -> float:
-    """The absolute term of the stationarity test, ``max(astol * |a|, ACCELERATION_FLOOR) * h^2`` (m), for the
-    external acceleration ``acceleration`` (m/s^2) and the time step ``h`` (s)."""
+@wp.func
+def _absolute_allowance(fext: wp.vec3f, m: wp.float32, astol: wp.float32, h2: wp.float32) -> wp.float32:
+    """Node i's absolute allowance in the gradient's units, alpha_i h^2 m_i (m kg), alpha_i = max(astol |f_ext,i| /
+    m_i, ACCELERATION_FLOOR) its own external acceleration times astol (m/s^2), h^2 the solve's squared time step
+    (:class:`ConvergenceParams`; m_i > 0)."""
     # The float32 floor (2026-11-06): the backward-error bound of the force sums, eps32 * sum_i (|m_i (x_i - x~_i)| +
     # |h^2 f_el,i| + |h^2 f_c,i|), proposed here before, is 1000-10000x below the attainable residual. The floor is
     # the quantization of x, f_i = |H_i|_F eps32 |x_i| through the vertex Hessian (the residual of the exactly rounded
@@ -413,7 +424,8 @@ def absolute_stationarity_tolerance(astol: float, acceleration: float, h: float)
     # 1e8 beam); with the residual condition, the beam's single-check residual noise after ~2000 sweeps still
     # stalls it at 1.5x its 4000-sweep residual. Not pursued (maintainer, 2026-10-24): no scene needs it, and it
     # risks the timings and other scenes. Notes: python/tools/sim/docs/solver-accuracy-notes.md, entry 7.
-    return max(float(astol) * float(acceleration), ACCELERATION_FLOOR) * float(h) ** 2
+    alpha = wp.max(astol * wp.length(fext) / m, wp.float32(ACCELERATION_FLOOR))
+    return alpha * h2 * m
 
 
 def ratio_to_tolerance(value: float, tolerance: float) -> float:
@@ -521,12 +533,13 @@ def _floor_clause_ratio(sums: wp.array[wp.float32], floor_kappa2: wp.float32) ->
 
 @wp.func
 def _node_ratio(
-    g: wp.vec3f, scale: wp.float32, m: wp.float32, f: wp.float32, rstol: wp.float32, atol: wp.float32, kl: wp.float32
+    g: wp.vec3f, scale: wp.float32, absolute: wp.float32, f: wp.float32, rstol: wp.float32, kl: wp.float32
 ) -> wp.float32:
-    """Node i's residual over its allowance, in the gradient's units, q_i = |g_i| / max(rstol s_i, atol m_i, kl f_i):
-    s_i the largest magnitude of the terms of its force balance (``scale``), atol = max(astol |a|, ACCELERATION_FLOOR)
-    h^2 the absolute tolerance (m), and f_i = |H_i|_F EPS32 |x_i| its float32 floor (0 gives q0_i)."""
-    return wp.length(g) / wp.max(wp.max(rstol * scale, atol * m), kl * f)
+    """Node i's residual over its allowance, in the gradient's units, q_i = |g_i| / max(rstol s_i, alpha_i h^2 m_i,
+    kl f_i): s_i the largest magnitude of the terms of its force balance (``scale``), alpha_i h^2 m_i its absolute
+    allowance (``absolute``, :func:`_absolute_allowance`), and f_i = |H_i|_F EPS32 |x_i| its float32 floor (0 gives
+    q0_i)."""
+    return wp.length(g) / wp.max(wp.max(rstol * scale, absolute), kl * f)
 
 
 @wp.kernel
@@ -536,7 +549,8 @@ def _stationarity_ratios(
     hnorm: wp.array[wp.float32],
     use_floor: wp.int32,
     rstol: wp.float32,
-    atol: wp.float32,
+    astol: wp.float32,
+    h2: wp.float32,
     local_kappa: wp.float32,
     node_norm: wp.int32,
     fem: FemElastoDynamicsData,
@@ -544,7 +558,9 @@ def _stationarity_ratios(
 ):
     """Free node i's terms of the stationarity reductions (``SUM_*``), from its ratios q_i and q0_i
     (:func:`_node_ratio`). Its relative allowance is rstol s_i, s_i the largest magnitude of the terms of its force
-    balance (``scale``, gpu.gradient.Gradient's force scale), and its float32 floor f_i = |H_i|_F EPS32 |x_i|: the
+    balance (``scale``, gpu.gradient.Gradient's force scale), its absolute allowance alpha_i h^2 m_i from its own
+    external force (``fem.fext``, ``astol``, ``h2`` = h^2; :func:`_absolute_allowance`), and its float32 floor f_i =
+    |H_i|_F EPS32 |x_i|: the
     force (in the gradient's units) that a position error of about one float32 spacing at x_i makes through the
     vertex's own Hessian block |H_i|_F (``hnorm``, the last sweep's, inertia included). Fixed and massless nodes don't
     count. With NodeNorm.MAX the terms are per unit mass, for max reductions (see ``SUM_*``)."""
@@ -557,8 +573,9 @@ def _stationarity_ratios(
     f = wp.float32(0)
     if use_floor != 0:
         f = hnorm[i] * wp.float32(EPS32) * wp.length(fem.x[i])
-    q = _node_ratio(g[i], scale[i], mi, f, rstol, atol, local_kappa)
-    q0 = _node_ratio(g[i], scale[i], mi, wp.float32(0), rstol, atol, local_kappa)
+    absolute = _absolute_allowance(fem.fext[i], mi, astol, h2)
+    q = _node_ratio(g[i], scale[i], absolute, f, rstol, local_kappa)
+    q0 = _node_ratio(g[i], scale[i], absolute, wp.float32(0), rstol, local_kappa)
     terms[SUM_RATIO_MAX, i] = q
     if node_norm == NODE_NORM_MAX:
         terms[SUM_RATIO, i] = q * q
@@ -603,7 +620,8 @@ def _stationarity_ratios_smoothed(
     floor: wp.array[wp.float32],
     use_floor: wp.int32,
     rstol: wp.float32,
-    atol: wp.float32,
+    astol: wp.float32,
+    h2: wp.float32,
     local_kappa: wp.float32,
     node_norm: wp.int32,
     fem: FemElastoDynamicsData,
@@ -620,8 +638,9 @@ def _stationarity_ratios_smoothed(
     f = wp.float32(0)
     if use_floor != 0:
         f = floor[i]
-    q = _node_ratio(g[i], scale[i], mi, f, rstol, atol, local_kappa)
-    q0 = _node_ratio(g[i], scale[i], mi, wp.float32(0), rstol, atol, local_kappa)
+    absolute = _absolute_allowance(fem.fext[i], mi, astol, h2)
+    q = _node_ratio(g[i], scale[i], absolute, f, rstol, local_kappa)
+    q0 = _node_ratio(g[i], scale[i], absolute, wp.float32(0), rstol, local_kappa)
     terms[SUM_RATIO_MAX, i] = q
     if node_norm == NODE_NORM_MAX:
         terms[SUM_RATIO, i] = q * q
@@ -1014,7 +1033,6 @@ class ConvergenceCheck:
         contact: ContactDynamics,
         params: ConvergenceParams | None = None,
         status_capacity: int = 1,
-        acceleration: float | None = None,
         vertex_adjacency: tuple[wp.array, wp.array] | None = None,
     ):
         """
@@ -1025,18 +1043,11 @@ class ConvergenceCheck:
             params (ConvergenceParams | None): Check interval and feasibility tolerance; defaults if None.
             status_capacity (int): Rows of the status ring: at least the solves between two
                 :meth:`read_status` calls (``SimulationState`` reads every step: its substeps).
-            acceleration (float | None): The scene's external acceleration |a| (m/s^2) that scales
-                ``astol`` (:func:`external_acceleration`), computed from ``fem``'s loads if None.
             vertex_adjacency (tuple[wp.array, wp.array] | None): ``fem``'s vertex-vertex adjacency (GVVp, GVVadj)
                 on the device, the residual smoothing's 1-rings (``smoothing_passes``), e.g. the VBD params'; built
                 from ``fem``'s elements when smoothing first runs if None.
         """
         self.params = params or ConvergenceParams()
-        if acceleration is None:
-            acceleration = external_acceleration(
-                fem.data.fext.numpy(), fem.data.m.numpy(), fem.data.dmask.numpy()
-            )
-        self.acceleration = float(acceleration)
         capacity = max(1, int(status_capacity))
         self.status = wp.zeros(capacity, dtype=SolveStatus)
         self.solves = wp.zeros(1, dtype=wp.int32)
@@ -1164,12 +1175,6 @@ class ConvergenceCheck:
         return enabled and not self._fem.static
 
     @property
-    def absolute_tolerance(self) -> float:
-        """The stationarity test's absolute term ``max(astol * |a|, ACCELERATION_FLOOR) * h^2`` (m), h being the time
-        step of ``fem``'s integrator (dt / substeps)."""
-        return absolute_stationarity_tolerance(self.params.astol, self.acceleration, self._fem.bdf.h)
-
-    @property
     def node_norm(self) -> NodeNorm:
         """The norm over free nodes of the stationarity test (``ConvergenceParams.node_norm``)."""
         return NodeNorm(self.params.node_norm)
@@ -1217,44 +1222,17 @@ class ConvergenceCheck:
         keeps the stricter test's (both must pass)."""
         stream = wp.get_stream()
         hnorm = self._hessian_norms
+        floor = hnorm if hnorm is not None else self._no_hessian_norms
         k = self.smoothing_passes
         if k > 0:
             self.prepare_smoothing()
             # The unsmoothed test, as with k = 0, into its own reductions
-            wp.launch(
-                _stationarity_ratios,
-                dim=self._terms.shape[1],
-                inputs=[
-                    gradient.g,
-                    gradient.scale,
-                    hnorm if hnorm is not None else self._no_hessian_norms,
-                    int(hnorm is not None),
-                    float(self.params.rstol),
-                    self.absolute_tolerance,
-                    float(self.params.floor_local_kappa),
-                    int(self.node_norm.value),
-                    self._fem.data,
-                    self._terms,
-                ],
-            )
+            self._launch_ratios(_stationarity_ratios, gradient.g, gradient.scale, floor)
             for reduce in self._reduce_unsmoothed_sums[self.node_norm]:
                 reduce(stream)
             # The smoothed test
-            wp.launch(
-                _stationarity_ratios_smoothed,
-                dim=self._terms.shape[1],
-                inputs=[
-                    self._smooth_field(gradient.g, k),
-                    gradient.scale,
-                    self._smoothed_floor,
-                    int(hnorm is not None),
-                    float(self.params.rstol),
-                    self.absolute_tolerance,
-                    float(self.params.floor_local_kappa),
-                    int(self.node_norm.value),
-                    self._fem.data,
-                    self._terms,
-                ],
+            self._launch_ratios(
+                _stationarity_ratios_smoothed, self._smooth_field(gradient.g, k), gradient.scale, self._smoothed_floor
             )
             for reduce in self._reduce_sums[self.node_norm]:
                 reduce(stream)
@@ -1265,28 +1243,36 @@ class ConvergenceCheck:
                 inputs=[self._unsmoothed_sums, self.norm_weight, float(self.params.floor_kappa) ** 2, self.sums],
             )
             return
+        self._launch_ratios(_stationarity_ratios, gradient.g, gradient.scale, floor)
+        for reduce in self._reduce_sums[self.node_norm]:
+            reduce(stream)
+
+    def _launch_ratios(self, kernel, g: wp.array, scale: wp.array, floor: wp.array) -> None:
+        """Launch a node-ratio kernel (:func:`_stationarity_ratios` with the Hessian norms as ``floor``, or
+        :func:`_stationarity_ratios_smoothed` with the smoothed floor) into ``_terms``. Each node's absolute allowance
+        comes from its own external force, read on the device (:func:`_absolute_allowance`), h being the time step of
+        ``fem``'s integrator (dt / substeps)."""
         wp.launch(
-            _stationarity_ratios,
+            kernel,
             dim=self._terms.shape[1],
             inputs=[
-                gradient.g,
-                gradient.scale,
-                hnorm if hnorm is not None else self._no_hessian_norms,
-                int(hnorm is not None),
+                g,
+                scale,
+                floor,
+                int(self._hessian_norms is not None),
                 float(self.params.rstol),
-                self.absolute_tolerance,
+                float(self.params.astol),
+                float(self._fem.bdf.h) ** 2,
                 float(self.params.floor_local_kappa),
                 int(self.node_norm.value),
                 self._fem.data,
                 self._terms,
             ],
         )
-        for reduce in self._reduce_sums[self.node_norm]:
-            reduce(stream)
 
     def measure_scale(self) -> None:
         """Measure the time step's free mass sum m_i over free nodes, the weight of the node ratios' RMSs (the
-        allowances come from each test's forces and the absolute tolerance), and with ``smoothing_passes`` > 0 and
+        allowances come from each test's forces and each node's external force), and with ``smoothing_passes`` > 0 and
         the float32 floor on (:meth:`set_hessian_norms`) the smoothed floor at the current positions. No-op unless
         :attr:`relative`. Capturable."""
         if self.relative:
@@ -1614,24 +1600,57 @@ class TestStationarityTolerance(unittest.TestCase):
         def k(
             cases: wp.array2d[wp.float32],
             rstol: wp.float32,
-            atol: wp.float32,
             kl: wp.float32,
             q: wp.array[wp.float32],
         ):
             i = wp.tid()
             g = wp.vec3f(cases[i, 0], wp.float32(0), wp.float32(0))
-            q[i] = _node_ratio(g, cases[i, 1], cases[i, 2], cases[i, 3], rstol, atol, kl)
+            q[i] = _node_ratio(g, cases[i, 1], cases[i, 2], cases[i, 3], rstol, kl)
 
-        rstol, atol, kl = 2e-2, 1e-4, 1.5  # atol = astol |a| h^2, in m
-        cases = [  # (|g_i|, s_i, m_i, f_i), in the gradient's units
-            (0.9 * rstol * 1.0, 1.0, 1.0, 0.0),  # the relative allowance rstol s_i decides
-            (1.1 * atol * 2.0, 1e-6, 2.0, 0.0),  # small forces: the absolute allowance atol m_i
-            (0.5 * kl * 1e-3, 1e-3, 1.0, 1e-3),  # at the float32 floor: kl f_i
-            (1e-9, 0.0, 1e-3, 0.0),  # no force, no floor: atol m_i keeps the ratio finite
+        rstol, kl, A = 2e-2, 1.5, 2e-4  # A = alpha_i h^2 m_i, node i's absolute allowance in the gradient's units
+        cases = [  # (|g_i|, s_i, alpha_i h^2 m_i, f_i), in the gradient's units
+            (0.9 * rstol * 1.0, 1.0, A, 0.0),  # the relative allowance rstol s_i decides
+            (1.1 * A, 1e-6, A, 0.0),  # small forces: the absolute allowance decides
+            (0.5 * kl * 1e-3, 1e-3, A, 1e-3),  # at the float32 floor: kl f_i
+            (1e-9, 0.0, 1e-10, 0.0),  # no force, no floor: the absolute allowance keeps the ratio finite
         ]
         q = wp.zeros(len(cases), dtype=wp.float32)
-        wp.launch(k, dim=len(cases), inputs=[wp.array(np.array(cases, dtype=np.float32)), rstol, atol, kl, q])
-        np.testing.assert_allclose(q.numpy(), [0.9, 1.1, 0.5, 1e-9 / (atol * 1e-3)], rtol=1e-5)
+        wp.launch(k, dim=len(cases), inputs=[wp.array(np.array(cases, dtype=np.float32)), rstol, kl, q])
+        np.testing.assert_allclose(q.numpy(), [0.9, 1.1, 0.5, 10.0], rtol=1e-5)
+
+    def test_absolute_allowance(self):
+        # alpha_i = max(astol |f_ext,i| / m_i, ACCELERATION_FLOOR) from each node's own load, on the device (in the
+        # gradient's units, alpha_i h^2 m_i) and the host alike: non-uniform loads get their own, a node without a
+        # load only the floor (no 9.81 fallback), astol = 0 the floor everywhere
+        wp.init()
+
+        @wp.kernel
+        def k(
+            fext: wp.array[wp.vec3f],
+            m: wp.array[wp.float32],
+            astol: wp.float32,
+            h2: wp.float32,
+            out: wp.array[wp.float32],
+        ):
+            i = wp.tid()
+            out[i] = _absolute_allowance(fext[i], m[i], astol, h2)
+
+        m = np.array([1.0, 3.0, 2.0, 0.5])
+        a = np.array([[0.0, 0.0, -9.81], [0.0, 0.0, -19.62], [15.0, 0.0, 20.0], [0.0, 0.0, 0.0]])  # f_ext,i / m_i
+        fext = m[:, None] * a
+        astol = ConvergenceParams().astol
+        self.assertEqual(astol, 0.1)
+        np.testing.assert_allclose(absolute_allowance(fext, m, astol), [0.981, 1.962, 2.5, ACCELERATION_FLOOR])
+        np.testing.assert_array_equal(absolute_allowance(fext, m, 0.0), ACCELERATION_FLOOR)
+        out = wp.zeros(m.shape[0], dtype=wp.float32)
+        for tol in (astol, 0.0):
+            for h in (1e-2, 2e-3):
+                wp.launch(k, dim=m.shape[0], inputs=[wp.array(fext.astype(np.float32), dtype=wp.vec3f),
+                                                     wp.array(m.astype(np.float32)), tol, h * h, out])
+                np.testing.assert_allclose(out.numpy(), absolute_allowance(fext, m, tol) * h * h * m, rtol=1e-6)
+        # Below each loaded node's own external acceleration, so a loaded node that hasn't moved can't pass
+        loaded = np.linalg.norm(a, axis=1) > 0
+        self.assertTrue(np.all(absolute_allowance(fext, m, astol)[loaded] < np.linalg.norm(a, axis=1)[loaded]))
 
     def test_decision(self):
         wp.init()
@@ -1699,26 +1718,6 @@ class TestStationarityTolerance(unittest.TestCase):
         np.testing.assert_allclose(out["max_ratio"], q, rtol=1e-6)
         np.testing.assert_allclose(out["no_floor_ratio"], q0, rtol=1e-6)
         np.testing.assert_allclose(out["floor_clause_ratio"], r / (kg * F), rtol=1e-6)
-
-    def test_external_acceleration(self):
-        # Uniform gravity on unequal masses: its norm; fixed and massless nodes don't count
-        m = np.array([1.0, 3.0, 2.0, 0.0])
-        fext = m[:, None] * np.array([0.0, 0.0, -9.81])
-        fext[2] = [100.0, 0.0, 0.0]  # a fixed node's load
-        self.assertAlmostEqual(external_acceleration(fext, m, np.array([0, 0, 1, 0])), 9.81, places=12)
-        # No load: standard gravity
-        self.assertEqual(external_acceleration(np.zeros((4, 3)), m, np.zeros(4)), STANDARD_GRAVITY)
-
-    def test_absolute_tolerance_scales_with_h2(self):
-        astol = ConvergenceParams().astol
-        self.assertAlmostEqual(absolute_stationarity_tolerance(astol, 9.81, 1e-2), 0.1 * 9.81e-4)
-        tol = [absolute_stationarity_tolerance(astol, 9.81, h) for h in (1e-2, 2e-3)]
-        self.assertAlmostEqual(tol[0] / tol[1], 25.0)
-        # Below one step's gravity sag h^2 |a| at any h, so a step that hasn't moved can't pass
-        for h in (1e-2, 2e-3, 1e-4):
-            self.assertLess(absolute_stationarity_tolerance(astol, 9.81, h), 9.81 * h * h)
-        # astol = 0 (the relative test alone): still positive, so a node without forces has a finite ratio
-        self.assertEqual(absolute_stationarity_tolerance(0.0, 9.81, 1e-2), ACCELERATION_FLOOR * 1e-4)
 
 
 def _two_resting_cubes(solver_name: str = "VBD"):
@@ -1858,8 +1857,9 @@ class TestResidualSmoothing(unittest.TestCase):
         # The unsmoothed kernel and reductions, launched directly on the same gradient
         gradient, hnorm = check.gradient_norm, check._hessian_norms
         wp.launch(_stationarity_ratios, dim=terms.shape[1], inputs=[
-            gradient.g, gradient.scale, hnorm, 1, float(check.params.rstol), check.absolute_tolerance,
-            float(check.params.floor_local_kappa), int(check.node_norm.value), state.fem.data, check._terms])
+            gradient.g, gradient.scale, hnorm, 1, float(check.params.rstol), float(check.params.astol),
+            float(state.fem.bdf.h) ** 2, float(check.params.floor_local_kappa), int(check.node_norm.value),
+            state.fem.data, check._terms])
         for reduce in check._reduce_sums[check.node_norm]:
             reduce(wp.get_stream())
         np.testing.assert_array_equal(check._terms.numpy(), terms)
@@ -1925,10 +1925,16 @@ class TestResidualSmoothing(unittest.TestCase):
         # k = 4: the test passes only if the unsmoothed test and the smoothed one (the smoothed residual against the
         # smoothed floor) both pass, and records the ratios of the one with the larger decisive ratio (float64
         # references from the device's gradient, force scale and floors), under both norms; the device's decision,
-        # the host's and status_ratio.stationarity_test_ratio agree; the test leaves the gradient as it was
+        # the host's and status_ratio.stationarity_test_ratio agree; the test leaves the gradient as it was. Under a
+        # non-uniform load (one free node without any), each node keeps its own absolute allowance in both tests
         from ...status_ratio import stationarity_test_ratio
 
         state, check = self._state()
+        fem = state.fem
+        fext = fem.data.fext.numpy()
+        scale = np.linspace(0.0, 3.0, fext.shape[0], dtype=np.float32)
+        scale[-1] = 0.0  # a free node (the free cube's last) without a load
+        fem.data.fext.assign(fext * scale[:, None])
         params = check.params
         params.smoothing_passes = 4
         kl, kg = float(params.floor_local_kappa), float(params.floor_kappa)
@@ -1944,7 +1950,10 @@ class TestResidualSmoothing(unittest.TestCase):
                 free = m > 0
                 GVVp, GVVadj = (a.numpy() for a in check._vertex_adjacency)
                 s, mf = check.gradient_norm.scale.numpy()[free], m[free]
-                allowance = np.maximum(float(params.rstol) * s, check.absolute_tolerance * mf)
+                alpha = absolute_allowance(fem.data.fext.numpy(), m, float(params.astol))[free]
+                self.assertEqual(alpha[-1], ACCELERATION_FLOOR)
+                self.assertGreater(np.ptp(alpha[:-1]), 1.0)  # non-uniform
+                allowance = np.maximum(float(params.rstol) * s, alpha * float(fem.bdf.h) ** 2 * mf)
 
                 def ratios(r, f):  # (||q||, ||q0||, floor clause), max q, decisive; r, f in the gradient's units
                     q, q0 = r / np.maximum(allowance, kl * f), r / allowance
@@ -2026,7 +2035,7 @@ class TestOuterGradientBeforeRedetection(unittest.TestCase):
             with self.subTest(solver=solver_name):
                 state = _two_resting_cubes(solver_name)
                 contact, check, cd = state.contact, state.convergence, state.detector
-                probe = ConvergenceCheck(state.fem, contact, check.params, acceleration=check.acceleration)
+                probe = ConvergenceCheck(state.fem, contact, check.params)
                 measured = {}
                 detect_contacts, commit_decay = cd.detect_contacts, contact.commit_decay
 
@@ -2116,6 +2125,95 @@ class TestOuterTestDecayWeights(unittest.TestCase):
         self.assertTrue(all(np.all(cs.gamma.current.numpy() == cs.gamma_next.current.numpy()) for cs in sets))
 
 
+def _free_cube_state(dt: float):
+    """A test scene: a free cube (nodes 8-15) 2 m above a fixed one (nodes 0-7), no contact, gravity (-9.81 m/s^2 in
+    z), BDF1 at the time step ``dt``. Returns the ``SimulationState`` (reset) and the rest positions X (16, 3)."""
+    from pbatoolkit import pbat, pypbat
+    from ...state import SimulationState, load_params
+
+    V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
+    C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
+    X = np.vstack([V, V + [0.0, 0.0, 3.0]]).astype(np.float64)  # the free cube well above the fixed one
+    fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
+    fem_cpu.set_mass_matrix(1e3)
+    mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
+    fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
+    fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
+    fem_cpu.set_time_integration_scheme(dt=dt, s=1)
+    fem_cpu.constrain(np.repeat([1, 0], 8))
+    state = SimulationState(fem_cpu, load_params(fem_cpu))
+    state.dt = dt
+    state.reset()
+    assert abs(float(state.fem.bdf.h) - dt) < 1e-9
+    return state, X
+
+
+class TestPerNodeAbsoluteAllowance(unittest.TestCase):
+    """Each node's absolute allowance alpha_i = max(astol |f_ext,i| / m_i, ACCELERATION_FLOOR) comes from its own
+    external force, read on the device (no scene-wide |a|). A free cube under a non-uniform load (per-node factors
+    0.5-2.5 of gravity, one node also pushed sideways, one without any load), at rest at x^t."""
+
+    def _state(self):
+        state, X = _free_cube_state(1e-2)
+        fem, check = state.fem, state.convergence
+        m = fem.data.m.numpy().astype(np.float64)
+        fext = fem.data.fext.numpy().astype(np.float64)
+        factor = np.ones(X.shape[0])
+        factor[8:] = np.linspace(0.5, 2.5, 8)
+        factor[15] = 0.0  # a free node without a load
+        fext = fext * factor[:, None]
+        fext[9] += m[9] * np.array([5.0, 0.0, 0.0])  # a sideways push
+        fem.data.fext.assign(fext.astype(np.float32))
+        # At rest at x^t, its inertial target x~ = x^t + h^2 f_ext / m (BDF1, v^t = 0)
+        h = float(fem.bdf.h)
+        xt = X.astype(np.float32)
+        fem.data.xt.assign(xt)
+        fem.data.x.assign(xt)
+        fem.data.xtilde.assign((X + h * h * fext / m[:, None]).astype(np.float32))
+        return state, check, m, fext
+
+    def _q0(self, check) -> np.ndarray:
+        """The device's q0_i of the free nodes, from the terms of the last test (RMS: m_i q0_i^2)."""
+        m = check._fem.data.m.numpy().astype(np.float64)
+        return np.sqrt(check._terms.numpy()[SUM_RATIO_NO_FLOOR][8:] / m[8:])
+
+    def test_ratios(self):
+        # q0_i = |g_i| / max(rstol s_i, alpha_i h^2 m_i) per node, alpha_i from node i's own load (float64 reference
+        # from the device's gradient and force scale), with rstol = 0 (the absolute allowance alone) and the default
+        state, check, m, fext = self._state()
+        params = check.params
+        h2 = float(state.fem.bdf.h) ** 2
+        alpha = absolute_allowance(fext, m, float(params.astol))[8:]
+        self.assertEqual(alpha[-1], ACCELERATION_FLOOR)  # no load: the floor only
+        np.testing.assert_allclose(alpha[:-1], 0.1 * np.linalg.norm(fext[8:15] / m[8:15, None], axis=1))
+        check.measure_scale()
+        for rstol in (0.0, float(params.rstol)):
+            with self.subTest(rstol=rstol):
+                params.rstol = rstol
+                check._test()
+                g = np.linalg.norm(check.gradient_norm.g.numpy().astype(np.float64), axis=1)[8:]
+                s = check.gradient_norm.scale.numpy().astype(np.float64)[8:]
+                expected = g / np.maximum(rstol * s, alpha * h2 * m[8:])
+                np.testing.assert_allclose(self._q0(check), expected, rtol=1e-4)
+        params.rstol = ConvergenceParams().rstol
+
+    def test_free_fall_fails(self):
+        # Left at x^t, every loaded node's residual is its own external acceleration, r_i = -f_ext,i / m_i, and its
+        # largest force |f_ext,i|, so q_i = 1 / max(rstol, astol) = 1 / astol = 10 whatever its load; the test fails
+        state, check, m, fext = self._state()
+        params = check.params
+        self.assertEqual((float(params.rstol), float(params.astol)), (2e-2, 0.1))
+        check.measure_scale()
+        check._test()
+        q0 = self._q0(check)
+        np.testing.assert_allclose(q0[:-1], 10.0, rtol=1e-3)
+        self.assertFalse(check._relative_passes())
+        self.assertGreater(check.gradient_ratio(), 5.0)
+        # The VBD family's whole first test (the step's start, x = x^t): the solve doesn't end there
+        check.start(gtol=0.0, n_max_iters=1)
+        self.assertEqual(int(check.keep.numpy()[0]), 1)
+
+
 class TestForceRelativeTolerance(unittest.TestCase):
     """The relative term is relative to the forces in the balance, so in acceleration units it doesn't depend on the
     time step: a deformed free cube moving at constant velocity v (x = x^t + h v, so x - x~ = -h^2 a for BDF1), no
@@ -2124,24 +2222,8 @@ class TestForceRelativeTolerance(unittest.TestCase):
 
     @staticmethod
     def _tolerances(dt: float) -> tuple[float, float]:
-        from pbatoolkit import pbat, pypbat
-        from ...state import SimulationState, load_params
-
-        V = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]])
-        C = np.array([[0, 1, 3, 5], [3, 2, 0, 6], [5, 4, 6, 0], [6, 7, 5, 3], [0, 5, 3, 6]])
-        X = np.vstack([V, V + [0.0, 0.0, 3.0]]).astype(np.float64)  # the free cube well above the fixed one
-        fem_cpu = pbat.sim.dynamics.FemElastoDynamics(X.T, np.vstack([C, C + 8]).T)
-        fem_cpu.set_mass_matrix(1e3)
-        mu, lam = pypbat.fem.lame_coefficients(1e6, 0.45)
-        fem_cpu.set_elastic_energy(mu, lam)  # pyright: ignore[reportArgumentType]
-        fem_cpu.set_external_load(1e3 * np.array([0.0, 0.0, -9.81]))
-        fem_cpu.set_time_integration_scheme(dt=dt, s=1)
-        fem_cpu.constrain(np.repeat([1, 0], 8))
-        state = SimulationState(fem_cpu, load_params(fem_cpu))
-        state.dt = dt
-        state.reset()
+        state, X = _free_cube_state(dt)
         fem, check = state.fem, state.convergence
-        assert abs(float(fem.bdf.h) - dt) < 1e-9
         rng = np.random.default_rng(3)
         xt = X + np.vstack([np.zeros((8, 3)), 0.02 * rng.standard_normal((8, 3))])  # deformed free cube
         v = np.zeros_like(X)
