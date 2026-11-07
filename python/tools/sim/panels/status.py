@@ -66,35 +66,39 @@ _SUBPROBLEM = {
     ),
 }
 
+_NORM_TIP = (
+    "||.|| is the norm over free nodes, Solver.Convergence.node_norm: RMS (default), the mass-weighted RMS,\n"
+    "or MAX, the largest node value."
+)
 _STATIONARITY_TIP = (
     "The stationarity test's ratio at the end of the solve: at most 1 exactly when the test passed.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or\n"
-    "RMS_M(r) <= floor_kappa * RMS_M(phi)), so this is max(RMS_M(q), min(RMS_M(q0), RMS_M(r) / (floor_kappa *\n"
-    "RMS_M(phi)))), from the rows below (RMS node, Without floor, Residual / floor). RMS_M(q) alone can be below 1\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): ||q|| <= 1 and (||q0|| <= 1 or\n"
+    "||r|| <= floor_kappa * ||phi||), so this is max(||q||, min(||q0||, ||r|| / (floor_kappa * ||phi||))),\n"
+    "from the rows below (Node norm, Without floor, Residual / floor). ||q|| alone can be below 1\n"
     "on a solve that failed the second condition. Absolute test (both 0, or static): |g| / gtol.\n"
-    "Solves recorded without the other ratios, and GPU Newton's (no floor): RMS_M(q) (Newton: RMS_M(q0))."
+    "Solves recorded without the other ratios, and GPU Newton's (no floor): ||q|| (Newton: ||q0||).\n" + _NORM_TIP
 )
 _RESIDUAL_TIP = (
-    "RMS_M(q), the stationarity test's first condition (at most 1 meets it; the test's ratio is the row above).\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or\n"
-    "RMS_M(r) <= floor_kappa * RMS_M(phi)). This row is RMS_M(q), the mass-weighted RMS over free nodes of\n"
+    "||q||, the stationarity test's first condition (at most 1 meets it; the test's ratio is the row above).\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): ||q|| <= 1 and (||q0|| <= 1 or\n"
+    "||r|| <= floor_kappa * ||phi||). This row is ||q|| over free nodes of\n"
     "q_i = |r_i| / max(rstol * s_i / m_i, astol * |a|, floor_local_kappa * phi_i): r_i node i's residual\n"
     "acceleration, s_i the largest of its forces (inertial, elastic, contact, external) in the step's Lagrangian\n"
     "gradient, |a| the scene's gravity, phi_i its float32 floor |H_i|_F eps32 |x_i| / (m_i h^2).\n"
-    "Absolute test (both 0, or static): |g| / gtol."
+    "Absolute test (both 0, or static): |g| / gtol.\n" + _NORM_TIP
 )
 _MAX_TIP = (
     "The largest node ratio max_i q_i (information only; single nodes at their float32 floor exceed 1).\n"
     "0: absolute test."
 )
 _NO_FLOOR_TIP = (
-    "RMS_M(q0), the node ratios without the float32 floor, q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|).\n"
-    "At most 1 passes without the floor clause. 0: absolute test."
+    "||q0||, the node ratios without the float32 floor, q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|).\n"
+    "At most 1 passes without the floor clause. 0: absolute test.\n" + _NORM_TIP
 )
 _FLOOR_CLAUSE_TIP = (
-    "RMS_M(r) / (floor_kappa * RMS_M(phi)): the floor clause, needed when Without floor / tol is above 1,\n"
+    "||r|| / (floor_kappa * ||phi||): the floor clause, needed when Without floor / tol is above 1,\n"
     "passes at most 1 (the residual near the float32 floor overall). inf: no floor (GPU Newton, floor_kappa 0).\n"
-    "0: absolute test."
+    "0: absolute test.\n" + _NORM_TIP
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -103,10 +107,12 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "The outer test's stationarity ratio, {when}; at most 1 exactly when the gradient test passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's without\n"
-    "the float32 floor, so its ratio is RMS_M(q0), the mass-weighted RMS of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|), r_i node i's residual\n"
-    "acceleration, s_i the largest of its forces in the step's Lagrangian gradient, |a| the scene's gravity\n"
-    "(no float32 floor).\n"
-    "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
+    "the float32 floor, so its ratio is ||q0|| over free nodes of q0_i = |r_i| / max(rstol * s_i / m_i, astol * |a|),\n"
+    "r_i node i's residual acceleration, s_i the largest of its forces in the step's Lagrangian gradient, |a| the\n"
+    "scene's gravity (no float32 floor).\n"
+    "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient.\n"
+    "||.|| is the norm over free nodes, Solver.Convergence.node_norm: RMS (default), the mass-weighted RMS,\n"
+    "or MAX, the largest node value."
 )
 _NEWTON_PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -166,7 +172,7 @@ def _ratio_rows(rows: _Rows, prefix: str, gradient: float, feasibility: float, w
     )
 
 
-def _draw_vbd_solve(r, rows: _Rows):
+def _draw_vbd_solve(r, rows: _Rows, norm: str = "RMS"):
     reason = SolveEnd(int(r["reason"]))
     label, tip = _RESULT[reason]
     rows.row("Result", label, tip, _GOOD if reason == SolveEnd.CONVERGED else _WARN)
@@ -185,7 +191,7 @@ def _draw_vbd_solve(r, rows: _Rows):
     passed = reason in (SolveEnd.CONVERGED, SolveEnd.FEASIBILITY_UNMET)
     rows.row("Stationarity / tol", _ratio(ratio), _STATIONARITY_TIP, None if ratio <= 1 or passed else _WARN)
     if "max_ratio" in r.dtype.names:
-        rows.row("RMS node / tol", _ratio(float(r["gradient_ratio"])), _RESIDUAL_TIP)
+        rows.row(f"{norm} node / tol", _ratio(float(r["gradient_ratio"])), _RESIDUAL_TIP)
         rows.row("Largest node / tol", _ratio(float(r["max_ratio"])), _MAX_TIP)
         rows.row("Without floor / tol", _ratio(float(r["no_floor_ratio"])), _NO_FLOOR_TIP)
         rows.row("Residual / floor", _ratio(float(r["floor_clause_ratio"])), _FLOOR_CLAUSE_TIP)
@@ -313,7 +319,7 @@ def _draw_substeps_summary(vbd, solves, n: int):
         )
 
 
-def _draw_last_step(log):
+def _draw_last_step(log, norm: str = "RMS"):
     last = log.last_step
     vbd = log.vbd
     vbd = vbd[vbd["step"] == last]
@@ -336,7 +342,7 @@ def _draw_last_step(log):
         newton = subproblems[subproblems["substep"] == sub]
         with _Rows(f"last_step_{sub}") as rows:
             for r in vbd[vbd["substep"] == sub]:
-                _draw_vbd_solve(r, rows)
+                _draw_vbd_solve(r, rows, norm)
             for s in solves[solves["substep"] == sub]:
                 _draw_newton_solve(s, newton, rows)
         if solves[solves["substep"] == sub].shape[0]:
@@ -463,6 +469,8 @@ def draw_status_panel(state, ui_state):
         return
     imgui.PushID("solve_status")
     check = getattr(state, "convergence", None)
+    # The node norm of the stationarity test (labels the ratio rows; rows recorded under another norm aren't marked)
+    norm = check.params.node_norm.name if check is not None else "RMS"
     if check is not None:
         astol, a = float(check.params.astol), check.acceleration
         imgui.Text(f"Absolute stationarity tolerance: {check.absolute_tolerance:.3g} m ({astol * a:.3g} m/s^2)")
@@ -477,7 +485,7 @@ def draw_status_panel(state, ui_state):
         imgui.Text("No solves recorded yet")
     else:
         if imgui.TreeNodeEx("Last step", imgui.ImGuiTreeNodeFlags_DefaultOpen):
-            _draw_last_step(log)
+            _draw_last_step(log, norm)
             imgui.TreePop()
         if imgui.TreeNode(f"Last {_window['steps']} steps###window"):  # closed by default (maintainer)
             _draw_window(log)
@@ -579,6 +587,20 @@ class TestStatusPanel(unittest.TestCase):
         self.assertIn("Worst stationarity / tol", labels)
         self.assertEqual(warned.count("1.5"), 2)  # the solve's and the window's worst, both warned
         self.assertIn("0.25", labels)  # RMS node / tol, information
+        self.assertIn("RMS node / tol", labels)
+        # With the max norm the node row is labeled so, and the decisive ratio is the same helper's
+        from ..gpu.vbd.convergence import NodeNorm
+
+        check = SimpleNamespace(params=SimpleNamespace(node_norm=NodeNorm.MAX, astol=0.1), acceleration=9.81,
+                                absolute_tolerance=1e-5)
+        fake.reset_mock()
+        with mock.patch(f"{__name__}.imgui", fake):
+            draw_status_panel(SimpleNamespace(status_log=log, convergence=check), None)
+        labels = [str(c.args[0]) for c in fake.Text.call_args_list]
+        self.assertIn("MAX node / tol", labels)
+        self.assertNotIn("RMS node / tol", labels)
+        tips = " ".join(str(c.args[0]) for c in fake.SetTooltip.call_args_list)
+        self.assertIn("node_norm", tips)
 
     def test_subproblem_browser(self):
         """Newton's summary counts its subproblems; the browser shows one at a time, the last by default."""
