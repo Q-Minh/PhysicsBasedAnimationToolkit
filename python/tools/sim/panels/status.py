@@ -66,8 +66,9 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * |a| * h^2),\n"
-    "mass-weighted, g the gradient of the step's Lagrangian, |a| the scene's gravity, h the time step.\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(e) / (astol * |a|), mass-weighted, e_i node i's\n"
+    "residual acceleration beyond its allowance rstol * s_i / m_i, s_i the sum of the magnitudes of its forces (inertial,\n"
+    "elastic, contact, external) in the step's Lagrangian gradient, |a| the scene's gravity.\n"
     "Absolute test (both 0, or static): |g| / gtol."
 )
 _PENETRATION_TIP = (
@@ -77,8 +78,8 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS(M^-1 g) / max(rstol * RMS(x~ - x^t), astol * |a| * h^2), mass-weighted, g the gradient of the step's Lagrangian,\n"
-    "|a| the scene's gravity, h the time step.\n"
+    "RMS(e) / (astol * |a|), e_i node i's residual acceleration beyond rstol * s_i / m_i, s_i the sum of the magnitudes\n"
+    "of its forces, in the step's Lagrangian gradient, |a| the scene's gravity.\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (

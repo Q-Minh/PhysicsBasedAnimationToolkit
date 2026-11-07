@@ -187,7 +187,7 @@ def check_convergence(
     """
     if params.convergence is None:
         return False
-    params.convergence.gradient_norm.compute(wp.get_stream())
+    params.convergence.measure_outer_gradient()
     return params.convergence.converged(params.data.gtol)
 
 

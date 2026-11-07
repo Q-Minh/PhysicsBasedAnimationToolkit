@@ -94,6 +94,33 @@ def _inertial_gradient(
 
 
 @wp.kernel
+def _combine_with_force_scale(
+    fem: FemElastoDynamicsData,
+    h2: wp.float32,
+    g: wp.array[wp.vec3f],
+    gc: wp.array[wp.vec3f],
+    scale: wp.array[wp.float32],
+):
+    """Add the inertial (or static: external) term and the contact part ``gc`` to the elastic part in ``g``, and
+    record the force scale: the sum of the terms' magnitudes, |m (x - x~)| + |g_el| + |g_c| + h^2 |fext| (static:
+    |fext| + |g_el| + |g_c|), in the gradient's units (see :class:`Gradient`)."""
+    i = wp.tid()
+    scale[i] = wp.float32(0)
+    if is_dirichlet_node(fem.dmask, i):
+        return
+    gel = g[i]
+    gci = gc[i]
+    if fem.is_static != 0:
+        gin = -fem.fext[i]
+        sext = wp.float32(0)
+    else:
+        gin = fem.m[i] * (fem.x[i] - fem.xtilde[i])
+        sext = h2 * wp.length(fem.fext[i])
+    g[i] = gin + gel + gci
+    scale[i] = wp.length(gin) + wp.length(gel) + wp.length(gci) + sext
+
+
+@wp.kernel
 def _vv_gradient(
     x: wp.array[wp.vec3f],
     xt: wp.array[wp.vec3f],
@@ -319,6 +346,13 @@ class Gradient:
 
     For static problems (``fem.static``), the inertial term is replaced by the external load, -fext.
 
+    With ``force_scale``, it also records per node the sum of the magnitudes of the terms that add up to ``g``
+    (:attr:`scale`): ``|m_i (x_i - x~_i)| + |g_el,i| + |g_c,i| + h^2 |fext_i|``, the inertial term (which holds the
+    external load's h^2 fext, counted again on its own so that a free fall, x = x~, still has a scale), the
+    elastic and contact forces at the node, each net over its elements and contacts, times h^2. The contact part
+    then accumulates in its own buffer and the inertial term is added after the joins, so ``g``'s rounding differs
+    from the default path's.
+
     Kernel launches are overlapped across 6 streams (elastic, inertial, vv, ve, vf, ee)
     forked from the active stream, making the computation graph-capturable.
     """
@@ -329,11 +363,16 @@ class Gradient:
         contact: ContactDynamics,
         g: wp.array,
         augmented_lagrangian: bool = True,
+        force_scale: bool = False,
     ):
         self._fem = fem
         self._contact = contact
         self._g = g
         self._augmented = 1 if augmented_lagrangian else 0
+        n_nodes = fem.data.x.shape[0]
+        # Per-node force scale (force_scale): the contact part's own buffer and the sum of the terms' magnitudes
+        self._gc = wp.zeros(n_nodes, dtype=wp.vec3f) if force_scale else None
+        self.scale = wp.zeros(n_nodes, dtype=wp.float32) if force_scale else None
         # Augmented normal terms with the slack eliminated (see contact.dynamics.augmented_normal_energy), GPU
         # Newton's Solver.Newton.one_sided_contact; ignored by the Lagrangian gradient
         self.one_sided = False
@@ -348,6 +387,9 @@ class Gradient:
     @profiling.scoped("newton.gradient")
     def compute(self, main_stream: wp.Stream) -> None:
         self._g.zero_()
+        scaled = self._gc is not None
+        if scaled:
+            self._gc.zero_()
         fem = self._fem
         contact = self._contact
         g = self._g
@@ -366,12 +408,14 @@ class Gradient:
             inputs=[fem.data, h2, g],
             stream=self._streams[0],
         )
-        wp.launch(
-            _inertial_gradient,
-            dim=n_nodes,
-            inputs=[fem.data, g],
-            stream=self._streams[1],
-        )
+        if not scaled:
+            wp.launch(
+                _inertial_gradient,
+                dim=n_nodes,
+                inputs=[fem.data, g],
+                stream=self._streams[1],
+            )
+        gc = self._gc if scaled else g
         for stream, kernel, cs in zip(
             self._streams[2:],
             [_vv_gradient, _ve_gradient, _vf_gradient, _ee_gradient],
@@ -380,11 +424,18 @@ class Gradient:
             wp.launch(
                 kernel,
                 dim=cs.capacity,
-                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, int(self.one_sided), g],
+                inputs=[x, xt, dmask, cd, cs.n_u, self._augmented, int(self.one_sided), gc],
                 stream=stream,
             )
         for stream in self._streams:
             main_stream.wait_stream(stream)
+        if scaled:
+            wp.launch(
+                _combine_with_force_scale,
+                dim=n_nodes,
+                inputs=[fem.data, h2, g, self._gc, self.scale],
+                stream=main_stream,
+            )
 
 
 class GradientNorm:
@@ -392,7 +443,8 @@ class GradientNorm:
 
     ``gnorm2[0] = |g|^2`` over the free DOFs (Dirichlet entries of ``g`` stay 0) is the convergence
     measure of the GPU solvers. :meth:`compute` launches no host synchronization, so it captures.
-    ``augmented_lagrangian`` selects the contact terms (see :class:`Gradient`).
+    ``augmented_lagrangian`` selects the contact terms, and ``force_scale`` also records the per-node force scale
+    :attr:`scale` (see :class:`Gradient`).
     """
 
     def __init__(
@@ -400,17 +452,24 @@ class GradientNorm:
         fem: FemElastoDynamics,
         contact: ContactDynamics,
         augmented_lagrangian: bool = True,
+        force_scale: bool = False,
     ):
         n_nodes = fem.data.x.shape[0]
         self.g = wp.zeros(n_nodes, dtype=wp.vec3f)
         self.gnorm2 = wp.zeros(1, dtype=wp.float32)
-        self._gradient = Gradient(fem, contact, self.g, augmented_lagrangian)
+        self._gradient = Gradient(fem, contact, self.g, augmented_lagrangian, force_scale)
         self._reduce = Reduce(
             d_in=cuda.compute.TransformIterator(cp.asarray(self.g).ravel(), lambda x: x * x),
             d_out=cp.asarray(self.gnorm2),
             num_items=3 * n_nodes,
             op=cuda.compute.OpKind.PLUS,
         )
+
+    @property
+    def scale(self) -> wp.array | None:
+        """(N,) per-node force scale of the last :meth:`compute_gradient` (``force_scale``; None otherwise): the sum of
+        the magnitudes of the terms that add up to ``g`` at the node (see :class:`Gradient`), 0 on Dirichlet nodes."""
+        return self._gradient.scale
 
     @property
     def friction_limits(self) -> FrictionLimits:
