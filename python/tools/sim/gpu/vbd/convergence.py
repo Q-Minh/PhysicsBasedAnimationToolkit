@@ -75,8 +75,8 @@ class ConvergenceParams(SerializableMixin):
         phi_i    = |H_i|_F eps32 |x_i| / (m_i h^2)                                  float32 floor
         RMS_M(v) = (sum_i m_i v_i^2 / sum_i m_i)^(1/2)                              over free nodes
 
-    with kl = ``floor_local_kappa`` 1.5 and kg = ``floor_kappa`` 0.2. s_i is the largest of the terms whose sum is
-    node i's force residual, each net at the node (gpu.gradient.Gradient, ``force_scale``): the inertial term (it holds
+    with astol = 0.1, kl = ``floor_local_kappa`` 1.5 and kg = ``floor_kappa`` 0.2. s_i is the largest of the terms
+    whose sum is node i's force residual, each net at the node (gpu.gradient.Gradient, ``force_scale``): the inertial term (it holds
     -f_ext for BDF1, so f_ext also counts on its own and a free fall, x = x~, keeps a scale), the elastic force, the
     contact force (normal and friction as one term) and the external load. h is the solve's time step (dt /
     substeps), |a| the scene's external acceleration (:func:`external_acceleration`: the gravity's norm, or
@@ -102,6 +102,20 @@ class ConvergenceParams(SerializableMixin):
     ArmadilloSpaghetti.DragonImpact 0 of 30 substeps (+31%). The RMS form against the former test:
     Trampoline.SoftSoft and BendingBeam.100MPa bit-identical, DragonImpact and CapsulesIntoBowl -1% sweeps with the
     same exits; DragonImpact and the beam pass through the floor clause (python/tools/sim/CLAUDE.md).
+
+    astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
+    (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
+    and 2.8 s, the capsules at 0.2 s and 0.8 s):
+
+        astol   h = 10 ms: trampoline sweeps, steps passing, distance     capsules sweeps, distance
+        0.05    27860   172/280   0.22 / 2.5                              6540   0.05 / 1.9
+        0.1     25460   251/280   0.29 / 2.5                              5780   0.11 / 2.1
+        0.2     22720   261/280   0.66 / 2.7                              4840   0.18 / 3.5
+        0.5     18860   280/280   1.15 / 1.5                              3900   0.92 / 4.9
+
+    At h = 1 ms every substep of both scenes passes at its first test (20 sweeps) for every astol in this range, with
+    the same distances (trampoline 0.01 mm before the sphere's impact at 2.4 s). The feasibility
+    ratio's max is about the same at every astol (the trampoline's 1.05 matches its reference's 1.04).
 
     Changed form (2026-11-06): the test was RMS_M(e) <= alpha, e_i = max(0, |r_i|^2 - rho_i^2)^(1/2) the residual
     beyond the relative allowance, or RMS_M(e') <= alpha and RMS_M(r) <= kg RMS_M(phi), e'_i beyond
@@ -135,12 +149,12 @@ class ConvergenceParams(SerializableMixin):
         "meaning (2026-11-06): the relative term used to be rstol * RMS(x~ - x^t) / h^2, default 1e-2",
     )
     astol = DocField(
-        0.5,
+        0.1,
         "Absolute stationarity tolerance, as a fraction of the scene's external acceleration |a| (its gravity's "
         "norm, or 9.81 m/s^2 without a load): node i's absolute allowance is astol * |a| (at least 1e-6 m/s^2), see "
-        "rstol. With rstol < 1 and astol < 1 a step that hasn't moved can't pass. Changed meaning (2026-10-20): astol "
-        "used to be a fraction of the scene's size L (astol * L), so an old file's astol = 1e-4 is now extremely "
-        "strict",
+        "rstol. With rstol < 1 and astol < 1 a step that hasn't moved can't pass. Default 0.1 since 2026-11-06 (was "
+        "0.5). Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
+        "file's astol = 1e-4 is now extremely strict",
     )
     floor_kappa = DocField(
         0.2,
@@ -1263,8 +1277,7 @@ class TestStationarityTolerance(unittest.TestCase):
 
     def test_absolute_tolerance_scales_with_h2(self):
         astol = ConvergenceParams().astol
-        # The default matches the former astol * L = 1e-4 * 5.66 m of the trampolines at h = 1e-2
-        self.assertAlmostEqual(absolute_stationarity_tolerance(astol, 9.81, 1e-2), 0.5 * 9.81e-4)
+        self.assertAlmostEqual(absolute_stationarity_tolerance(astol, 9.81, 1e-2), 0.1 * 9.81e-4)
         tol = [absolute_stationarity_tolerance(astol, 9.81, h) for h in (1e-2, 2e-3)]
         self.assertAlmostEqual(tol[0] / tol[1], 25.0)
         # Below one step's gravity sag h^2 |a| at any h, so a step that hasn't moved can't pass
