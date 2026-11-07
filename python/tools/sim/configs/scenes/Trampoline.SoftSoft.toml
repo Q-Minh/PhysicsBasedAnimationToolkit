@@ -47,6 +47,14 @@
 #   BDF1 like the former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it
 #   would floor the penalty at 1e-4 at 10 ms.
 #     Contact.ContactDynamics.min_sigma_n = 10000.0 (source 1.0)
+# - Per-contact penalties (LocalMaxRayleighQuotient), the code default since 2026-11-06 (maintainer; the paper
+#   files have the global one): one global penalty, set by the stiffest contact, also stiffened soft-side
+#   contacts and slowed the sweeps. Global -> local, outer gradient ratio: Celebration median AAAVBD 40 -> 21,
+#   Newton 302 -> 20; BasketOfFruit 2 s median/max AAAVBD 117/1241 -> 51/306, VBD 270/2462 -> 41/220;
+#   DragonImpact impact p90/max AAAVBD 13.7/58.5 -> 6.3/15.0; CapsulesIntoBowl early exits 93% -> 100% and no
+#   feasibility violations; others within noise. Median feasibility ratios rise 2-5x where contact matters,
+#   staying below 1 (measurements: gpu/contact/dynamics.py, at adapt_penalty_parameters_to_hessian).
+#     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
 # - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
 #   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
 #   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
@@ -92,7 +100,7 @@ min_sigma_n = 10000.0
 mu_f = 0.30000001192092896
 multiplier_step = 1.0
 penalty_adaptivity = 1
-penalty_stiffness = 0
+penalty_stiffness = 1
 vbd_slack_at_evaluation = 1
 
 [Contact.ContactStorage]
