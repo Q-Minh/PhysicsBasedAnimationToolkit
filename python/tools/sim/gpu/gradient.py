@@ -102,8 +102,8 @@ def _combine_with_force_scale(
     scale: wp.array[wp.float32],
 ):
     """Add the inertial (or static: external) term and the contact part ``gc`` to the elastic part in ``g``, and
-    record the force scale: the sum of the terms' magnitudes, |m (x - x~)| + |g_el| + |g_c| + h^2 |fext| (static:
-    |fext| + |g_el| + |g_c|), in the gradient's units (see :class:`Gradient`)."""
+    record the force scale: the largest of the terms' magnitudes, max(|m (x - x~)|, |g_el|, |g_c|, h^2 |fext|) (static:
+    max(|fext|, |g_el|, |g_c|)), in the gradient's units (see :class:`Gradient`)."""
     i = wp.tid()
     scale[i] = wp.float32(0)
     if is_dirichlet_node(fem.dmask, i):
@@ -117,7 +117,7 @@ def _combine_with_force_scale(
         gin = fem.m[i] * (fem.x[i] - fem.xtilde[i])
         sext = h2 * wp.length(fem.fext[i])
     g[i] = gin + gel + gci
-    scale[i] = wp.length(gin) + wp.length(gel) + wp.length(gci) + sext
+    scale[i] = wp.max(wp.max(wp.length(gin), wp.length(gel)), wp.max(wp.length(gci), sext))
 
 
 @wp.kernel
@@ -346,8 +346,8 @@ class Gradient:
 
     For static problems (``fem.static``), the inertial term is replaced by the external load, -fext.
 
-    With ``force_scale``, it also records per node the sum of the magnitudes of the terms that add up to ``g``
-    (:attr:`scale`): ``|m_i (x_i - x~_i)| + |g_el,i| + |g_c,i| + h^2 |fext_i|``, the inertial term (which holds the
+    With ``force_scale``, it also records per node the largest magnitude of the terms that add up to ``g``
+    (:attr:`scale`): ``max(|m_i (x_i - x~_i)|, |g_el,i|, |g_c,i|, h^2 |fext_i|)``, the inertial term (which holds the
     external load's h^2 fext, counted again on its own so that a free fall, x = x~, still has a scale), the
     elastic and contact forces at the node, each net over its elements and contacts, times h^2. The contact part
     then accumulates in its own buffer and the inertial term is added after the joins, so ``g``'s rounding differs
@@ -370,7 +370,7 @@ class Gradient:
         self._g = g
         self._augmented = 1 if augmented_lagrangian else 0
         n_nodes = fem.data.x.shape[0]
-        # Per-node force scale (force_scale): the contact part's own buffer and the sum of the terms' magnitudes
+        # Per-node force scale (force_scale): the contact part's own buffer and the largest term's magnitude
         self._gc = wp.zeros(n_nodes, dtype=wp.vec3f) if force_scale else None
         self.scale = wp.zeros(n_nodes, dtype=wp.float32) if force_scale else None
         # Augmented normal terms with the slack eliminated (see contact.dynamics.augmented_normal_energy), GPU
@@ -467,8 +467,8 @@ class GradientNorm:
 
     @property
     def scale(self) -> wp.array | None:
-        """(N,) per-node force scale of the last :meth:`compute_gradient` (``force_scale``; None otherwise): the sum of
-        the magnitudes of the terms that add up to ``g`` at the node (see :class:`Gradient`), 0 on Dirichlet nodes."""
+        """(N,) per-node force scale of the last :meth:`compute_gradient` (``force_scale``; None otherwise): the largest
+        magnitude of the terms that add up to ``g`` at the node (see :class:`Gradient`), 0 on Dirichlet nodes."""
         return self._gradient.scale
 
     @property

@@ -242,6 +242,15 @@ LOCAL_PENALTY = Rule(
     "gpu/contact/dynamics.py, at adapt_penalty_parameters_to_hessian).",
     {"Contact.ContactDynamics.penalty_stiffness": 1},
 )
+STATIONARITY = Rule(
+    "Relative stationarity tolerance rstol = 2e-2, the code default since 2026-11-06 (maintainer: make the relative "
+    "tolerance h-independent; the paper files' 1e-2 had the former meaning): each node's residual acceleration may "
+    "exceed rstol times its largest force (inertial, elastic, contact, external) per mass, and the RMS of what's left "
+    "over must be within astol |a|. Calibrated so the soft scenes' early exits match the former test: Trampoline."
+    "SoftSoft and CapsulesIntoBowl traces gave the same pass points for rstol 1e-2 to 1e-1; 2e-2 matches the "
+    "former sum-of-forces form's 1e-2 where two forces balance (gpu/vbd/convergence.py, ConvergenceParams).",
+    {"Solver.Convergence.rstol": 2e-2},
+)
 PENALTY_FLOOR = Rule(
     "Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the effective "
     "normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with BDF1 like the "
@@ -262,7 +271,7 @@ SCENES = {
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
-        [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY,
+        [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
          CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
@@ -279,7 +288,7 @@ SCENES = {
                 {"Contact.CDType.VertexSdf.max_dist": 0.05, "Contact.CDType.VertexSdf.band": 3e-3,
                  "Contact.ContactDynamics.dmin": 5e-3},
             ),
-            PENALTY_FLOOR, LOCAL_PENALTY,
+            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
             CONTACT_CAPACITIES,
             FIXED_BUDGET,
             Rule(
@@ -308,7 +317,7 @@ SCENES = {
             ),
             *SOLVERS,
             *HET_CONTACT,
-            PENALTY_FLOOR, LOCAL_PENALTY,
+            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
             CONTACT_CAPACITIES,
         ],
         ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
@@ -318,13 +327,13 @@ SCENES = {
         "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE,
-         PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+         PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
     ),
     "Trampoline.StiffSoft": Scene(
         "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
-         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
     ),
     "Trampoline.SoftSoft": Scene(
         "Trampoline.SoftStiff.5Substeps",
@@ -336,7 +345,7 @@ SCENES = {
             *SOLVERS,
             *CONTACT,
             *TRAMPOLINE,
-            PENALTY_FLOOR, LOCAL_PENALTY,
+            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
             CONTACT_CAPACITIES,
         ],
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
@@ -345,7 +354,7 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -353,7 +362,7 @@ SCENES = {
         "CapsulesIntoBowl",
         "final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; "
         "the bodies span about 8.8 x 8.8 x 8.5 m)",
-        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+        [*SOLVERS, PENALTY, CAPSULE_CONTACT, CAPSULE_BUDGET, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
     ),
     "ArmadilloSpaghetti.DragonImpact": Scene(
         "defaults",
@@ -382,7 +391,7 @@ SCENES = {
         "leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at "
         "the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); "
         "released, it keeps that velocity. 1.40M tets in all",
-        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, PENALTY_FLOOR, LOCAL_PENALTY,
+        [*SOLVERS, PENALTY, ARMADILLO_SPAGHETTI_CONTACT, DRAGON_IMPACT_BUDGET, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
          CONTACT_CAPACITIES],
         ["Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the aim are the "
          "scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and the launch at "
@@ -397,20 +406,20 @@ SCENES = {
     "ArmadilloPull": Scene(
         "defaults",
         "sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released)",
-        [INVERSE, ARMADILLO_GAMMAS, ARMADILLO_BUDGET],
+        [INVERSE, ARMADILLO_GAMMAS, ARMADILLO_BUDGET, STATIONARITY],
     ),
     "EmptyBasket": Scene(
         "EmptyBasket",
         "probably final_scenes/short_basket.h5 (the woven basket alone, homogeneous, Young's modulus 1e7; not "
         "recorded)",
-        [*SOLVERS, *CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+        [*SOLVERS, *CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
         ["Budgets kept: 3 substeps of 10 x 5 = 150 sweeps per frame, a little below the guidance's ~200 for "
          "Young's modulus ~1e7."],
     ),
     "BasketOfOranges": Scene(
         "BasketOfOranges",
         "a basket scene, probably final_scenes/basket_of_oranges.h5 (Young's modulus 1e6 to 1e8; not recorded)",
-        [*SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 5 x 40 = 1000 sweeps per frame."],
     ),
     # Contact-free scenes (VertexSdf.deactivate = 1): the contact rules don't apply (only the margin, for consistency),
@@ -418,7 +427,7 @@ SCENES = {
     "BirthdayBanner": Scene(
         "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
-        [*SOLVERS, DMIN],
+        [*SOLVERS, DMIN, STATIONARITY],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
          "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while VertexSdf "
          "detection is off.",
@@ -430,7 +439,7 @@ SCENES = {
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
-            [*SOLVERS, DMIN],
+            [*SOLVERS, DMIN, STATIONARITY],
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while "
              "VertexSdf detection is off.",

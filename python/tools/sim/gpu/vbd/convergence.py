@@ -66,15 +66,15 @@ class ConvergenceParams(SerializableMixin):
     mass-weighted RMS over free nodes, must be within the absolute tolerance:
 
         RMS_M(e) <= astol |a|,   e_i = max(0, |r_i|^2 - (rstol s_i / m_i)^2)^(1/2),
-        s_i = |m_i (x_i - x~_i)| / h^2 + |f_el,i| + |f_c,i| + |f_ext,i|,
+        s_i = max(|m_i (x_i - x~_i)| / h^2, |f_el,i|, |f_c,i|, |f_ext,i|),
 
-    s_i being the magnitudes of the terms whose sum is node i's force residual: the inertial term (the net force the
+    s_i being the largest of the terms whose sum is node i's force residual: the inertial term (the net force the
     motion needs; it holds -f_ext for BDF1, so f_ext also counts on its own and a free fall, x = x~, keeps a scale),
-    the elastic force, the contact force (normal and friction) and the external load, each net at the node
-    (gpu.gradient.Gradient, ``force_scale``). h is the solve's time step (dt / substeps) and |a| the scene's external
+    the elastic force, the contact force (normal and friction as one term) and the external load, each net at the
+    node (gpu.gradient.Gradient, ``force_scale``; maintainer, 2026-11-06: the largest term rather than their sum). h is the solve's time step (dt / substeps) and |a| the scene's external
     acceleration (:func:`external_acceleration`: the gravity's norm, or :data:`STANDARD_GRAVITY` without a load). In
     the gradient's units: ``sum max(0, |g_i|^2 - (rstol h^2 s_i)^2) / m_i <= stol2 = (astol |a| h^2)^2 sum m_i``.
-    The relative part is a componentwise relative residual, |f_res,i| <= rstol sum_k |f_k,i| (the componentwise
+    The relative part is a componentwise relative residual, |f_res,i| <= rstol max_k |f_k,i| (cf. the componentwise
     backward error of Oettli and Prager, Numer. Math. 1964, used as a stopping test by Arioli, Duff and Ruiz, SIAM J.
     Matrix Anal. Appl. 1992; Higham, Accuracy and Stability of Numerical Algorithms, ch. 7), with the forces netted
     per node rather than per element, so that internal stresses that balance don't loosen it. Every term is a force,
@@ -83,14 +83,15 @@ class ConvergenceParams(SerializableMixin):
     contact-loaded light surface nodes dominate its scale (ArmadilloSpaghetti.DragonImpact at 7 s: RMS_M(s / m) =
     1.2e5 m/s^2 from elastic and contact forces of ~1e7 m/s^2 that cancel at the top 1% of nodes, against a median
     node's 105 m/s^2), so it accepted the substeps' initial guesses. astol |a| is the tolerated residual
-    acceleration where the forces are small; with 4 rstol^2 + astol^2 < 1, a step that hasn't moved (r = a, s = 2 m a
+    acceleration where the forces are small; with rstol^2 + astol^2 < 1, a step that hasn't moved (r = a, s = m a
     for a free node at rest) can't pass. Changed meaning (2026-11-06): the test used to be RMS_M(r) <=
     max(rstol RMS_M(x~ - x^t) / h^2, astol |a|), whose relative term rstol |v^t / h + a| grew as 1/h for a moving
     body (Trampoline.SoftSoft, first 0.3 s, median 1e-2 RMS_M(x~ - x^t) / h^2: 0.97, 1.91 and 9.5 m/s^2 at h = 10, 5
-    and 1 ms, the last above astol |a| = 4.9; 1e-2 RMS_M(s / m): 0.31, 0.30, 0.27). rstol keeps its value 1e-2: at
-    the scenes' production h the former relative term was below the absolute one on the soft scenes, and the new
-    allowances change their early exits by under 3% (Trampoline.SoftSoft, CapsulesIntoBowl); at 5e-2 the floor test
-    below stopped DragonImpact earlier than its accuracy warranted. Static problems use the absolute ``gtol``.
+    and 1 ms, the last above astol |a| = 4.9; 2e-2 RMS_M(s / m): 0.25, 0.23, 0.20). rstol 2e-2 (from 1e-2): at the
+    scenes' production h the former relative term was below the absolute one on the soft scenes, and their traced
+    pass points are the same for rstol 1e-2 to 1e-1 (Trampoline.SoftSoft, CapsulesIntoBowl); 2e-2 gives the former
+    sum-of-forces form's allowance at 1e-2 where two forces balance. On DragonImpact the floor test below decides
+    the exits, the same at 1e-2 and 2e-2. Static problems use the absolute ``gtol``.
 
     Float32 floor: a position error of one float32 spacing makes the force f_i = |H_i|_F eps32 |x_i| / h^2 (H_i node
     i's Hessian block in the gradient's units, inertia included, from the last sweep; eps32 = 2^-23), the
@@ -125,10 +126,10 @@ class ConvergenceParams(SerializableMixin):
         "fraction of |dmin| (at least 1e-6 m, so a zero or negative margin still has a positive tolerance)",
     )
     rstol = DocField(
-        1e-2,
+        2e-2,
         "Relative stationarity tolerance, relative to the forces in each node's balance: node i's residual "
-        "acceleration may exceed rstol s_i / m_i, s_i = |m_i (x_i - x~_i)| / h^2 + |f_el,i| + |f_c,i| + |f_ext,i| the "
-        "magnitudes of its inertial, elastic, contact and external forces, and the mass-weighted RMS of what's left "
+        "acceleration may exceed rstol s_i / m_i, s_i = max(|m_i (x_i - x~_i)| / h^2, |f_el,i|, |f_c,i|, |f_ext,i|) the "
+        "largest of its inertial, elastic, contact and external forces, and the mass-weighted RMS of what's left "
         "over must be at most astol * |a|. Every term is a force, so it doesn't depend on the time step. With rstol = "
         "astol = 0, the solver's absolute gtol applies instead. Changed meaning (2026-11-06): the test used to pass at "
         "RMS(M^-1 f_res) <= max(rstol * RMS(x~ - x^t) / h^2, astol * |a|), rstol |v / h + a|, default 1e-2",
@@ -138,7 +139,7 @@ class ConvergenceParams(SerializableMixin):
         "Absolute stationarity tolerance, as a fraction of the scene's external acceleration |a| (its gravity's "
         "norm, or 9.81 m/s^2 without a load): the mass-weighted RMS of the residual acceleration beyond each node's "
         "relative allowance (see rstol) must be at most astol * |a|. Time-step and scene-size invariant; with "
-        "4 rstol^2 + astol^2 < 1 a step that hasn't moved can't pass. "
+        "rstol^2 + astol^2 < 1 a step that hasn't moved can't pass. "
         "Changed meaning (2026-10-20): astol used to be a fraction of the scene's size L (astol * L), so an old "
         "file's astol = 1e-4 is now extremely strict",
     )
@@ -412,8 +413,8 @@ def _stationarity_terms(
     fem: FemElastoDynamicsData,
     terms: wp.array2d[wp.float32],
 ):
-    """Free node i's terms of the stationarity sums (``SUM_*``). Its relative allowance is rstol s_i, s_i the sum of
-    the magnitudes of the terms of its force balance (``scale``, gpu.gradient.Gradient's force scale), and its float32
+    """Free node i's terms of the stationarity sums (``SUM_*``). Its relative allowance is rstol s_i, s_i the largest
+    magnitude of the terms of its force balance (``scale``, gpu.gradient.Gradient's force scale), and its float32
     floor f_i = |H_i|_F EPS32 |x_i|: the force (in the gradient's units) that a position error of about one float32
     spacing at x_i makes through the vertex's own Hessian block |H_i|_F (``hnorm``, the last sweep's, inertia
     included)."""
@@ -1385,7 +1386,7 @@ class TestForceRelativeTolerance(unittest.TestCase):
         s1, f1 = self._tolerances(1e-2)
         s2, f2 = self._tolerances(5e-3)
         np.testing.assert_allclose(s2, s1, rtol=5e-3)  # float32 rounding of x - x~ (h^2 |a| = 0.25 mm at h/2)
-        self.assertTrue(np.all(s1 > 2 * 9.81 * (1 - 1e-4)))  # inertial and external terms (2 |a|) plus elastic forces
+        self.assertTrue(np.all(s1 > 9.81 * (1 - 1e-3)))  # the largest of |a| (inertial, external) and the elastic force
         self.assertGreater(f2 / f1, 1.8)
 
 

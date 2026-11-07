@@ -17,6 +17,14 @@
 #   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
 #   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
 #     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
+# - Relative stationarity tolerance rstol = 2e-2, the code default since 2026-11-06 (maintainer: make the
+#   relative tolerance h-independent; the paper files' 1e-2 had the former meaning): each node's residual
+#   acceleration may exceed rstol times its largest force (inertial, elastic, contact, external) per mass, and
+#   the RMS of what's left over must be within astol |a|. Calibrated so the soft scenes' early exits match the
+#   former test: Trampoline.SoftSoft and CapsulesIntoBowl traces gave the same pass points for rstol 1e-2 to
+#   1e-1; 2e-2 matches the former sum-of-forces form's 1e-2 where two forces balance (gpu/vbd/convergence.py,
+#   ConvergenceParams).
+#     Solver.Convergence.rstol = 0.02 (source 0.01)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -136,7 +144,7 @@ early_exit = 1
 floor_kappa = 0.2
 floor_local_kappa = 1.5
 ftol = 0.5
-rstol = 0.01
+rstol = 0.02
 
 [Solver.Newton]
 init_strategy = 0
