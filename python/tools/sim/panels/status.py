@@ -66,18 +66,16 @@ _SUBPROBLEM = {
 
 _RESIDUAL_TIP = (
     "Gradient residual over its tolerance at the end of the solve; at most 1 passes.\n"
-    "Stationarity test (Solver.Convergence.rstol or astol > 0): RMS(e) / (astol * |a|), mass-weighted, e_i node i's\n"
-    "residual acceleration beyond its allowance rstol * s_i / m_i, s_i the largest of its forces (inertial, elastic,\n"
-    "contact, external) in the step's Lagrangian gradient, |a| the scene's gravity. Above 1 the test can still\n"
-    "pass at the float32 floor (Float32 floor / tol).\n"
+    "Stationarity test (Solver.Convergence.rstol or astol > 0): max_i q_i over free nodes, q_i node i's residual\n"
+    "acceleration over its allowance, the largest of rstol * s_i / m_i (s_i the largest of its forces: inertial,\n"
+    "elastic, contact, external, in the step's Lagrangian gradient), astol * |a| (|a| the scene's gravity) and\n"
+    "floor_local_kappa times its float32 floor |H_i|_F eps32 |x_i| / (m_i h^2).\n"
     "Absolute test (both 0, or static): |g| / gtol."
 )
-_FLOOR_TIP = (
-    "The float32 floor RMS(M^-1 f) over the absolute tolerance astol * |a|, f_i = |H_i|_F eps32 |x_i| / h^2 the force\n"
-    "a position error of one float32 spacing makes through node i's Hessian block. The gradient test also passes when\n"
-    "the residual RMS(M^-1 g) / h^2 is at most floor_kappa times the floor and each node's residual beyond\n"
-    "max(rstol * s_i, floor_local_kappa * f_i) is within the tolerance (Solver.Convergence.floor_kappa,\n"
-    "floor_local_kappa). 0: no floor (GPU Newton)."
+_RMS_TIP = (
+    "The same node ratios' mass-weighted RMS, sqrt(sum m_i q_i^2 / sum m_i), for information: the test decides on\n"
+    "their largest (Residual / tol), so an RMS at most 1 with a residual above 1 means a few nodes hold the step.\n"
+    "0: absolute test."
 )
 _PENETRATION_TIP = (
     "Largest penetration into the contact margin over its tolerance ftol * max(|dmin|, 1e-6 m),\n"
@@ -86,8 +84,8 @@ _PENETRATION_TIP = (
 _NEWTON_RESIDUAL_TIP = (
     "Outer test's gradient residual over its tolerance, {when}; at most 1 passes.\n"
     "Stationarity test (Solver.Convergence.rstol or astol > 0, dynamic problems), as the VBD family's:\n"
-    "RMS(e) / (astol * |a|), e_i node i's residual acceleration beyond rstol * s_i / m_i, s_i the largest of its\n"
-    "forces, in the step's Lagrangian gradient, |a| the scene's gravity (no float32 floor).\n"
+    "max_i q_i, q_i node i's residual acceleration over the larger of rstol * s_i / m_i (s_i the largest of its\n"
+    "forces, in the step's Lagrangian gradient) and astol * |a| (|a| the scene's gravity; no float32 floor).\n"
     "Absolute test (both 0, or static problems): |g| / sqrt(gtol2), g the augmented-Lagrangian gradient."
 )
 _NEWTON_PENETRATION_TIP = (
@@ -166,8 +164,8 @@ def _draw_vbd_solve(r, rows: _Rows):
     ratio = float(r["gradient_ratio"])
     passed = reason in (SolveEnd.CONVERGED, SolveEnd.FEASIBILITY_UNMET)
     rows.row("Residual / tol", _ratio(ratio), _RESIDUAL_TIP, None if ratio <= 1 or passed else _WARN)
-    if "floor_ratio" in r.dtype.names:
-        rows.row("Float32 floor / tol", _ratio(float(r["floor_ratio"])), _FLOOR_TIP)
+    if "rms_ratio" in r.dtype.names:
+        rows.row("Residual RMS / tol", _ratio(float(r["rms_ratio"])), _RMS_TIP)
     ratio = float(r["feasibility_ratio"])
     rows.row("Penetration / tol", _ratio(ratio), _PENETRATION_TIP, None if ratio <= 1 else _WARN)
 
