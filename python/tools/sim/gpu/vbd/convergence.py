@@ -49,7 +49,7 @@ from ..common.reduce import Reduce
 from ..contact.dynamics import MeshDynamics as ContactDynamics, MeshDynamicsData
 from ..contact import halfedges
 from ..elasticity.fem import FemElastoDynamics, FemElastoDynamicsData, is_dirichlet_node
-from ..gradient import GradientNorm
+from ..gradient import GradientNorm, _elastic_gradient, _inertial_gradient
 
 
 class NodeNorm(enum.Enum):
@@ -126,6 +126,33 @@ class ConvergenceParams(SerializableMixin):
     ``status_ratio.stationarity_test_ratio`` decides as the test does. The RMS lets a heavy body hide a light stiff
     one (Celebration: the base plate's mass hides the letters, whose residuals are 6-9x their float32 floor when
     every solver passes the RMS test); the max catches it, at the cost of the single-node failures above.
+
+    ``smoothing_passes`` k > 0 (not the default; k = 0 adds no work) smooths the residual before the test: r_i
+    becomes r_bar_i, k passes of mass-weighted averaging over each free node's closed 1-ring of the tet mesh (free
+    nodes only: fixed nodes neither contribute nor receive), and phi_i a floor under the same filter, phi_bar_i:
+
+        r_bar_i^(t+1) = sum_j m_j r_bar_j^(t) / sum_j m_j         j in {i} and i's mesh neighbours, free
+        phi_bar_i     = c |S_k(p)|_i,   p_i = (g(x + xi) - g(x))_i / (m_i h^2)
+
+    S_k the same k passes, xi a random step of one float32 spacing (+-) per coordinate, g the elastic and inertial
+    gradient in float32 (contact left out: its Lagrangian force doesn't depend on x), c = :data:`SMOOTHED_FLOOR_SCALE`
+    = 1.4. p is measured once per solve (time step or substep), at its initial positions (:meth:`ConvergenceCheck.
+    measure_scale`), and only where the floor applies (the VBD family). rho_i, alpha, kl, kg and the test's form are
+    unchanged, so the status ratios are those of the smoothed test. Why: float32 rounding noise is high-frequency
+    and dominates the per-node residual of stiff bodies, so no per-node norm of r ranks the solvers on Celebration
+    (the letters sag under Chebyshev, Anderson and VBD), while it averages away under the filter and the solvers'
+    smooth error doesn't: RMS r_bar_16 at step 100 is 0.56 g for AAAVBD, 5.5 (Chebyshev), 4.8 (Anderson) and 15.9
+    (VBD). Raw phi can't be the floor after filtering: the real rounding noise falls 94x by k = 16, phi-sized white
+    noise 16x, so phi's 58 g letter floor would pass Chebyshev. The probe tracks the measured filtered floor F_k
+    (exact minimizer's rounding plus Warp's evaluation error) at 2.8-3.2x for every k from 0 to 32, within 7% across
+    states. Every choice errs strict (the test must never pass an unconverged solve): c makes the floor clause's
+    threshold kg phi_bar at most F_k (0.77-0.91 F_k measured, at most F_k by construction, see
+    :data:`SMOOTHED_FLOOR_SCALE`), so the floor clause can't accept more than the real noise, where the unsmoothed
+    test's kg phi is 1.16 F_0. Predicted offline (Celebration step 100, k = 16), decisive ratio: AAAVBD 1.72,
+    Chebyshev 23.8, Anderson 18.5, VBD 52.2; AAAVBD 5 x 400 1.43, 5 x 6000 1.30 (k = 4: 2.73, 21.7, 18.6, 54.0;
+    1.49, 1.44), so a fully converged AAAVBD state still fails narrowly (accepted: more work, never less). Data:
+    data/profiling/investigations/residual-smoothing. Each test costs k filter passes more, and each solve two
+    gradient evaluations and k passes. GPU Newton smooths r too, without a floor (as without smoothing).
 
     astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
     (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
@@ -205,6 +232,15 @@ class ConvergenceParams(SerializableMixin):
         "(max q0_i <= 1 or max |r_i| <= floor_kappa max phi_i)). MAX is stricter: a light stiff body can't hide "
         "behind a heavy one's mass, but single nodes at their float32 floor can hold a step. The status ratios "
         "follow it (GPU Newton too)",
+    )
+    smoothing_passes = DocField(
+        0,
+        "Residual smoothing passes k (0: off, no extra work): the stationarity test uses r_bar_i, k passes of "
+        "mass-weighted averaging of the residual acceleration over each free node's closed 1-ring of the tet mesh, "
+        "in place of r_i, and a float32 floor under the same filter (1.4 |S_k(g(x + xi) - g(x))| / (m h^2), xi a "
+        "random +-1 float32 spacing, measured once per solve) in place of phi_i. Float32 noise averages away, the "
+        "solvers' smooth errors don't, so the test ranks solvers on stiff bodies whose per-node residual sits at the "
+        "floor. Each test costs k filter passes (VBD family and GPU Newton; Newton has no floor)",
     )
     early_exit = DocField(
         True,
@@ -532,6 +568,140 @@ def _free_mass_terms(fem: FemElastoDynamicsData, masses: wp.array[wp.float32]):
         masses[i] = fem.m[i]
 
 
+# --- Residual smoothing (ConvergenceParams.smoothing_passes) ---
+
+SMOOTHED_FLOOR_SCALE = 1.4
+"""c of the smoothed test's float32 floor phi_bar_i = c |S_k(p)|_i / (m_i h^2), p = g(x + xi) - g(x) for a random
++-1 float32 spacing xi per coordinate (:class:`ConvergenceParams`). Chosen on the strict side (maintainer: never pass
+an unconverged solve; failing a nearly converged one is acceptable), so that the floor clause's threshold kg phi_bar
+can't exceed the real floor F_k, the filtered residual of the exactly rounded solution (its rounding, uniform within
++-1/2 spacing, plus the float32 evaluation error): p's rounding part is sqrt(12) = 3.46 times F_k's (the variance of
++-1 against U(-1/2, 1/2)) and its evaluation part sqrt(2) times, so p <= 3.46 F_k and kg c p <= F_k for c <=
+1 / (0.2 sqrt(12)) = 1.44 at kg = 0.2. Measured on Celebration (step 100): p / F_k = 2.75-3.25 for k = 0-32, within 7%
+across states, so kg c p = 0.77-0.91 F_k. phi_bar is then below phi's scale at k = 0 (RMS_M(phi) / RMS_M(p) = 1.78)."""
+
+PROBE_SEED = 20261107
+"""Seed of the floor probe's random signs (fixed, so the probe and the test are reproducible)."""
+
+
+@wp.kernel
+def _stationarity_ratios_smoothed(
+    g: wp.array[wp.vec3f],
+    scale: wp.array[wp.float32],
+    floor: wp.array[wp.float32],
+    use_floor: wp.int32,
+    rstol: wp.float32,
+    atol: wp.float32,
+    local_kappa: wp.float32,
+    node_norm: wp.int32,
+    fem: FemElastoDynamicsData,
+    terms: wp.array2d[wp.float32],
+):
+    """:func:`_stationarity_ratios` with the smoothed residual ``g`` (r_bar_i m_i h^2) and the smoothed float32 floor
+    ``floor`` (phi_bar_i m_i h^2) in the gradient's units; the same terms otherwise."""
+    i = wp.tid()
+    for k in range(N_SUMS):
+        terms[k, i] = wp.float32(0)
+    mi = fem.m[i]
+    if is_dirichlet_node(fem.dmask, i) or mi <= wp.float32(0):
+        return
+    f = wp.float32(0)
+    if use_floor != 0:
+        f = floor[i]
+    q = _node_ratio(g[i], scale[i], mi, f, rstol, atol, local_kappa)
+    q0 = _node_ratio(g[i], scale[i], mi, wp.float32(0), rstol, atol, local_kappa)
+    terms[SUM_RATIO_MAX, i] = q
+    if node_norm == NODE_NORM_MAX:
+        terms[SUM_RATIO, i] = q * q
+        terms[SUM_RATIO_NO_FLOOR, i] = q0 * q0
+        terms[SUM_RESIDUAL, i] = wp.dot(g[i], g[i]) / (mi * mi)
+        terms[SUM_FLOOR, i] = (f * f) / (mi * mi)
+    else:
+        terms[SUM_RATIO, i] = mi * q * q
+        terms[SUM_RATIO_NO_FLOOR, i] = mi * q0 * q0
+        terms[SUM_RESIDUAL, i] = wp.dot(g[i], g[i]) / mi
+        terms[SUM_FLOOR, i] = f * f / mi
+
+
+@wp.kernel
+def _smoothing_pass(
+    src: wp.array[wp.vec3f],
+    masses: wp.array[wp.float32],
+    GVVp: wp.array[wp.int32],
+    GVVadj: wp.array[wp.int32],
+    dst: wp.array[wp.vec3f],
+):
+    """One pass of the residual filter, in the gradient's units (u_i = m_i v_i h^2 for an acceleration field v):
+    dst_i = m_i sum_j src_j / sum_j m_j over j in {i} and i's mesh neighbours (``GVVp``/``GVVadj``, which may list i
+    itself), free nodes only (``masses`` the free masses, 0 on fixed nodes), i.e. m_i h^2 times the mass-weighted
+    average of v. Fixed and massless nodes get 0."""
+    i = wp.tid()
+    mi = masses[i]
+    out = wp.vec3f(0.0)
+    if mi > wp.float32(0):
+        s = src[i]
+        w = mi
+        for k in range(GVVp[i], GVVp[i + 1]):
+            j = GVVadj[k]
+            if j != i:
+                mj = masses[j]
+                if mj > wp.float32(0):
+                    s += src[j]
+                    w += mj
+        out = (mi / w) * s
+    dst[i] = out
+
+
+@wp.func
+def _step_one_spacing(v: wp.float32, up: bool) -> wp.float32:
+    """v moved by about one float32 spacing up or down (exactly one, or two next to a power of 2); 0 stays 0."""
+    a = wp.abs(v)
+    out = v
+    if a >= wp.float32(1.17549435e-38):  # normal numbers
+        spacing = wp.pow(wp.float32(2), wp.floor(wp.log2(a)) - wp.float32(23))
+        out = wp.where(up, v + spacing, v - spacing)
+    return out
+
+
+@wp.kernel
+def _perturb_positions(x: wp.array[wp.vec3f], seed: wp.int32, xp: wp.array[wp.vec3f]):
+    """xp = x moved by one float32 spacing per coordinate, with random signs (the floor probe's xi)."""
+    i = wp.tid()
+    state = wp.rand_init(seed, i)
+    xi = x[i]
+    out = xi
+    for d in range(3):
+        out[d] = _step_one_spacing(xi[d], wp.randf(state) < wp.float32(0.5))
+    xp[i] = out
+
+
+@wp.kernel
+def _subtract(a: wp.array[wp.vec3f], b: wp.array[wp.vec3f]):
+    """a -= b."""
+    i = wp.tid()
+    a[i] = a[i] - b[i]
+
+
+@wp.kernel
+def _floor_from_probe(p: wp.array[wp.vec3f], c: wp.float32, floor: wp.array[wp.float32]):
+    """The smoothed float32 floor in the gradient's units, c |S_k(p)|_i."""
+    i = wp.tid()
+    floor[i] = c * wp.length(p[i])
+
+
+def _vertex_adjacency(E: np.ndarray, n_nodes: int) -> tuple[np.ndarray, np.ndarray]:
+    """Vertex-vertex adjacency of tets ``E`` (Ne, 4), each vertex listing itself and its mesh neighbours, as
+    ``pbat.sim.algorithm.vbd.vertex_colors``'s GVVp/GVVadj (CSR, int32)."""
+    E = np.asarray(E, dtype=np.int64).reshape(-1, 4)
+    i = np.repeat(E, 4, axis=1).ravel()
+    j = np.tile(E, (1, 4)).ravel()
+    keys = np.unique(i * n_nodes + j)
+    rows, cols = keys // n_nodes, keys % n_nodes
+    GVVp = np.zeros(n_nodes + 1, dtype=np.int32)
+    GVVp[1:] = np.cumsum(np.bincount(rows, minlength=n_nodes))
+    return GVVp, cols.astype(np.int32)
+
+
 @wp.func
 def _is_feasible(penetration: wp.array[wp.float32], ftol: wp.float32, dmin: wp.float32) -> bool:
     return penetration[0] <= _feasibility_tolerance(ftol, dmin)
@@ -798,6 +968,7 @@ class ConvergenceCheck:
         params: ConvergenceParams | None = None,
         status_capacity: int = 1,
         acceleration: float | None = None,
+        vertex_adjacency: tuple[wp.array, wp.array] | None = None,
     ):
         """
         Args:
@@ -809,6 +980,9 @@ class ConvergenceCheck:
                 :meth:`read_status` calls (``SimulationState`` reads every step: its substeps).
             acceleration (float | None): The scene's external acceleration |a| (m/s^2) that scales
                 ``astol`` (:func:`external_acceleration`), computed from ``fem``'s loads if None.
+            vertex_adjacency (tuple[wp.array, wp.array] | None): ``fem``'s vertex-vertex adjacency (GVVp, GVVadj)
+                on the device, the residual smoothing's 1-rings (``smoothing_passes``), e.g. the VBD params'; built
+                from ``fem``'s elements when smoothing first runs if None.
         """
         self.params = params or ConvergenceParams()
         if acceleration is None:
@@ -862,6 +1036,63 @@ class ConvergenceCheck:
         self.blocks = wp.zeros(1, dtype=wp.int32)
         self.inner_keep = wp.zeros(1, dtype=wp.int32)
         self.subproblem_keep = wp.zeros(1, dtype=wp.int32)
+        # Residual smoothing (smoothing_passes > 0): the 1-rings, and buffers allocated when it's first used
+        # (prepare_smoothing): two ping-pong fields, the probe's positions and the smoothed floor
+        self._vertex_adjacency = vertex_adjacency
+        self._smooth = None
+        self._probe_x = None
+        self._smoothed_floor = None
+
+    @property
+    def smoothing_passes(self) -> int:
+        """The residual smoothing's passes k (``ConvergenceParams.smoothing_passes``; 0: off)."""
+        return max(0, int(self.params.smoothing_passes))
+
+    def prepare_smoothing(self) -> None:
+        """Allocate the residual smoothing's buffers if ``smoothing_passes > 0`` and they don't exist yet. Host-side:
+        call it before a graph capture (``SimulationState.step`` does), since captured work must not allocate; the
+        tests also call it when they first run."""
+        if self.smoothing_passes == 0 or self._smooth is not None:
+            return
+        n_nodes = self._fem.data.x.shape[0]
+        if self._vertex_adjacency is None:
+            GVVp, GVVadj = _vertex_adjacency(self._fem.data.E.numpy().reshape(-1, 4), n_nodes)
+            self._vertex_adjacency = (wp.array(GVVp, dtype=wp.int32), wp.array(GVVadj, dtype=wp.int32))
+        self._smooth = (wp.zeros(n_nodes, dtype=wp.vec3f), wp.zeros(n_nodes, dtype=wp.vec3f))
+        self._probe_x = wp.zeros(n_nodes, dtype=wp.vec3f)
+        self._smoothed_floor = wp.zeros(n_nodes, dtype=wp.float32)
+
+    def _smooth_field(self, src: wp.array, k: int) -> wp.array:
+        """k filter passes of ``src`` (gradient units, see :func:`_smoothing_pass`) through the ping-pong buffers,
+        leaving ``src`` as it is; returns the buffer holding the result."""
+        GVVp, GVVadj = self._vertex_adjacency
+        for t in range(k):
+            dst = self._smooth[t % 2]
+            wp.launch(_smoothing_pass, dim=dst.shape[0], inputs=[src, self._masses, GVVp, GVVadj, dst])
+            src = dst
+        return src
+
+    def _measure_smoothed_floor(self) -> None:
+        """The smoothed test's float32 floor c |S_k(p)|_i in the gradient's units (:class:`ConvergenceParams`), p =
+        g(x + xi) - g(x) of the elastic and inertial gradient at the current positions, xi a random step of one
+        float32 spacing per coordinate. Reads the free masses (:meth:`measure_scale`). Capturable."""
+        fem = self._fem
+        h2 = wp.float32(fem.h2)
+        g0, g1 = self._smooth
+        n_nodes, n_elems = fem.data.x.shape[0], fem.data.E.shape[0]
+        wp.launch(_perturb_positions, dim=n_nodes, inputs=[fem.data.x, PROBE_SEED, self._probe_x])
+        perturbed = FemElastoDynamicsData()
+        for name in FemElastoDynamicsData.vars:
+            setattr(perturbed, name, getattr(fem.data, name))
+        perturbed.x = self._probe_x
+        for data, g in ((fem.data, g0), (perturbed, g1)):
+            g.zero_()
+            wp.launch(_elastic_gradient, dim=n_elems, inputs=[data, h2, g])
+            wp.launch(_inertial_gradient, dim=n_nodes, inputs=[data, g])
+        wp.launch(_subtract, dim=n_nodes, inputs=[g1, g0])
+        # The passes write g0, g1, g0, ..., so the first reads p from g1 and none writes its own input
+        p = self._smooth_field(g1, self.smoothing_passes)
+        wp.launch(_floor_from_probe, dim=n_nodes, inputs=[p, float(SMOOTHED_FLOOR_SCALE), self._smoothed_floor])
 
     @property
     def relative(self) -> bool:
@@ -919,9 +1150,32 @@ class ConvergenceCheck:
         self._measure_residual(a)
 
     def _measure_residual(self, gradient: GradientNorm) -> None:
-        """The stationarity reductions of ``gradient``'s node ratios (``g`` and its force ``scale``)."""
+        """The stationarity reductions of ``gradient``'s node ratios (``g`` and its force ``scale``), of its smoothed
+        residual with ``smoothing_passes`` > 0 (``g`` itself is left as it is)."""
         stream = wp.get_stream()
         hnorm = self._hessian_norms
+        k = self.smoothing_passes
+        if k > 0:
+            self.prepare_smoothing()
+            wp.launch(
+                _stationarity_ratios_smoothed,
+                dim=self._terms.shape[1],
+                inputs=[
+                    self._smooth_field(gradient.g, k),
+                    gradient.scale,
+                    self._smoothed_floor,
+                    int(hnorm is not None),
+                    float(self.params.rstol),
+                    self.absolute_tolerance,
+                    float(self.params.floor_local_kappa),
+                    int(self.node_norm.value),
+                    self._fem.data,
+                    self._terms,
+                ],
+            )
+            for reduce in self._reduce_sums[self.node_norm]:
+                reduce(stream)
+            return
         wp.launch(
             _stationarity_ratios,
             dim=self._terms.shape[1],
@@ -943,11 +1197,15 @@ class ConvergenceCheck:
 
     def measure_scale(self) -> None:
         """Measure the time step's free mass sum m_i over free nodes, the weight of the node ratios' RMSs (the
-        allowances come from each test's forces and the absolute tolerance). No-op unless :attr:`relative`.
-        Capturable."""
+        allowances come from each test's forces and the absolute tolerance), and with ``smoothing_passes`` > 0 and
+        the float32 floor on (:meth:`set_hessian_norms`) the smoothed floor at the current positions. No-op unless
+        :attr:`relative`. Capturable."""
         if self.relative:
             wp.launch(_free_mass_terms, dim=self._masses.shape[0], inputs=[self._fem.data, self._masses])
             self._reduce_free_mass(wp.get_stream())
+            if self.smoothing_passes > 0 and self._hessian_norms is not None:
+                self.prepare_smoothing()
+                self._measure_smoothed_floor()
 
     def _tolerance_inputs(self, gtol: float) -> list:
         return [
@@ -1457,6 +1715,183 @@ class TestNodeNorm(unittest.TestCase):
         check._test()
         self.assertEqual(check.gradient_ratio(), rms_ratio)
         self.assertEqual(check._relative_passes(), rms_passes)
+
+
+def _smooth_reference(u: np.ndarray, m: np.ndarray, GVVp: np.ndarray, GVVadj: np.ndarray, k: int) -> np.ndarray:
+    """float64 reference of k :func:`_smoothing_pass` passes of ``u`` (gradient units), ``m`` the free masses."""
+    u = np.asarray(u, dtype=np.float64)
+    for _ in range(k):
+        out = np.zeros_like(u)
+        for i in np.flatnonzero(m > 0):
+            ring = [j for j in GVVadj[GVVp[i] : GVVp[i + 1]] if j != i and m[j] > 0]
+            out[i] = m[i] * (u[i] + u[ring].sum(axis=0)) / (m[i] + m[ring].sum())
+        u = out
+    return u
+
+
+class TestResidualSmoothing(unittest.TestCase):
+    """``smoothing_passes`` k: the stationarity test of the smoothed residual r_bar_k against the smoothed float32
+    floor (:class:`ConvergenceParams`). Two resting cubes, the lower one fixed."""
+
+    def _state(self, solver_name: str = "VBD"):
+        state = _two_resting_cubes(solver_name)
+        check = state.convergence
+        check.params.rstol, check.params.astol = 2e-2, 0.1
+        return state, check
+
+    def test_k0_adds_no_work(self):
+        # k = 0 (the default): the test launches exactly what it launched before smoothing existed and measures the
+        # same values, bit for bit, as the unsmoothed kernel launched directly; no smoothing buffer is allocated
+        state, check = self._state()
+        self.assertEqual(ConvergenceParams().smoothing_passes, 0)
+        smoothing = {_stationarity_ratios_smoothed, _smoothing_pass, _perturb_positions, _subtract, _floor_from_probe}
+        launched = []
+        launch = wp.launch
+
+        def recording_launch(kernel, *args, **kwargs):
+            launched.append(kernel)
+            return launch(kernel, *args, **kwargs)
+
+        wp.launch = recording_launch
+        try:
+            check.measure_scale()
+            check._test()
+            check._test_subproblem()
+            check._test()
+        finally:
+            wp.launch = launch
+        self.assertFalse(smoothing & set(launched))
+        self.assertEqual(launched.count(_stationarity_ratios), 3)
+        self.assertEqual(launched.count(_elastic_gradient), 3)  # the tests' gradients, no probe
+        self.assertIsNone(check._smooth)
+        terms, sums = check._terms.numpy().copy(), check.sums.numpy().copy()
+        # The unsmoothed kernel and reductions, launched directly on the same gradient
+        gradient, hnorm = check.gradient_norm, check._hessian_norms
+        wp.launch(_stationarity_ratios, dim=terms.shape[1], inputs=[
+            gradient.g, gradient.scale, hnorm, 1, float(check.params.rstol), check.absolute_tolerance,
+            float(check.params.floor_local_kappa), int(check.node_norm.value), state.fem.data, check._terms])
+        for reduce in check._reduce_sums[check.node_norm]:
+            reduce(wp.get_stream())
+        np.testing.assert_array_equal(check._terms.numpy(), terms)
+        np.testing.assert_array_equal(check.sums.numpy(), sums)
+        # A whole captured step: no smoothing buffer either
+        state.step()
+        self.assertIsNone(check._smooth)
+
+    def test_adjacency(self):
+        # The fallback 1-rings equal the VBD params' (pbat's vertex_colors), each vertex listing itself
+        state, check = self._state()
+        vbd = state.params[state.solver].data
+        GVVp, GVVadj = _vertex_adjacency(state.fem.data.E.numpy().reshape(-1, 4), state.fem.data.x.shape[0])
+        np.testing.assert_array_equal(GVVp, vbd.GVVp.numpy())
+        np.testing.assert_array_equal(GVVadj, vbd.GVVadj.numpy())
+
+    def test_filter(self):
+        # k passes of mass-weighted averaging over closed 1-rings of free nodes, in the gradient's units: as a float64
+        # reference; a uniform acceleration stays uniform; random-sign node noise averages away; fixed nodes get 0
+        state, check = self._state()
+        check.params.smoothing_passes = 3
+        check.measure_scale()
+        check.prepare_smoothing()
+        m = check._masses.numpy().astype(np.float64)
+        GVVp, GVVadj = (a.numpy() for a in check._vertex_adjacency)
+        free = m > 0
+        rng = np.random.default_rng(5)
+        u = (m[:, None] * rng.standard_normal((m.shape[0], 3))).astype(np.float32)
+        out = check._smooth_field(wp.array(u, dtype=wp.vec3f), 3).numpy()
+        np.testing.assert_allclose(out, _smooth_reference(u, m, GVVp, GVVadj, 3), rtol=1e-5, atol=1e-6 * np.abs(u).max())
+        self.assertTrue(np.all(out[~free] == 0.0))
+        a = np.array([0.3, -2.0, 9.81])
+        uniform = check._smooth_field(wp.array((m[:, None] * a).astype(np.float32), dtype=wp.vec3f), 3).numpy()
+        np.testing.assert_allclose(uniform[free] / m[free, None], np.tile(a, (int(free.sum()), 1)), rtol=1e-6)
+
+        def rms(v):
+            return np.sqrt(np.sum(np.sum((v[free] / m[free, None]) ** 2, axis=1) * m[free]) / m[free].sum())
+
+        self.assertLess(rms(out), 0.6 * rms(u))
+
+    def test_floor_probe(self):
+        # The probe moves every nonzero coordinate by exactly one float32 spacing (zeros stay), and the smoothed floor
+        # is positive on free nodes, 0 on fixed ones, and below the unsmoothed floor phi
+        state, check = self._state()
+        check.params.smoothing_passes = 4
+        check.measure_scale()
+        x, xp = state.fem.data.x.numpy(), check._probe_x.numpy()
+        nonzero = x != 0
+        np.testing.assert_array_equal(np.abs(xp - x)[nonzero], np.spacing(np.abs(x[nonzero])))
+        np.testing.assert_array_equal(xp[~nonzero], x[~nonzero])
+        floor = check._smoothed_floor.numpy()
+        m = check._masses.numpy()
+        phi = check._hessian_norms.numpy() * EPS32 * np.linalg.norm(x, axis=1)
+        self.assertTrue(np.all(floor[m > 0] > 0.0) and np.all(floor[m == 0] == 0.0))
+        self.assertTrue(np.all(floor[m > 0] < phi[m > 0]))
+        # Without the floor (GPU Newton), no probe
+        check._smoothed_floor.zero_()
+        check.set_hessian_norms(None)
+        check.measure_scale()
+        self.assertTrue(np.all(check._smoothed_floor.numpy() == 0.0))
+
+    def test_smoothed_test(self):
+        # k = 4: the test's ratios are those of the smoothed residual against the smoothed floor (a float64 reference
+        # from the device's gradient, force scale and floor), under both norms; the device's decision, the host's and
+        # status_ratio.stationarity_test_ratio agree; the test leaves the gradient as it was
+        from ...status_ratio import stationarity_test_ratio
+
+        state, check = self._state()
+        params = check.params
+        params.smoothing_passes = 4
+        kl, kg = float(params.floor_local_kappa), float(params.floor_kappa)
+        check.measure_scale()
+        for norm in NodeNorm:
+            with self.subTest(norm=norm.name):
+                params.node_norm = norm
+                check._test()
+                g = check.gradient_norm.g.numpy()
+                check._measure_residual(check.gradient_norm)
+                np.testing.assert_array_equal(check.gradient_norm.g.numpy(), g)  # g isn't smoothed in place
+                m = check._masses.numpy().astype(np.float64)
+                free = m > 0
+                GVVp, GVVadj = (a.numpy() for a in check._vertex_adjacency)
+                gbar = np.linalg.norm(_smooth_reference(g, m, GVVp, GVVadj, 4), axis=1)[free]
+                s, f, mf = check.gradient_norm.scale.numpy()[free], check._smoothed_floor.numpy()[free], m[free]
+                allowance = np.maximum(float(params.rstol) * s, check.absolute_tolerance * mf)
+                q, q0 = gbar / np.maximum(allowance, kl * f), gbar / allowance
+                if norm == NodeNorm.RMS:
+                    expected = [np.sqrt(np.sum(mf * q**2) / mf.sum()), np.sqrt(np.sum(mf * q0**2) / mf.sum()),
+                                np.sqrt(np.sum(gbar**2 / mf) / (kg**2 * np.sum(f**2 / mf)))]
+                else:
+                    expected = [q.max(), q0.max(), np.sqrt(np.max(gbar**2 / mf**2) / (kg**2 * np.max(f**2 / mf**2)))]
+                check.penetration.zero_()
+                check.k.zero_()
+                wp.launch(_end_outer_kernel, dim=1, inputs=check._outer_test_inputs(1.0, 1) + [
+                    check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep])
+                row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
+                np.testing.assert_allclose(
+                    [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], expected, rtol=1e-4)
+                np.testing.assert_allclose(row["max_ratio"], q.max(), rtol=1e-4)
+                passes = check._relative_passes()
+                self.assertEqual(int(row["reason"]) == int(SolveEnd.CONVERGED), passes)
+                self.assertEqual(stationarity_test_ratio(row) <= 1.0, passes)
+        params.node_norm = NodeNorm.RMS
+
+    def test_steps(self):
+        # Whole steps with k = 4: VBD-family solvers under graph capture, and GPU Newton (no floor, so its floor clause
+        # never decides), record finite ratios
+        for solver_name in ("VBD", "AAAVBD", "Newton"):
+            with self.subTest(solver=solver_name):
+                state, check = self._state(solver_name)
+                check.params.smoothing_passes = 4
+                state.capture = None
+                state.step()
+                state.step()
+                if solver_name == "Newton":
+                    ratios = state.params[state.solver].last_outer_ratios
+                    self.assertTrue(np.all(np.isfinite(ratios)))
+                else:
+                    self.assertIsNotNone(check._smooth)
+                    row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
+                    self.assertTrue(np.isfinite(float(row["gradient_ratio"])))
+                    self.assertGreater(float(row["floor_clause_ratio"]), 0.0)
 
 
 class TestOuterGradientBeforeRedetection(unittest.TestCase):
