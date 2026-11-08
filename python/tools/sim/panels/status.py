@@ -79,7 +79,7 @@ _STATIONARITY_TIP = (
     "||r|| <= floor_kappa * ||phi||), so this is max(||q||, min(||q0||, ||r|| / (floor_kappa * ||phi||))),\n"
     "from the rows below (Node norm, Without floor, Residual / floor). ||q|| alone can be below 1\n"
     "on a solve that failed the second condition. Absolute test (both 0, or static): |g| / gtol.\n"
-    "Solves recorded without the other ratios, and GPU Newton's (no floor): ||q|| (Newton: ||q0||).\n" + _NORM_TIP
+    "Solves recorded without the other ratios: ||q||. GPU Newton records this ratio itself.\n" + _NORM_TIP
 )
 _RESIDUAL_TIP = (
     "||q||, the stationarity test's first condition (at most 1 meets it; the test's ratio is the row above).\n"
@@ -101,7 +101,7 @@ _NO_FLOOR_TIP = (
 )
 _FLOOR_CLAUSE_TIP = (
     "||r|| / (floor_kappa * ||phi||): the floor clause, needed when Without floor / tol is above 1,\n"
-    "passes at most 1 (the residual near the float32 floor overall). inf: no floor (GPU Newton, floor_kappa 0).\n"
+    "passes at most 1 (the residual near the float32 floor overall). inf: no floor (floor_kappa 0).\n"
     "0: absolute test.\n" + _NORM_TIP
 )
 _PENETRATION_TIP = (
@@ -301,7 +301,7 @@ def _draw_subproblem_browser(subproblems, key: int):
 def _draw_substeps_summary(vbd, solves, n: int):
     """The time step's substeps at a glance: how many passed their tests and the worst final ratios."""
     passed = int(np.sum(vbd["reason"] == int(SolveEnd.CONVERGED))) + int(np.sum(solves["converged"]))
-    # The stationarity test's ratio (GPU Newton's gradient ratio is its own, without a floor)
+    # The stationarity test's ratio (GPU Newton records the decisive ratio as its gradient ratio)
     gradient = max(np.max(stationarity_test_ratio(vbd), initial=0.0), np.max(solves["gradient_ratio"], initial=0.0))
     feasibility = max(
         np.max(vbd["feasibility_ratio"], initial=0.0), np.max(solves["feasibility_ratio"], initial=0.0)

@@ -25,9 +25,10 @@ def stationarity_test_ratio(row):
     """The stationarity test's decisive ratio of one status row: ``max(gradient_ratio, min(no_floor_ratio,
     floor_clause_ratio))``, at most 1 exactly when the test passed (feasibility isn't included).
 
-    Rows without the two other ratios (recorded before they existed, 2026-11-06; GPU Newton's rows, whose test
-    has no float32 floor, so its ``gradient_ratio`` is RMS_M(q0) and already decides) give ``gradient_ratio``. The
-    absolute test records them as 0, which also gives ``gradient_ratio``.
+    Rows without the two other ratios (recorded before they existed, 2026-11-06; GPU Newton's rows, whose
+    ``gradient_ratio`` is the decisive ratio itself, ``ConvergenceCheck.decisive_ratio``, RMS_M(q0) before Newton had
+    the float32 floor, 2026-11-07) give ``gradient_ratio``. The absolute test records them as 0, which also gives
+    ``gradient_ratio``.
 
     Args:
         row: A mapping (a profiling result's status entry, None for unknown values) or a numpy structured
