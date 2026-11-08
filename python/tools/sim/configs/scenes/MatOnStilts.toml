@@ -1,7 +1,7 @@
 # Scene config: MatOnStilts, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/mat_on_stilts_3.h5 (Young's modulus 1e6 to 1e8).
 # Source: configs/paper/MatOnStilts.5Substeps.toml. Keys not listed below have the source's values.
-# Generated 2026-11-07 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-08 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - The maintainer's budget for stiff heterogeneous scenes: no substeps, 5 x 80 = 400 sweeps per step for every
@@ -82,6 +82,7 @@
 #   Solver.Convergence.floor_kappa
 #   Solver.Convergence.floor_local_kappa
 #   Solver.Convergence.node_norm
+#   Solver.Convergence.smoothing_in_test
 #   Solver.Convergence.smoothing_passes
 #   Solver.Newton.early_exit
 #   Solver.Newton.one_sided_contact
@@ -195,6 +196,7 @@ floor_local_kappa = 1.5
 ftol = 0.5
 node_norm = 0
 rstol = 0.02
+smoothing_in_test = 1
 smoothing_passes = 0
 
 [Solver.Newton]

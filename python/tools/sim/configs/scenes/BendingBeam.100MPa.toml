@@ -54,6 +54,7 @@
 #   Solver.Convergence.floor_kappa
 #   Solver.Convergence.floor_local_kappa
 #   Solver.Convergence.node_norm
+#   Solver.Convergence.smoothing_in_test
 #   Solver.Convergence.smoothing_passes
 #   Solver.Newton.early_exit
 #   Solver.Newton.one_sided_contact
@@ -170,6 +171,7 @@ floor_local_kappa = 1.5
 ftol = 0.5
 node_norm = 0
 rstol = 0.02
+smoothing_in_test = 1
 smoothing_passes = 4
 
 [Solver.Newton]

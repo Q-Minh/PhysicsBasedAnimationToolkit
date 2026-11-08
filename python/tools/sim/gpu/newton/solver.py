@@ -964,8 +964,9 @@ class Params:
         # NewtonSolver.solve until a consumer (SimulationState.step) drains them
         self.last_subproblem: NewtonSubproblemRecord | None = None
         self.solve_records: list[NewtonSolveRecord] = []
-        # (gradient, feasibility) ratios to their tolerances of the last check_convergence
-        self.last_outer_ratios: tuple[float, float] = (float("nan"), float("nan"))
+        # (gradient, feasibility, unsmoothed, smoothed) ratios to their tolerances of the last outer test (see
+        # NewtonSolveRecord)
+        self.last_outer_ratios: tuple[float, float, float, float] = (float("nan"),) * 4
 
     def construct(self, fem: FemElastoDynamics, contact: ContactDynamics):
         vv_capacity, ve_capacity, vf_capacity, ee_capacity = (
@@ -1248,8 +1249,10 @@ def check_convergence(
     augmented-Lagrangian gradient, as in C++.
 
     Sets ``params.last_outer_ratios`` to the test's (gradient, feasibility) measures over their
-    tolerances, as the VBD family's status ratios (at most 1 passes). The absolute test doesn't include
-    feasibility, but its ratio is still measured when the shared check exists (NaN otherwise).
+    tolerances, as the VBD family's status ratios (at most 1 passes), and with ``Solver.Convergence.smoothing_passes``
+    > 0 the unsmoothed and the smoothed test's own decisive ratios (NaN otherwise; see :class:`NewtonSolveRecord`).
+    The absolute test doesn't include feasibility, but its ratio is still measured when the shared check exists (NaN
+    otherwise).
     """
     gradient = outer_gradient_test(fem, contact, params)
     return outer_feasibility_test(params, gradient)
@@ -1270,20 +1273,21 @@ def outer_gradient_test(
     AL method solves each subproblem for a fixed constraint set; C++ tests after re-detection).
 
     Returns:
-        tuple[bool, float]: Whether it passes, and its measure over its tolerance.
+        tuple[bool, float, float, float]: Whether it passes, its measure over its tolerance, and with residual
+        smoothing the unsmoothed and the smoothed test's own decisive ratios (NaN otherwise).
     """
     check = _relative_check(params)
     if check is not None:
         passed = check.test_gradient()
         # The decisive ratio, at most 1 iff the test passed (with the float32 floor, ||q|| alone isn't)
-        return passed, check.decisive_ratio()
+        return passed, check.decisive_ratio(), *check.split_ratios()
     params._gradient_norm.compute(wp.get_stream())
     gnorm2, gtol2 = float(params._gnorm2.numpy()[0]), float(params.data.gtol2)
-    return gnorm2 <= gtol2, float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2)))
+    return gnorm2 <= gtol2, float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2))), float("nan"), float("nan")
 
 
 @profiling.scoped("newton.convergence")
-def outer_feasibility_test(params: Params, gradient: tuple[bool, float]) -> bool:
+def outer_feasibility_test(params: Params, gradient: tuple[bool, float, float, float]) -> bool:
     """Complete the outer test whose gradient part ``gradient`` (:func:`outer_gradient_test`) was measured:
     feasibility of the current positions on the current (after a subproblem: re-detected) contacts. Sets
     ``params.last_outer_ratios``.
@@ -1292,14 +1296,14 @@ def outer_feasibility_test(params: Params, gradient: tuple[bool, float]) -> bool
         bool: Whether the outer test passes: both parts with the relative test, the gradient alone with
         the absolute one.
     """
-    gradient_passes, gradient_ratio = gradient
+    gradient_passes, gradient_ratio, unsmoothed, smoothed = gradient
     check = _relative_check(params)
     if check is not None:
         feasible = check.test_feasibility()
-        params.last_outer_ratios = (gradient_ratio, check.feasibility_ratio())
+        params.last_outer_ratios = (gradient_ratio, check.feasibility_ratio(), unsmoothed, smoothed)
         return gradient_passes and feasible
     feasibility = params.convergence.feasibility_ratio(measure=True) if params.convergence is not None else float("nan")
-    params.last_outer_ratios = (gradient_ratio, feasibility)
+    params.last_outer_ratios = (gradient_ratio, feasibility, unsmoothed, smoothed)
     return gradient_passes
 
 
@@ -1353,15 +1357,18 @@ class NewtonSubproblemRecord(NamedTuple):
 
 class NewtonSolveRecord(NamedTuple):
     """One Newton solve (time step or substep): outer iterations, their subproblems, and the
-    (gradient, feasibility) ratios to their tolerances of every outer test, in order: the test before the
+    (gradient, feasibility, unsmoothed, smoothed) ratios of every outer test, in order: the test before the
     first subproblem (``check_convergence``), then the one after each subproblem (its gradient on the contact
     set the subproblem solved, its feasibility after re-detection), so ``len(outer_tests) ==
-    len(subproblems) + 1``. The last entry is the solve's result."""
+    len(subproblems) + 1``. The last entry is the solve's result. The gradient and feasibility ratios are to their
+    tolerances (the gradient's is the deciding test's decisive ratio); with ``Solver.Convergence.smoothing_passes`` > 0
+    the unsmoothed and the smoothed test's own decisive ratios follow (``ConvergenceCheck.split_ratios``; NaN
+    otherwise)."""
 
     outer: int  # outer (augmented-Lagrangian) iterations run
     converged: bool  # the outer test passed within the budget
     subproblems: tuple[NewtonSubproblemRecord, ...]
-    outer_tests: tuple[tuple[float, float], ...] = ()
+    outer_tests: tuple[tuple[float, ...], ...] = ()
 
 
 def _assemble_hessian(
@@ -1873,6 +1880,9 @@ class TestOuterTestOrder(unittest.TestCase):
             def decisive_ratio(self):
                 return self.ratio
 
+            def split_ratios(self):
+                return float("nan"), float("nan")
+
             def test_feasibility(self):
                 calls.append("feasibility")
                 return True
@@ -1936,6 +1946,9 @@ class TestFreezeWithinSolve(unittest.TestCase):
 
             def decisive_ratio(self):
                 return 0.0
+
+            def split_ratios(self):
+                return float("nan"), float("nan")
 
             def test_feasibility(self):
                 tests[0] += 1
