@@ -251,11 +251,27 @@ STATIONARITY = Rule(
     "(about 1 m/s^2): 2-4x closer to an early-exit-off reference than 0.5 at h = 10 ms for 35-48% more sweeps, and "
     "no effect at h = 1 ms (gpu/vbd/convergence.py, ConvergenceParams). The norm over nodes is the mass-weighted "
     "RMS (node_norm 0, the code default); the max (1) is stricter, as single nodes at their float32 floor can hold "
-    "a step (Trampoline.SoftSoft passed 0 of 421 steps under a max test). No residual smoothing (smoothing_passes "
-    "0, the code default, no extra work); k > 0 passes rank the solvers on stiff bodies at their float32 floor "
-    "(Celebration) at a cost per test.",
+    "a step (Trampoline.SoftSoft passed 0 of 421 steps under a max test). Residual smoothing in the test, "
+    "smoothing_passes = 4 with smoothing_in_test = 1, the code default for every scene since 2026-11-08 "
+    "(maintainer): the test must also pass with the residual and its float32 floor smoothed by 4 passes of 1-ring "
+    "averaging. It rejects unconverged states that the unsmoothed test passes through its floor clause (RMS_M(q0) > 1 "
+    "but RMS_M(r) <= kg RMS_M(phi)), and it can only remove passes. Screen (2026-11-08, one step per solver from a "
+    "shared AAAVBD checkpoint at the scene budget, early exit off; decisive ratio at k = 0 / k = 4 and mass-weighted "
+    "RMS distance to the reference; data/profiling/investigations/smoothing-screen): BendingBeam.100MPa Chebyshev "
+    "0.82 / 6.72, 0.43 mm from Newton; BendingBeam.Heterogeneous VBD, Chebyshev and Anderson 0.46-0.83 / 1.96-3.55, "
+    "0.11-0.19 mm vs AAAVBD's 0.058 mm; BirthdayBanner VBD and Anderson 0.86 / 10.9 and 1.00 / 11.6, 3.5 mm from "
+    "AAAVBD at 100x the budget, which fails k = 4 too (1.51), so the banner runs its full budget (accepted); "
+    "BasketOfFruit AAAVBD at 10x the budget 0.92 / 15.1, 1.8 mm from 100x. Celebration (2026-11-07, 5 x 80; "
+    "data/profiling/investigations/residual-smoothing): Chebyshev and Anderson pass unsmoothed (0.84 / 0.78) while "
+    "their letters sag, 17 / 41 mm from Newton vs AAAVBD's 3.3 mm, and fail smoothed (12.5 / 10.7); "
+    "BendingBeam.100MPa VBD (2026-11-07) passed steps 0-2 with a gravity-sized smooth error at k = 0, none at k = 4 "
+    "(data/profiling/investigations/floor-clause-false-positive). Where the "
+    "unsmoothed ratio only misranks the solvers (BendingBeam.10MPa, the trampolines, MatOnStilts, BasketOfFruit: "
+    "AAAVBD the closest with the largest unsmoothed ratio), the smoothed ratio ranks them; every status row records "
+    "both (unsmoothed_ratio, smoothed_ratio). Cost about +1.3% per step at a 20-sweep check interval (Celebration, "
+    "0.22 sweep per test).",
     {"Solver.Convergence.rstol": 2e-2, "Solver.Convergence.astol": 0.1, "Solver.Convergence.node_norm": 0,
-     "Solver.Convergence.smoothing_passes": 0},
+     "Solver.Convergence.smoothing_passes": 4, "Solver.Convergence.smoothing_in_test": 1},
 )
 PENALTY_FLOOR = Rule(
     "Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the effective "
@@ -264,55 +280,13 @@ PENALTY_FLOOR = Rule(
     "penalty at 1e-4 at 10 ms.",
     {"Contact.ContactDynamics.min_sigma_n": 1e4},
 )
-RESIDUAL_SMOOTHING = Rule(
-    "Residual smoothing, smoothing_passes = 4 (maintainer, 2026-11-07 and 2026-11-08), where the unsmoothed test "
-    "passes visibly worse states, mostly through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and "
-    "k = 4 rejects them. Celebration (2026-11-07): unsmoothed, Chebyshev and Anderson pass at 400 sweeps while their "
-    "letters visibly sag (decisive ratios 0.84/0.78; 17/41 mm from Newton vs AAAVBD's 3.3 mm); smoothed, their ratios "
-    "are 12.5/10.7 (VBD 34.9, AAAVBD 1.56), so they fail (data/profiling/investigations/residual-smoothing). "
-    "BendingBeam.100MPa (2026-11-07): VBD passed steps 0-2 with a gravity-sized smooth error under the floor at "
-    "k = 0, none at k = 4 (data/profiling/investigations/floor-clause-false-positive). Screen (2026-11-08, one step "
-    "per solver from a shared AAAVBD checkpoint at the scene budget, early exit off; decisive ratio at k = 0 / k = 4 "
-    "and mass-weighted RMS distance to the reference; data/profiling/investigations/smoothing-screen): "
-    "BendingBeam.100MPa step 3 (reference Newton): Chebyshev passes at k = 0 (0.82 / 6.72, 0.43 mm), VBD and "
-    "Anderson fail narrowly (1.05 / 11.7, 0.81 mm; 1.68 / 19.6, 1.12 mm); BendingBeam.Heterogeneous step 10 "
-    "(Newton): VBD, Chebyshev and Anderson pass at k = 0 (0.49 / 2.39, 0.46 / 1.96, 0.83 / 3.55; 0.11-0.19 mm vs "
-    "AAAVBD's 0.058 mm, 1.51 / 1.51); BirthdayBanner step 30 (AAAVBD at 100x the budget): VBD and Anderson pass at "
-    "k = 0 (0.86 / 10.9, 1.00 / 11.6) 3.5 mm off, every solver fails k = 4 (10.7-13.0) and so does the 100x "
-    "reference (1.51), so the banner practically always runs its full budget (accepted by the maintainer: a stiff, "
-    "hard scene). Scenes where the plain ratio only misranks the solvers (BendingBeam.10MPa, the trampolines, "
-    "MatOnStilts: AAAVBD 2-7x closer to the reference with the largest k = 0 ratio, no wrong decision) keep k = 0, "
-    "since the combined test can only remove false passes. Cost about +1.1-1.3% per step at a 20-sweep check "
-    "interval (Celebration).",
-    {"Solver.Convergence.smoothing_passes": 4},
-)
-RESIDUAL_SMOOTHING_RECORD = Rule(
-    "Smoothed ratio recorded only, smoothing_passes = 4 with smoothing_in_test = 0 (maintainer, 2026-11-08), where "
-    "the plain (unsmoothed) ratio misranks the solvers but decides correctly: the smoothed test runs at each outer "
-    "test and is recorded beside the plain one (the status's smoothed_ratio and unsmoothed_ratio), while the plain "
-    "test alone decides, so pass/fail, iterations and positions are those of k = 0. Why: residual-over-time results "
-    "for the paper that rank the solvers by quality, beside the misleading plain ratio. Screen (2026-11-08, one step "
-    "per solver from a shared AAAVBD checkpoint at the scene budget, early exit off, reference GPU Newton; "
-    "data/profiling/investigations/smoothing-screen): on BendingBeam.10MPa, Trampoline.SoftStiff, "
-    "Trampoline.StiffSoft, Trampoline.StiffSphere and MatOnStilts AAAVBD is 2-7x closer to the reference (mass-"
-    "weighted RMS distance) but has the largest plain ratio (rough residual), with no wrong decision, so the combined "
-    "test (RESIDUAL_SMOOTHING) can't fix the ranking (it only removes false passes); the smoothed ratio alone ranks "
-    "the solvers correctly (MatOnStilts step 20: AAAVBD 6.1 vs 35-45 for VBD, Chebyshev and Anderson, 0.56 mm vs "
-    "1.9-2.0 mm from Newton). BasketOfFruit step 100 (heavy-scene screen, reference AAAVBD at 100x the budget): "
-    "AAAVBD is the closest (3.2 mm vs 3.8-4.0 mm RMS) but has the largest plain ratio (3.54 vs 2.31-3.30); all fail "
-    "both tests at the budget; at 10x the budget the plain test passes a state 1.8 mm from the 100x one (0.92, "
-    "floor clause) that k = 4 rejects (15.1), so k = 4 in the test would only matter beyond the budget. Cost about +1% per step: with every test smoothed it is +1.3% per Celebration step at "
-    "k = 4 (21 tests, 0.22 sweep per test), and recording smooths the outer tests only (not those inside "
-    "subproblems). Scenes found misranked later are added to this rule.",
-    {"Solver.Convergence.smoothing_passes": 4, "Solver.Convergence.smoothing_in_test": 0},
-)
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
         [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
-         RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
+         CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
         "Celebration",
@@ -332,11 +306,10 @@ SCENES = {
             CONTACT_CAPACITIES,
             Rule(
                 "Early exit for every solver, the VBD family and Newton (maintainer, 2026-11-07; Newton follows the "
-                "shared early_exit), replacing the fixed budgets of 2026-11-01 (with residual smoothing, "
-                "RESIDUAL_SMOOTHING).",
+                "shared early_exit), replacing the fixed budgets of 2026-11-01 (with residual smoothing in the "
+                "test, STATIONARITY).",
                 {"Solver.Convergence.early_exit": 1},
             ),
-            RESIDUAL_SMOOTHING,
             Rule(
                 "Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 "
                 "at most 6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed "
@@ -363,7 +336,7 @@ SCENES = {
             ),
             *SOLVERS,
             *HET_CONTACT,
-            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD,
+            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
             CONTACT_CAPACITIES,
         ],
         ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
@@ -373,13 +346,13 @@ SCENES = {
         "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE,
-         PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
+         PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
     ),
     "Trampoline.StiffSoft": Scene(
         "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
-         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
+         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
     ),
     "Trampoline.SoftSoft": Scene(
         "Trampoline.SoftStiff.5Substeps",
@@ -400,8 +373,7 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD,
-         CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -474,7 +446,7 @@ SCENES = {
     "BirthdayBanner": Scene(
         "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
-        [*SOLVERS, DMIN, STATIONARITY, RESIDUAL_SMOOTHING],
+        [*SOLVERS, DMIN, STATIONARITY],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
          "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while VertexSdf "
          "detection is off.",
@@ -486,9 +458,7 @@ SCENES = {
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
-            [*SOLVERS, DMIN, STATIONARITY]
-            + ([RESIDUAL_SMOOTHING] if name in ("100MPa", "Heterogeneous") else [])
-            + ([RESIDUAL_SMOOTHING_RECORD] if name == "10MPa" else []),
+            [*SOLVERS, DMIN, STATIONARITY],
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while "
              "VertexSdf detection is off.",
