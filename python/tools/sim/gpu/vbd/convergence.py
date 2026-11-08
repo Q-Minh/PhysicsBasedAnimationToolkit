@@ -93,7 +93,7 @@ class ConvergenceParams(SerializableMixin):
     contact force (normal and friction as one term) and the external load. h is the solve's time step (dt /
     substeps), f_ext,i node i's external force (``fem.data.fext``, read on the device by the ratio kernels, so a
     changed load applies at once), H_i node i's Hessian block in the gradient's units (inertia included, from the
-    last sweep) and eps32 = 2^-23.
+    last sweep; GPU Newton's from its last Newton step) and eps32 = 2^-23.
 
     The absolute allowance alpha_i is node i's own external acceleration times astol (:func:`absolute_allowance`;
     maintainer, 2026-11-07): under a uniform gravity g it is astol |g| on every free node, as the former scene-wide
@@ -116,8 +116,11 @@ class ConvergenceParams(SerializableMixin):
     doesn't depend on h; with rstol < 1 and astol < 1 a step that hasn't moved (r_i = f_ext,i / m_i, s_i = |f_ext,i|
     for a loaded free node at rest) can't pass. The status records RMS_M(q) (``gradient_ratio``), max_i q_i,
     RMS_M(q0) and RMS_M(r) / (kg RMS_M(phi)) (:class:`SolveStatus`). In the gradient's units the node ratio is |g_i| / max(rstol h^2 s_i,
-    alpha_i h^2 m_i, kl |H_i|_F eps32 |x_i|). GPU Newton has no floor (TODO in gpu/newton/solver.py), so it tests
-    RMS_M(q0) <= 1. Static problems use the absolute ``gtol``.
+    alpha_i h^2 m_i, kl |H_i|_F eps32 |x_i|). GPU Newton runs the same test, its H_i the diagonal 3x3 block of its
+    last Newton step's assembled Hessian (``gpu.newton.solver._store_hessian_norms``), without the floor before a
+    solve's first Newton step (its initial guess x^t hasn't moved, and on a stiff body the floor clause passes it:
+    ``gpu.newton.solver.initialize_solve``), and records its decisive ratio (:meth:`ConvergenceCheck.decisive_ratio`).
+    Static problems use the absolute ``gtol``.
 
     The RMS decides, not the largest ratio: max_i q_i <= 1 is held by single nodes at their float32 floor (light
     surface nodes, a node next to a clamped rim, an interior beam node). Measured (2026-11-06, AAAVBD, against the
@@ -149,8 +152,8 @@ class ConvergenceParams(SerializableMixin):
     S_k the same k passes, xi a random step of one float32 spacing (+-) per coordinate, g the elastic and inertial
     gradient in float32 (contact left out: its Lagrangian force doesn't depend on x), c = :data:`SMOOTHED_FLOOR_SCALE`
     = 1.4. p is measured once per solve (time step or substep), at its initial positions (:meth:`ConvergenceCheck.
-    measure_scale`), and only where the floor applies (the VBD family). rho_i, alpha_i, kl, kg and the test's form are
-    unchanged. A solve passes only if the unsmoothed test and the smoothed one both pass, and the status records the
+    measure_scale`), and only where the floor applies (the VBD family and GPU Newton). rho_i, alpha_i, kl, kg and the
+    test's form are unchanged. A solve passes only if the unsmoothed test and the smoothed one both pass, and the status records the
     ratios of the one whose decisive ratio is larger (``_keep_stricter_sums``), so ``status_ratio.
     stationarity_test_ratio`` stays exact. The smoothed test alone isn't safe: the filter also averages away real
     high-frequency residual, and on Trampoline.SoftSoft (AAAVBD 5 x 20, 0-1 s, k = 16) it passed every step after
@@ -173,8 +176,8 @@ class ConvergenceParams(SerializableMixin):
     bit-identical to k = 0 (the unsmoothed test is the stricter at every pass). Data:
     data/profiling/investigations/residual-smoothing. Each test costs k filter passes (82 us each on Celebration's
     196k nodes) and one more ratio kernel and reductions, 0.22 sweep at k = 4 and 0.77 at k = 16, and each solve two
-    elastic gradients and k passes: +1.3% and +4.1% per Celebration step (21 tests). GPU Newton smooths r too,
-    without a floor (as without smoothing).
+    elastic gradients and k passes: +1.3% and +4.1% per Celebration step (21 tests). GPU Newton runs the smoothed
+    test the same way, against the same probe floor from a solve's first Newton step on (no floor before it).
 
     astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
     (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
@@ -265,8 +268,7 @@ class ConvergenceParams(SerializableMixin):
         "tet mesh, in place of r_i, and a float32 floor under the same filter (1.4 |S_k(g(x + xi) - g(x))| / (m h^2), "
         "xi a random +-1 float32 spacing, measured once per solve) in place of phi_i; the status shows the stricter "
         "test. Float32 noise averages away, the solvers' smooth errors don't, so it fails solvers whose stiff bodies "
-        "hide a smooth error under the per-node floor. Each test costs k filter passes (VBD family and GPU Newton; "
-        "Newton has no floor)",
+        "hide a smooth error under the per-node floor. Each test costs k filter passes (VBD family and GPU Newton)",
     )
     early_exit = DocField(
         True,
@@ -1186,9 +1188,9 @@ class ConvergenceCheck:
         return self._unit_weight if self.node_norm == NodeNorm.MAX else self.free_mass
 
     def set_hessian_norms(self, hnorm: wp.array | None) -> None:
-        """Use the solver's (N,) vertex Hessian norms |H_i|_F (``Params.data.Hnk``, written by every sweep) for the
-        float32 floor; None: no floor. Host-side: recorded kernels read the array, so it must stay the same while a
-        captured graph replays."""
+        """Use the solver's (N,) vertex Hessian norms |H_i|_F (``Params.data.Hnk``, written by every sweep; GPU
+        Newton's from each Newton step's assembled Hessian) for the float32 floor; None: no floor. Host-side: recorded
+        kernels read the array, so it must stay the same while a captured graph replays."""
         self._hessian_norms = hnorm
 
     def _test(self) -> None:
@@ -1503,6 +1505,22 @@ class ConvergenceCheck:
         """Host-side largest node ratio of the last test, max_i q_i, as the status ring's ``max_ratio``.
         Synchronizes."""
         return float(self.sums.numpy()[SUM_RATIO_MAX])
+
+    def decisive_ratio(self) -> float:
+        """Host-side decisive ratio of the last stationarity test, max(||q||, min(||q0||, ||r|| / (kg ||phi||))): at
+        most 1 iff it passed (as :func:`_decisive_ratio`, and ``status_ratio.stationarity_test_ratio`` of a status
+        row). Without the float32 floor it is ||q0|| = ||q||. GPU Newton records it as its gradient ratio.
+        Synchronizes."""
+        sums, weight = self.sums.numpy().astype(np.float64), float(self.norm_weight.numpy()[0])
+        if weight <= 0.0:
+            return 0.0
+        q, q0 = np.sqrt(sums[SUM_RATIO] / weight), np.sqrt(sums[SUM_RATIO_NO_FLOOR] / weight)
+        floor = float(self.params.floor_kappa) ** 2 * sums[SUM_FLOOR]
+        if floor > 0.0:
+            floor_clause = np.sqrt(sums[SUM_RESIDUAL] / floor)
+        else:
+            floor_clause = np.inf if sums[SUM_RESIDUAL] > 0.0 else 0.0
+        return float(max(q, min(q0, floor_clause)))
 
     def feasibility_ratio(self, measure: bool = False) -> float:
         """Host-side largest penetration into the contact margin over its tolerance
@@ -1915,7 +1933,7 @@ class TestResidualSmoothing(unittest.TestCase):
         phi = check._hessian_norms.numpy() * EPS32 * np.linalg.norm(x, axis=1)
         self.assertTrue(np.all(floor[m > 0] > 0.0) and np.all(floor[m == 0] == 0.0))
         self.assertTrue(np.all(floor[m > 0] < phi[m > 0]))
-        # Without the floor (GPU Newton), no probe
+        # Without the floor (no Hessian norms), no probe
         check._smoothed_floor.zero_()
         check.set_hessian_norms(None)
         check.measure_scale()
@@ -2004,8 +2022,8 @@ class TestResidualSmoothing(unittest.TestCase):
             np.testing.assert_array_equal(out.numpy(), kept)
 
     def test_steps(self):
-        # Whole steps with k = 4: VBD-family solvers under graph capture, and GPU Newton (no floor, so its floor clause
-        # never decides), record finite ratios
+        # Whole steps with k = 4: VBD-family solvers under graph capture, and GPU Newton (its floor from its Hessian's
+        # diagonal blocks), measure the smoothed floor and record finite ratios
         for solver_name in ("VBD", "AAAVBD", "Newton"):
             with self.subTest(solver=solver_name):
                 state, check = self._state(solver_name)
@@ -2013,11 +2031,12 @@ class TestResidualSmoothing(unittest.TestCase):
                 state.capture = None
                 state.step()
                 state.step()
+                self.assertIsNotNone(check._smooth)
                 if solver_name == "Newton":
                     ratios = state.params[state.solver].last_outer_ratios
                     self.assertTrue(np.all(np.isfinite(ratios)))
+                    self.assertTrue(np.any(check._smoothed_floor.numpy() > 0.0))
                 else:
-                    self.assertIsNotNone(check._smooth)
                     row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
                     self.assertTrue(np.isfinite(float(row["gradient_ratio"])))
                     self.assertGreater(float(row["floor_clause_ratio"]), 0.0)

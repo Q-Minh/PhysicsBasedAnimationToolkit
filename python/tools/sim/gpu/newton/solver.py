@@ -796,6 +796,14 @@ def _axpy(y: wp.array[wp.vec3f], x: wp.array[wp.vec3f], alpha: wp.float32):
 
 
 @wp.kernel
+def _block_frobenius_norms(blocks: wp.array[wp.mat33f], norms: wp.array[wp.float32]):
+    """|H_ii|_F of each diagonal 3x3 block, as the VBD sweeps store their vertex Hessians' (``Params.data.Hnk``)."""
+    i = wp.tid()
+    Hi = blocks[i]
+    norms[i] = wp.sqrt(wp.ddot(Hi, Hi))
+
+
+@wp.kernel
 def _initialize_hessian_triplets(
     fem: FemElastoDynamicsData,  # pyright: ignore[reportGeneralTypeIssues]
     params: ParamsData,  # pyright: ignore[reportGeneralTypeIssues]
@@ -981,6 +989,10 @@ class Params:
             prune_numerical_zeros=False,
         )
         self._ndx = wp.zeros(n_nodes, dtype=wp.vec3f)
+        # The stationarity test's float32 floor (_store_hessian_norms): the last Newton step's Hessian diagonal blocks
+        # and their norms |H_ii|_F (read from the solve's first Newton step on, see initialize_solve)
+        self._hessian_diagonal = wp.zeros(n_nodes, dtype=wp.mat33f)
+        self._hessian_norms = wp.zeros(n_nodes, dtype=wp.float32)
         # Energy partial-contributions buffer: one slot per inertial node, elastic element,
         # and each contact pair type.
         f_obj_partial_counts = [
@@ -1105,14 +1117,22 @@ def initialize_solve(
         adapt_penalty_parameters(fem, contact, params)
     check = _relative_check(params)
     if check is not None:
-        # TODO: The float32 floor of the stationarity test (ConvergenceParams.floor_local_kappa) for GPU Newton: its
-        # vertex Hessian norms |H_ii|_F would come from the assembled Hessian's diagonal 3x3 blocks (the previous
-        # iterate's, as the VBD sweeps' are). Not done (2026-11-06): no Newton scene was measured at its floor.
-        # With Solver.Convergence.smoothing_passes > 0 the floor is the probe's (ConvergenceCheck._measure_smoothed_floor),
-        # which needs no Hessian, so Newton could have it by enabling it without Hessian norms; not done (2026-11-07),
-        # Newton smooths its residual without a floor, the stricter test.
-        check.set_hessian_norms(None)
+        # The float32 floor of the stationarity test (ConvergenceParams.floor_local_kappa, floor_kappa), as the VBD
+        # family's, from the solve's first Newton step on (solve_subproblem): the vertex Hessian norms |H_ii|_F of the
+        # last Newton step's assembled Hessian (_store_hessian_norms), i.e. the previous iterate's, as the VBD family's
+        # Hnk is its last sweep's (not the contact-free Hessian adapt_penalty_parameters assembles). The solve's tests
+        # before its first Newton step (the initial outer test, the first subproblem's first test) have no floor,
+        # where the VBD family's read the previous solve's last sweep: they test Newton's initial guess x^t
+        # (Solver.Newton.init_strategy Position), which hasn't moved, and on a stiff body the floor clause passes
+        # it. Measured on BendingBeam.100MPa (2026-11-07): RMS_M(phi) = 91 m/s^2, so the floor clause accepts RMS_M(r)
+        # up to 18 m/s^2, and x^t's residual (gravity, v^t/h up to 7 m/s^2, the elastic force's float32 noise) is
+        # 16-19 m/s^2; with the previous solve's norms, step 2 passed at x^t (v = 0) and the beam froze for good.
+        # With smoothing_passes > 0 the smoothed test's floor (the probe's, ConvergenceCheck._measure_smoothed_floor)
+        # is measured here, at the solve's initial positions as for the VBD family, and applies from the first Newton
+        # step as well; the unsmoothed and smoothed tests must both pass.
+        check.set_hessian_norms(params._hessian_norms)
         check.measure_scale()
+        check.set_hessian_norms(None)
 
 
 @profiling.scoped("newton.energy")
@@ -1197,11 +1217,12 @@ def check_convergence(
     re-detection instead (:func:`outer_gradient_test` before it, :func:`outer_feasibility_test` after it).
 
     With the shared convergence check's stationarity test on (``Solver.Convergence.rstol`` or ``astol > 0``,
-    dynamic problems), it's the VBD family's outer test without the float32 floor: the Lagrangian gradient,
-    ``RMS_M(q0) <= 1``, q0_i = |g_i| / max(rstol h^2 s_i, alpha_i h^2 m_i) (s_i node i's largest force term,
-    alpha_i = max(astol |f_ext,i| / m_i, 1e-6 m/s^2) its own absolute allowance; see
-    ``vbd.convergence.ConvergenceParams``; with ``Solver.Convergence.node_norm`` MAX, ``max_i q0_i <= 1``), and
-    feasibility
+    dynamic problems), it's the VBD family's outer test: the Lagrangian gradient,
+    ``RMS_M(q) <= 1 and (RMS_M(q0) <= 1 or RMS_M(r) <= kg RMS_M(phi))``, q_i = |r_i| / max(rho_i, alpha_i, kl phi_i)
+    with the float32 floor phi_i from the vertex Hessian norms of the last Newton step (:func:`_store_hessian_norms`;
+    see ``vbd.convergence.ConvergenceParams``, and with ``Solver.Convergence.node_norm`` MAX the max over nodes),
+    without the floor before the solve's first Newton step, so this test before the first subproblem has none
+    (:func:`initialize_solve`), and feasibility
     (penetration into the contact margin at most ``ftol * max(|dmin|, FEASIBILITY_FLOOR)``). The Lagrangian gradient has no
     term for a new contact (lambda = 0), so without the feasibility test a penetrating free-flight
     guess passes before any subproblem runs. Otherwise it's ``|g|^2 <= gtol2`` on the
@@ -1235,7 +1256,8 @@ def outer_gradient_test(
     check = _relative_check(params)
     if check is not None:
         passed = check.test_gradient()
-        return passed, check.gradient_ratio()
+        # The decisive ratio, at most 1 iff the test passed (with the float32 floor, ||q|| alone isn't)
+        return passed, check.decisive_ratio()
     params._gradient_norm.compute(wp.get_stream())
     gnorm2, gtol2 = float(params._gnorm2.numpy()[0]), float(params.data.gtol2)
     return gnorm2 <= gtol2, float(np.sqrt(ratio_to_tolerance(gnorm2, gtol2)))
@@ -1422,6 +1444,25 @@ def _assemble_hessian(
     )
 
 
+def _store_hessian_norms(params: Params) -> None:
+    """Store the vertex Hessian norms |H_ii|_F of the assembled Newton Hessian ``params._H`` (its diagonal 3x3
+    blocks) in ``params._hessian_norms``, the shared stationarity test's float32 floor phi_i = |H_ii|_F eps32 |x_i| /
+    (m_i h^2) (``vbd.convergence.ConvergenceParams``), as the VBD sweeps store theirs in ``Params.data.Hnk``.
+
+    Same content as the VBD family's vertex blocks, in the gradient's units: m_i I + h^2 sum_e K_e,ii plus each
+    contact's gamma w_i^2 (sigma_n n n^T + friction-scaled sigma_f (t t^T + b b^T)) over the contacts vertex i takes
+    part in (as vertex, edge or face node). The elastic blocks differ where Stable Neo-Hookean's d^2Psi/dF^2 is
+    indefinite: Newton's are SPD-corrected per element (``spd_correction``; Absolute keeps |d^2Psi/dF^2|_F), the
+    VBD family's aren't. With ``Solver.Newton.one_sided_contact`` an unpressed contact's normal block is 0 here,
+    while the VBD family keeps gamma sigma_n n n^T for every contact in the set."""
+    warp.sparse.bsr_get_diag(params._H, out=params._hessian_diagonal)
+    wp.launch(
+        _block_frobenius_norms,
+        dim=params._hessian_norms.shape[0],
+        inputs=[params._hessian_diagonal, params._hessian_norms],
+    )
+
+
 # One-sided (slack-eliminated) AL contact terms: Solver.Newton.one_sided_contact (NewtonGpuParams, off by default
 # as C++, which fixes s per step; contact.dynamics.augmented_normal_energy). With s fixed within a Newton step, a
 # contact inside the detection band but not pressed is a two-sided spring of stiffness sigma_n (adapted to the
@@ -1502,6 +1543,11 @@ def solve_subproblem(
         # Assemble FEM + contact Hessian
         profiling.push("newton.assemble")
         _assemble_hessian(fem, contact, params, h2)
+        if check is not None:
+            # The float32 floor of the next tests is this iterate's Hessian: they test the stepped iterate, as the
+            # VBD family's test reads the vertex blocks of the sweep that moved the positions (initialize_solve)
+            _store_hessian_norms(params)
+            check.set_hessian_norms(params._hessian_norms)
         profiling.pop()
         profiling.push("newton.linear_solve")
         M = warp.optim.linear.preconditioner(params._H, "diag")
@@ -1707,6 +1753,34 @@ class NewtonSolver:
         return False
 
 
+class TestHessianNorms(unittest.TestCase):
+    """The stationarity test's float32 floor: after a Newton step the shared check reads Newton's vertex Hessian
+    norms, the Frobenius norms of the last Newton step's assembled Hessian's diagonal 3x3 blocks, and the outer test
+    records its decisive ratio; a solve's tests before its first Newton step have no floor. Two resting cubes
+    (``vbd.convergence._two_resting_cubes``, rstol 0, astol 0.1)."""
+
+    def test_norms_and_decisive_ratio(self):
+        from ..vbd.convergence import SUM_FLOOR, _two_resting_cubes
+
+        state = _two_resting_cubes("Newton")
+        params, check = state.params[state.solver], state.convergence
+        self.assertTrue(check.relative)
+        self.assertIs(check._hessian_norms, params._hessian_norms)
+        # The last assembly of a step is its last Newton step's (penalty adaptation assembles before the subproblems)
+        blocks = warp.sparse.bsr_get_diag(params._H).numpy().reshape(-1, 9).astype(np.float64)
+        expected = np.linalg.norm(blocks, axis=1)
+        np.testing.assert_allclose(params._hessian_norms.numpy(), expected, rtol=1e-6)
+        free = state.fem.data.dmask.numpy() == 0
+        self.assertTrue(np.all(expected[free] > 0.0))
+        # The recorded gradient ratio is the decisive one: at most 1 iff the test passes
+        passed = check.test_gradient()
+        self.assertEqual(check.decisive_ratio() <= 1.0, passed)
+        self.assertGreater(float(check.sums.numpy()[SUM_FLOOR]), 0.0)
+        # A solve's tests before its first Newton step (Newton's initial guess x^t) have no floor
+        initialize_solve(state.fem, state.contact, state.detector, params)
+        self.assertIsNone(check._hessian_norms)
+
+
 class TestSubproblemGradient(unittest.TestCase):
     """The subproblem gradient refreshes the contact slack (only) at the iterate first."""
 
@@ -1756,7 +1830,7 @@ class TestOuterTestOrder(unittest.TestCase):
                 self.ratio = float(detections[0])
                 return False
 
-            def gradient_ratio(self):
+            def decisive_ratio(self):
                 return self.ratio
 
             def test_feasibility(self):
@@ -1820,7 +1894,7 @@ class TestFreezeWithinSolve(unittest.TestCase):
             def test_gradient(self):
                 return True
 
-            def gradient_ratio(self):
+            def decisive_ratio(self):
                 return 0.0
 
             def test_feasibility(self):
