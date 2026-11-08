@@ -888,7 +888,7 @@ class NewtonGpuParams(SerializableMixin):
         "Whether passing a convergence test ends Newton's solve or subproblem: Shared (the default) follows "
         "Solver.Convergence.early_exit, the VBD family's switch; Off runs every solve's full budget; On exits early "
         "even with Solver.Convergence.early_exit off, so Newton, the reference, can stop at convergence in scenes "
-        "that give the VBD family fixed budgets (Celebration). Takes effect at the next time step",
+        "that give the VBD family fixed budgets. Takes effect at the next time step",
     )
 
 
