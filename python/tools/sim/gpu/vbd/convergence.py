@@ -179,6 +179,15 @@ class ConvergenceParams(SerializableMixin):
     elastic gradients and k passes: +1.3% and +4.1% per Celebration step (21 tests). GPU Newton runs the smoothed
     test the same way, against the same probe floor from a solve's first Newton step on (no floor before it).
 
+    With k > 0 the status also records each test's own decisive ratio, the unsmoothed one and the smoothed one
+    (:class:`SolveStatus` ``unsmoothed_ratio`` and ``smoothed_ratio``; GPU Newton per outer test), NaN with k = 0.
+    ``smoothing_in_test`` off (not the default) keeps the smoothed test out of the decision: it is still measured
+    at every outer test (not inside subproblems) and recorded, but only the unsmoothed test decides, so pass/fail,
+    iterations and positions are those of k = 0. Why (maintainer, 2026-11-08): where the unsmoothed ratio misranks
+    the solvers but decides correctly (BendingBeam.10MPa, the trampolines, MatOnStilts: AAAVBD 2-7x closer to the
+    reference with the largest unsmoothed ratio; data/profiling/investigations/smoothing-screen), the smoothed
+    ratio over time ranks them, shown beside the unsmoothed one.
+
     astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
     (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
     and 2.8 s, the capsules at 0.2 s and 0.8 s):
@@ -271,6 +280,12 @@ class ConvergenceParams(SerializableMixin):
         "test. Float32 noise averages away, the solvers' smooth errors don't, so it fails solvers whose stiff bodies "
         "hide a smooth error under the per-node floor. Each test costs k filter passes (VBD family and GPU Newton)",
     )
+    smoothing_in_test = DocField(
+        True,
+        "With smoothing_passes k > 0, whether the smoothed test decides too (both must pass). Off, it is only measured "
+        "at each outer test and recorded (the status's smoothed_ratio, beside unsmoothed_ratio), and the unsmoothed "
+        "test alone decides, as with k = 0",
+    )
     early_exit = DocField(
         True,
         "End a solve (or a subproblem) once it passes its tests. Off, every solve runs its full budget of outer "
@@ -316,6 +331,11 @@ class SolveStatus:
     max_ratio: wp.float32  # the same test's largest node ratio, max_i q_i (0: absolute test)
     no_floor_ratio: wp.float32  # ||q0||, the node ratios without the float32 floor (0: absolute test)
     floor_clause_ratio: wp.float32  # ||r|| / (kg ||phi||) (0: absolute test)
+    # With smoothing_passes > 0, the unsmoothed and the smoothed test's own decisive ratios, max(||q||, min(||q0||,
+    # ||r|| / (kg ||phi||))) of each (NaN otherwise: the ratios above are then the unsmoothed test's). The ratios above
+    # are the deciding test's: the stricter one with smoothing_in_test, else the unsmoothed one
+    unsmoothed_ratio: wp.float32
+    smoothed_ratio: wp.float32
 
 
 class SweepLayout(NamedTuple):
@@ -672,17 +692,25 @@ def _keep_stricter_sums(
     unsmoothed: wp.array[wp.float32],
     weight: wp.array[wp.float32],
     floor_kappa2: wp.float32,
+    in_test: wp.int32,
     sums: wp.array[wp.float32],
+    split: wp.array[wp.float32],
 ):
     """With smoothing, a test passes only if the unsmoothed and the smoothed tests both pass: ``sums`` (the smoothed
     test's reductions) becomes the unsmoothed test's where its decisive ratio is larger, so every reader of ``sums``
-    (decisions, status rows, the host) sees the stricter of the two."""
+    (decisions, status rows, the host) sees the stricter of the two. With ``in_test`` 0 (``smoothing_in_test`` off)
+    ``sums`` always becomes the unsmoothed test's, so the smoothed test is only recorded. ``split`` gets both tests'
+    own decisive ratios (unsmoothed, smoothed) first."""
+    split[0] = _decisive_ratio(unsmoothed, weight, floor_kappa2)
+    split[1] = _decisive_ratio(sums, weight, floor_kappa2)
     # The decisions first (as _is_converged), so rounding of the ratios at 1 can't pick a passing test over a failing one
     passes = _is_converged(sums, wp.float32(0), sums, weight, 1, floor_kappa2)
     unsmoothed_passes = _is_converged(unsmoothed, wp.float32(0), unsmoothed, weight, 1, floor_kappa2)
     stricter = passes and not unsmoothed_passes
     if passes == unsmoothed_passes:
         stricter = _decisive_ratio(unsmoothed, weight, floor_kappa2) > _decisive_ratio(sums, weight, floor_kappa2)
+    if in_test == 0:
+        stricter = True
     if stricter:
         for k in range(N_SUMS):
             sums[k] = unsmoothed[k]
@@ -908,6 +936,7 @@ def _start_kernel(
     keep: wp.array[wp.int32],
     status: wp.array[SolveStatus],
     solves: wp.array[wp.int32],
+    split: wp.array[wp.float32],
 ):
     k[0] = 0
     converged = _is_converged(gnorm2, gtol2, sums, free_mass, relative, floor_kappa2)
@@ -925,6 +954,8 @@ def _start_kernel(
     row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, free_mass, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
     row = _with_node_ratios(row, _node_ratios(sums, free_mass, relative, floor_kappa2))
+    row.unsmoothed_ratio = split[0]
+    row.smoothed_ratio = split[1]
     status[n % status.shape[0]] = row
 
 
@@ -989,6 +1020,7 @@ def _end_outer_kernel(
     n_blocks: wp.int32,
     blocks: wp.array[wp.int32],
     subproblem_keep: wp.array[wp.int32],
+    split: wp.array[wp.float32],
 ):
     kk = k[0] + 1
     k[0] = kk
@@ -1008,6 +1040,8 @@ def _end_outer_kernel(
     row.gradient_ratio = _gradient_ratio(gnorm2, gtol2, sums, free_mass, relative)
     row.feasibility_ratio = _feasibility_ratio(penetration, ftol, contact.dmin)
     row = _with_node_ratios(row, _node_ratios(sums, free_mass, relative, floor_kappa2))
+    row.unsmoothed_ratio = split[0]
+    row.smoothed_ratio = split[1]
     status[idx] = row
 
 
@@ -1103,11 +1137,20 @@ class ConvergenceCheck:
         self._smooth = None
         self._probe_x = None
         self._smoothed_floor = None
+        # The status rows' unsmoothed and smoothed decisive ratios: NaN without smoothing, else the last test's
+        # (allocated by prepare_smoothing)
+        self._no_split_ratios = wp.array([np.nan, np.nan], dtype=wp.float32)
+        self._split_ratios = None
 
     @property
     def smoothing_passes(self) -> int:
         """The residual smoothing's passes k (``ConvergenceParams.smoothing_passes``; 0: off)."""
         return max(0, int(self.params.smoothing_passes))
+
+    @property
+    def smoothing_in_test(self) -> bool:
+        """Whether the smoothed test decides too (``ConvergenceParams.smoothing_in_test``), or is only recorded."""
+        return bool(self.params.smoothing_in_test)
 
     def prepare_smoothing(self) -> None:
         """Allocate the residual smoothing's buffers if ``smoothing_passes > 0`` and they don't exist yet. Host-side:
@@ -1124,6 +1167,7 @@ class ConvergenceCheck:
         self._smoothed_floor = wp.zeros(n_nodes, dtype=wp.float32)
         # The unsmoothed test's reductions, kept beside the smoothed test's (sums): the stricter one decides
         self._unsmoothed_sums = wp.zeros(N_SUMS, dtype=wp.float32)
+        self._split_ratios = wp.zeros(2, dtype=wp.float32)
         terms, sums = cp.asarray(self._terms), cp.asarray(self._unsmoothed_sums)
         maximum, plus = cuda.compute.OpKind.MAXIMUM, cuda.compute.OpKind.PLUS
         self._reduce_unsmoothed_sums = {
@@ -1217,17 +1261,19 @@ class ConvergenceCheck:
         a.one_sided = bool(int(self._contact.data.vbd_slack_at_evaluation))
         self._contact.reset_friction_limits()
         a.compute_gradient(wp.get_stream())
-        self._measure_residual(a)
+        self._measure_residual(a, outer=False)
 
-    def _measure_residual(self, gradient: GradientNorm) -> None:
+    def _measure_residual(self, gradient: GradientNorm, outer: bool = True) -> None:
         """The stationarity reductions of ``gradient``'s node ratios (``g`` and its force ``scale``). With
-        ``smoothing_passes`` > 0, also those of its smoothed residual (``g`` itself is left as it is), and ``sums``
-        keeps the stricter test's (both must pass)."""
+        ``smoothing_passes`` > 0, also those of its smoothed residual (``g`` itself is left as it is), both tests'
+        decisive ratios for the status, and ``sums`` keeps the stricter test's (both must pass), or with
+        ``smoothing_in_test`` off the unsmoothed test's; then a test inside a subproblem (not ``outer``), which isn't
+        recorded, skips the smoothed one."""
         stream = wp.get_stream()
         hnorm = self._hessian_norms
         floor = hnorm if hnorm is not None else self._no_hessian_norms
         k = self.smoothing_passes
-        if k > 0:
+        if k > 0 and (outer or self.smoothing_in_test):
             self.prepare_smoothing()
             # The unsmoothed test, as with k = 0, into its own reductions
             self._launch_ratios(_stationarity_ratios, gradient.g, gradient.scale, floor)
@@ -1239,11 +1285,19 @@ class ConvergenceCheck:
             )
             for reduce in self._reduce_sums[self.node_norm]:
                 reduce(stream)
-            # Both must pass: keep the reductions of the test with the larger decisive ratio
+            # Both must pass: keep the reductions of the test with the larger decisive ratio (or, recording only, the
+            # unsmoothed test's)
             wp.launch(
                 _keep_stricter_sums,
                 dim=1,
-                inputs=[self._unsmoothed_sums, self.norm_weight, float(self.params.floor_kappa) ** 2, self.sums],
+                inputs=[
+                    self._unsmoothed_sums,
+                    self.norm_weight,
+                    float(self.params.floor_kappa) ** 2,
+                    int(self.smoothing_in_test),
+                    self.sums,
+                    self._split_ratios,
+                ],
             )
             return
         self._launch_ratios(_stationarity_ratios, gradient.g, gradient.scale, floor)
@@ -1296,6 +1350,21 @@ class ConvergenceCheck:
             float(self.params.floor_kappa) ** 2,
         ]
 
+    @property
+    def _recorded_split_ratios(self) -> wp.array:
+        """The (2,) unsmoothed and smoothed decisive ratios the status rows record: the last test's with smoothing,
+        NaN otherwise."""
+        if self.smoothing_passes > 0 and self.relative and self._split_ratios is not None:
+            return self._split_ratios
+        return self._no_split_ratios
+
+    def split_ratios(self) -> tuple[float, float]:
+        """Host-side decisive ratios of the last outer test's unsmoothed and smoothed tests, each on its own (as the
+        status rows' ``unsmoothed_ratio`` and ``smoothed_ratio``): NaN without smoothing. GPU Newton records them per
+        outer test. Synchronizes."""
+        unsmoothed, smoothed = self._recorded_split_ratios.numpy()
+        return float(unsmoothed), float(smoothed)
+
     def _measure_penetration(self) -> None:
         self.penetration.zero_()
         contact = self._contact
@@ -1330,7 +1399,8 @@ class ConvergenceCheck:
         wp.launch(
             _start_kernel,
             dim=1,
-            inputs=self._outer_test_inputs(gtol, n_max_iters) + [self.status, self.solves],
+            inputs=self._outer_test_inputs(gtol, n_max_iters)
+            + [self.status, self.solves, self._recorded_split_ratios],
         )
 
     def begin_outer(self) -> None:
@@ -1413,6 +1483,7 @@ class ConvergenceCheck:
                 int(layout.n_blocks),
                 self.blocks,
                 self.subproblem_keep,
+                self._recorded_split_ratios,
             ],
         )
 
@@ -1554,7 +1625,7 @@ class ConvergenceCheck:
         """
         if not self.relative:
             return False
-        self._measure_residual(gradient)
+        self._measure_residual(gradient, outer=False)
         return self._relative_passes()
 
 
@@ -1810,7 +1881,7 @@ class TestNodeNorm(unittest.TestCase):
         check.penetration.zero_()
         check.k.zero_()
         wp.launch(_end_outer_kernel, dim=1, inputs=check._outer_test_inputs(1.0, 1) + [
-            check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep])
+            check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep, check._recorded_split_ratios])
         row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
         np.testing.assert_allclose(
             [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], expected, rtol=1e-5)
@@ -1883,9 +1954,12 @@ class TestResidualSmoothing(unittest.TestCase):
             reduce(wp.get_stream())
         np.testing.assert_array_equal(check._terms.numpy(), terms)
         np.testing.assert_array_equal(check.sums.numpy(), sums)
-        # A whole captured step: no smoothing buffer either
+        # A whole captured step: no smoothing buffer either, and no split ratios in the status
         state.step()
         self.assertIsNone(check._smooth)
+        row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
+        self.assertTrue(np.isnan(row["unsmoothed_ratio"]) and np.isnan(row["smoothed_ratio"]))
+        self.assertTrue(np.all(np.isnan(check.split_ratios())))
 
     def test_adjacency(self):
         # The fallback 1-rings equal the VBD params' (pbat's vertex_colors), each vertex listing itself
@@ -1991,9 +2065,14 @@ class TestResidualSmoothing(unittest.TestCase):
                 expected = max(unsmoothed, smoothed, key=lambda e: e[2])
                 check.penetration.zero_()
                 check.k.zero_()
-                wp.launch(_end_outer_kernel, dim=1, inputs=check._outer_test_inputs(1.0, 1) + [
-                    check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep])
-                row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
+
+                def end_outer_row():
+                    wp.launch(_end_outer_kernel, dim=1, inputs=check._outer_test_inputs(1.0, 1) + [
+                        check.status, check.solves, 0, 0, 0, 0, check.blocks, check.subproblem_keep,
+                        check._recorded_split_ratios])
+                    return check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
+
+                row = end_outer_row()
                 np.testing.assert_allclose(
                     [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], expected[0], rtol=1e-4)
                 np.testing.assert_allclose(row["max_ratio"], expected[1], rtol=1e-4)
@@ -2001,6 +2080,26 @@ class TestResidualSmoothing(unittest.TestCase):
                 passes = check._relative_passes()
                 self.assertEqual(int(row["reason"]) == int(SolveEnd.CONVERGED), passes)
                 self.assertEqual(stationarity_test_ratio(row) <= 1.0, passes)
+                # Each test's own decisive ratio, in the row and on the host
+                split = [unsmoothed[2], smoothed[2]]
+                np.testing.assert_allclose([row["unsmoothed_ratio"], row["smoothed_ratio"]], split, rtol=1e-4)
+                np.testing.assert_allclose(check.split_ratios(), split, rtol=1e-4)
+                # Recording only (smoothing_in_test off): the unsmoothed test decides alone, its reductions bit for bit
+                # those of k = 0, and the row still records both ratios
+                params.smoothing_in_test = False
+                check._measure_residual(check.gradient_norm)
+                np.testing.assert_array_equal(check.sums.numpy(), check._unsmoothed_sums.numpy())
+                row = end_outer_row()
+                np.testing.assert_allclose(
+                    [row["gradient_ratio"], row["no_floor_ratio"], row["floor_clause_ratio"]], unsmoothed[0], rtol=1e-4)
+                np.testing.assert_allclose(stationarity_test_ratio(row), unsmoothed[2], rtol=1e-4)
+                np.testing.assert_allclose([row["unsmoothed_ratio"], row["smoothed_ratio"]], split, rtol=1e-4)
+                self.assertEqual(check._relative_passes(), unsmoothed[2] <= 1.0)
+                k0_sums = check.sums.numpy().copy()
+                params.smoothing_passes = 0
+                check._measure_residual(check.gradient_norm)
+                np.testing.assert_array_equal(check.sums.numpy(), k0_sums)
+                params.smoothing_passes, params.smoothing_in_test = 4, True
         params.node_norm = NodeNorm.RMS
 
     def test_keep_stricter(self):
@@ -2015,12 +2114,17 @@ class TestResidualSmoothing(unittest.TestCase):
             return out
 
         passing, failing, worse = sums(0.5, 0.9, 1.0, 1.0), sums(0.5, 2.0, 0.5, 1.0), sums(0.5, 3.0, 0.9, 1.0)
+        decisive = {id(passing): 0.9, id(failing): 2.0, id(worse): 3.0}  # max(q, min(q0, r / (kg F)))
         weight = wp.array(np.ones(1, dtype=np.float32))
         for unsmoothed, smoothed, kept in [(passing, failing, failing), (failing, passing, failing),
                                            (failing, worse, worse), (worse, failing, worse), (passing, passing, passing)]:
-            out = wp.array(smoothed.copy())
-            wp.launch(_keep_stricter_sums, dim=1, inputs=[wp.array(unsmoothed.copy()), weight, kg**2, out])
-            np.testing.assert_array_equal(out.numpy(), kept)
+            for in_test in (1, 0):
+                out, split = wp.array(smoothed.copy()), wp.zeros(2, dtype=wp.float32)
+                wp.launch(_keep_stricter_sums, dim=1,
+                          inputs=[wp.array(unsmoothed.copy()), weight, kg**2, in_test, out, split])
+                # Recording only (in_test 0), the unsmoothed test's reductions decide
+                np.testing.assert_array_equal(out.numpy(), kept if in_test else unsmoothed)
+                np.testing.assert_allclose(split.numpy(), [decisive[id(unsmoothed)], decisive[id(smoothed)]], rtol=1e-6)
 
     def test_steps(self):
         # Whole steps with k = 4: VBD-family solvers under graph capture, and GPU Newton (its floor from its Hessian's
@@ -2041,6 +2145,85 @@ class TestResidualSmoothing(unittest.TestCase):
                     row = check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]]
                     self.assertTrue(np.isfinite(float(row["gradient_ratio"])))
                     self.assertGreater(float(row["floor_clause_ratio"]), 0.0)
+
+
+class TestSmoothingRecordOnly(unittest.TestCase):
+    """``smoothing_in_test`` off with ``smoothing_passes`` k > 0: the smoothed test is measured at every outer test
+    and recorded, but only the unsmoothed one decides, so pass/fail, iterations and positions are those of k = 0.
+    Two resting cubes, the lower one fixed, early exit on."""
+
+    def _run(self, solver_name: str, k: int, in_test: bool, steps: int = 3):
+        state = _two_resting_cubes(solver_name)
+        check = state.convergence
+        params = check.params
+        params.rstol, params.astol, params.early_exit = 2e-2, 0.1, True
+        params.smoothing_passes, params.smoothing_in_test = k, in_test
+        state.capture = None
+        xs, rows = [], []
+        for _ in range(steps):
+            state.step()
+            xs.append(state.fem.data.x.numpy().copy())
+            if solver_name == "Newton":
+                rows.append(state.params[state.solver].last_outer_ratios)
+            else:
+                rows.append(check.status.numpy()[(int(check.solves.numpy()[0]) - 1) % check.status.shape[0]].copy())
+        return state, xs, rows
+
+    def test_inner_tests_skip_smoothing(self):
+        # Recording only, a test inside a subproblem (not recorded) launches no smoothing; an outer test does
+        state = _two_resting_cubes("VBD")
+        check = state.convergence
+        check.params.rstol, check.params.astol = 2e-2, 0.1
+        check.params.smoothing_passes, check.params.smoothing_in_test = 4, False
+        check.measure_scale()
+        launched, launch = [], wp.launch
+
+        def recording_launch(kernel, *args, **kwargs):
+            launched.append(kernel)
+            return launch(kernel, *args, **kwargs)
+
+        wp.launch = recording_launch
+        try:
+            check._test_subproblem()
+            inner = list(launched)
+            launched.clear()
+            check._test()
+        finally:
+            wp.launch = launch
+        self.assertNotIn(_stationarity_ratios_smoothed, inner)
+        self.assertNotIn(_keep_stricter_sums, inner)
+        self.assertIn(_stationarity_ratios_smoothed, launched)
+        self.assertIn(_keep_stricter_sums, launched)
+
+    def test_vbd_family_steps_as_k0(self):
+        from ...status_ratio import stationarity_test_ratio
+
+        decisions = ("outer", "sweeps", "reason")
+        ratios = ("gradient_ratio", "feasibility_ratio", "max_ratio", "no_floor_ratio", "floor_clause_ratio")
+        for solver_name in ("VBD", "AAAVBD"):
+            with self.subTest(solver=solver_name):
+                _, x0, r0 = self._run(solver_name, 0, True)
+                _, x4, r4 = self._run(solver_name, 4, False)
+                for a, b, ra, rb in zip(x0, x4, r0, r4):
+                    np.testing.assert_array_equal(a, b)
+                    self.assertEqual([int(ra[f]) for f in decisions], [int(rb[f]) for f in decisions])
+                    np.testing.assert_allclose([ra[f] for f in ratios], [rb[f] for f in ratios], rtol=1e-5)
+                    self.assertTrue(np.isnan(ra["unsmoothed_ratio"]) and np.isnan(ra["smoothed_ratio"]))
+                    # The recorded unsmoothed ratio is the deciding one; the smoothed one is measured too
+                    np.testing.assert_allclose(rb["unsmoothed_ratio"], stationarity_test_ratio(rb), rtol=1e-5)
+                    self.assertTrue(np.isfinite(rb["smoothed_ratio"]) and rb["smoothed_ratio"] > 0.0)
+
+    def test_newton_records_split_ratios(self):
+        # GPU Newton isn't reproducible run to run, so only what it records: recording only, its gradient ratio is
+        # the unsmoothed test's; with the smoothed test in the decision it is the larger of the two
+        for in_test in (False, True):
+            with self.subTest(in_test=in_test):
+                state, _, rows = self._run("Newton", 4, in_test, steps=2)
+                records = state.params[state.solver].solve_records
+                for gradient, _, unsmoothed, smoothed in [t for r in records for t in r.outer_tests] + rows:
+                    self.assertTrue(np.isfinite(smoothed) and smoothed > 0.0)
+                    expected = max(unsmoothed, smoothed) if in_test else unsmoothed
+                    np.testing.assert_allclose(gradient, expected, rtol=1e-5)
 
 
 class TestOuterGradientBeforeRedetection(unittest.TestCase):

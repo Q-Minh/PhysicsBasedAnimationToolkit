@@ -39,6 +39,11 @@ VBD_DTYPE = np.dtype(
         ("max_ratio", np.float32),
         ("no_floor_ratio", np.float32),
         ("floor_clause_ratio", np.float32),
+        # With Solver.Convergence.smoothing_passes > 0, the unsmoothed and the smoothed test's own decisive ratios (NaN
+        # otherwise, and in rows recorded before 2026-11-08); the ratios above are the deciding test's
+        # (status_ratio.unsmoothed_test_ratio / smoothed_test_ratio)
+        ("unsmoothed_ratio", np.float32),
+        ("smoothed_ratio", np.float32),
     ]
 )
 """One VBD-family solve."""
@@ -55,6 +60,12 @@ NEWTON_SOLVE_DTYPE = np.dtype(
         ("initial_feasibility_ratio", np.float32),
         ("gradient_ratio", np.float32),
         ("feasibility_ratio", np.float32),
+        # With residual smoothing, the unsmoothed and the smoothed test's own decisive ratios of the same two tests
+        # (NaN otherwise; NewtonSolveRecord)
+        ("initial_unsmoothed_ratio", np.float32),
+        ("initial_smoothed_ratio", np.float32),
+        ("unsmoothed_ratio", np.float32),
+        ("smoothed_ratio", np.float32),
     ]
 )
 """One Newton solve."""
@@ -74,6 +85,9 @@ NEWTON_SUBPROBLEM_DTYPE = np.dtype(
         # Ratios to their tolerances of the outer test after the subproblem (at most 1 passes)
         ("gradient_ratio", np.float32),
         ("feasibility_ratio", np.float32),
+        # With residual smoothing, the unsmoothed and the smoothed test's own decisive ratios (NaN otherwise)
+        ("unsmoothed_ratio", np.float32),
+        ("smoothed_ratio", np.float32),
     ]
 )
 """One Newton subproblem."""
@@ -138,6 +152,8 @@ class StatusLog:
         for f in ("max_ratio", "no_floor_ratio", "floor_clause_ratio"):
             if f in rows.dtype.names:
                 out[f] = rows[f]
+        for f in ("unsmoothed_ratio", "smoothed_ratio"):
+            out[f] = rows[f] if f in rows.dtype.names else np.nan
         out["max_outer"] = max_outer
         out["max_sweeps"] = max_sweeps
         self._vbd.append(out)
@@ -155,10 +171,12 @@ class StatusLog:
             return
         solves = np.zeros(len(records), dtype=NEWTON_SOLVE_DTYPE)
         subs = []
-        nan = (np.nan, np.nan)
+        nan = (np.nan,) * 4
         for s, r in enumerate(records):
-            tests = r.outer_tests or (nan,)
-            solves[s] = (step, s, r.outer, r.converged, max_outer, *tests[0], *tests[-1])
+            # (gradient, feasibility, unsmoothed, smoothed) per outer test; records without the last two are NaN there
+            tests = [tuple(t) + nan[len(t) :] for t in r.outer_tests] or [nan]
+            first, last = tests[0], tests[-1]
+            solves[s] = (step, s, r.outer, r.converged, max_outer, *first[:2], *last[:2], *first[2:], *last[2:])
             for k, sp in enumerate(r.subproblems):
                 after = tests[k + 1] if k + 1 < len(tests) else nan
                 subs.append(
@@ -420,7 +438,9 @@ class TestStatusLog(unittest.TestCase):
                 log.write_h5(f.require_group("sim/status"))
             with h5py.File(path, "r") as f:
                 g = f["sim/status"]
-                np.testing.assert_array_equal(g["vbd"][()], log.vbd)
+                # Bytes: the unrecorded split ratios are NaN, which compares unequal to itself
+                self.assertEqual(g["vbd"][()].dtype, log.vbd.dtype)
+                self.assertEqual(g["vbd"][()].tobytes(), log.vbd.tobytes())
                 self.assertEqual(g["newton_subproblems"][()]["backtracks"].tolist(), [12])
                 self.assertEqual(int(g.attrs["lost"]), 1)
             # Ranges of steps, as simulate.py writes them per frame
@@ -450,6 +470,35 @@ class TestStatusLog(unittest.TestCase):
             log.add_vbd(t, 1, self._rows([2 * t, 2 * t + 1]), 0, 5, 400)
         self.assertEqual(log.vbd.shape[0], 204)
         self.assertEqual(log.summary(window=10)["vbd"]["solves"], 20)
+
+    def test_split_ratios(self):
+        """With residual smoothing, the unsmoothed and smoothed tests' own decisive ratios reach the log (NaN without,
+        and for rows or records that predate them)."""
+        base = self._rows([0, 1])
+        rows = np.zeros(2, dtype=base.dtype.descr + [("unsmoothed_ratio", np.float32), ("smoothed_ratio", np.float32)])
+        for f in base.dtype.names:
+            rows[f] = base[f]
+        rows["unsmoothed_ratio"], rows["smoothed_ratio"] = [0.5, 0.75], [6.5, 8.0]
+        log = StatusLog()
+        log.add_vbd(0, 1, rows, 0, 5, 400)
+        log.add_vbd(1, 1, self._rows([2]), 0, 5, 400)
+        np.testing.assert_array_equal(log.vbd["smoothed_ratio"][:2], [6.5, 8.0])
+        self.assertTrue(np.all(np.isnan(log.vbd[2][["unsmoothed_ratio", "smoothed_ratio"]].tolist())))
+        e = log.step_entry(0)["vbd"][1]
+        self.assertEqual((e["unsmoothed_ratio"], e["smoothed_ratio"]), (0.75, 8.0))
+        self.assertIsNone(log.step_entry(1)["vbd"][0]["smoothed_ratio"])
+        # Newton: per outer test (gradient, feasibility, unsmoothed, smoothed); older 2-tuples give NaN
+        log.add_newton(2, [NewtonSolveRecord(1, True, (), ((40.0, 3.0, 40.0, 90.0), (0.5, 0.5, 0.4, 0.5)))], 5, 10, 300)
+        log.add_newton(3, [NewtonSolveRecord(1, True, (), ((40.0, 3.0), (0.5, 0.5)))], 5, 10, 300)
+        n = log.newton_solves
+        self.assertEqual([n[0][f] for f in ("initial_gradient_ratio", "initial_feasibility_ratio", "gradient_ratio",
+                                            "feasibility_ratio")], [40.0, 3.0, 0.5, 0.5])
+        self.assertEqual([n[0][f] for f in ("initial_unsmoothed_ratio", "initial_smoothed_ratio", "unsmoothed_ratio",
+                                            "smoothed_ratio")], [40.0, 90.0, 0.4, 0.5])
+        self.assertTrue(np.isnan(n[1]["smoothed_ratio"]) and n[1]["gradient_ratio"] == 0.5)
+        import json
+
+        json.dumps(log.step_entry(3), allow_nan=False)
 
     def test_summary_test_ratio(self):
         """The worst ratio is the stationarity test's: a failed floor clause counts, not just RMS_M(q)."""
