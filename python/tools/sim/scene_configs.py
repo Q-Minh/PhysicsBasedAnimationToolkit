@@ -264,15 +264,6 @@ PENALTY_FLOOR = Rule(
     "penalty at 1e-4 at 10 ms.",
     {"Contact.ContactDynamics.min_sigma_n": 1e4},
 )
-FIXED_BUDGET = Rule(
-    "Fixed compute budgets, no early exit for the VBD family (maintainer, 2026-11-01): the scene shows qualitative "
-    "differences between the solvers at equal compute. early_exit = 0 runs every VBD-family solve's full budget, "
-    "while the usual tests still run and record their ratios (zero tolerances, used before, made them infinite). "
-    "Newton, the reference, exits early (Solver.Newton.early_exit = 1, On; maintainer, 2026-11-07): its "
-    "stationarity test has the float32 floor, so its full budget would only waste compute.",
-    {"Solver.Convergence.early_exit": 0, "Solver.Newton.early_exit": 1},
-)
-
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
@@ -297,7 +288,18 @@ SCENES = {
             ),
             PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
             CONTACT_CAPACITIES,
-            FIXED_BUDGET,
+            Rule(
+                "Early exit for every solver, the VBD family and Newton (maintainer, 2026-11-07; Newton follows the "
+                "shared early_exit), replacing the fixed budgets of 2026-11-01. Residual smoothing, smoothing_passes "
+                "= 4 (2026-11-07): unsmoothed, Chebyshev and Anderson pass at 400 sweeps while their letters visibly "
+                "sag (decisive ratios 0.84/0.78; 17/41 mm from Newton vs AAAVBD's 3.3 mm); smoothed, their ratios are "
+                "12.5/10.7 (VBD 34.9, AAAVBD 1.56), so they fail (data/profiling/investigations/residual-smoothing). "
+                "On BendingBeam.100MPa k = 4 removed the floor clause's false positives (VBD passed steps 0-2 with a "
+                "gravity-sized smooth error under the floor at k = 0, none at k = 4; "
+                "data/profiling/investigations/floor-clause-false-positive). Cost about +1.1-1.3% per step at a "
+                "20-sweep check interval.",
+                {"Solver.Convergence.early_exit": 1, "Solver.Convergence.smoothing_passes": 4},
+            ),
             Rule(
                 "Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 "
                 "at most 6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed "
