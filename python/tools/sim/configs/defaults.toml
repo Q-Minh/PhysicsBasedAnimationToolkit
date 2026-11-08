@@ -110,6 +110,7 @@ rstol = 0.02
 smoothing_passes = 0
 
 [Solver.Newton]
+early_exit = -1
 init_strategy = 0
 linear_solver = 0
 n_max_iters = 1

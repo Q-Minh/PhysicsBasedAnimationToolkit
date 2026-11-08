@@ -204,7 +204,8 @@ class ConvergenceParams(SerializableMixin):
 
     ``early_exit`` (default on) lets passing the tests end a solve. Off, solves run their full budgets (fixed
     compute) while the tests still run and the status still records their ratios to the tolerances, unlike
-    zero tolerances, whose ratios are infinite.
+    zero tolerances, whose ratios are infinite. GPU Newton follows it unless ``Solver.Newton.early_exit`` is On or
+    Off (``newton.solver.NewtonGpuParams``).
     """
 
     check_interval = DocField(
@@ -274,7 +275,7 @@ class ConvergenceParams(SerializableMixin):
         True,
         "End a solve (or a subproblem) once it passes its tests. Off, every solve runs its full budget of outer "
         "iterations and sweeps, at fixed compute, and still tests and records its gradient and feasibility ratios "
-        "against the usual tolerances",
+        "against the usual tolerances. GPU Newton follows it unless Solver.Newton.early_exit is On or Off",
     )
 
     def deserialize(self, grp) -> None:
