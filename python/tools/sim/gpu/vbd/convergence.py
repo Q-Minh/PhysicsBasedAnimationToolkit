@@ -141,7 +141,7 @@ class ConvergenceParams(SerializableMixin):
     one (Celebration: the base plate's mass hides the letters, whose residuals are 6-9x their float32 floor when
     every solver passes the RMS test); the max catches it, at the cost of the single-node failures above.
 
-    ``smoothing_passes`` k > 0 (not the default; k = 0 adds no work) adds a smoothed test, which must pass too: the
+    ``smoothing_passes`` k > 0 (the default is k = 4; k = 0 adds no work) adds a smoothed test, which must pass too: the
     same test with r_i replaced by r_bar_i, k passes of mass-weighted averaging over each free node's closed 1-ring
     of the tet mesh (free nodes only: fixed nodes neither contribute nor receive), and phi_i by a floor under the
     same filter, phi_bar_i (each node keeps its own alpha_i):
@@ -179,14 +179,23 @@ class ConvergenceParams(SerializableMixin):
     elastic gradients and k passes: +1.3% and +4.1% per Celebration step (21 tests). GPU Newton runs the smoothed
     test the same way, against the same probe floor from a solve's first Newton step on (no floor before it).
 
+    k = 4 is the default for every scene (maintainer, 2026-11-08; 0 until then): the unsmoothed test alone passes
+    unconverged states through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and the combined test
+    can only remove passes, never add one. Screen (one step per solver from a shared AAAVBD checkpoint at the scene
+    budget, early exit off; decisive ratio k = 0 / k = 4): BendingBeam.100MPa Chebyshev 0.82 / 6.72, 0.43 mm from
+    Newton; BendingBeam.Heterogeneous VBD, Chebyshev and Anderson 0.46-0.83 / 1.96-3.55; BirthdayBanner VBD and
+    Anderson 0.86 / 10.9 and 1.00 / 11.6, 3.5 mm from AAAVBD at 100x the budget; Celebration (5 x 80) Chebyshev
+    0.84 / 12.5 and Anderson 0.78 / 10.7 while their letters sag; BasketOfFruit AAAVBD at 10x the budget 0.92 / 15.1,
+    1.8 mm from 100x (data/profiling/investigations/smoothing-screen).
+
     With k > 0 the status also records each test's own decisive ratio, the unsmoothed one and the smoothed one
     (:class:`SolveStatus` ``unsmoothed_ratio`` and ``smoothed_ratio``; GPU Newton per outer test), NaN with k = 0.
-    ``smoothing_in_test`` off (not the default) keeps the smoothed test out of the decision: it is still measured
-    at every outer test (not inside subproblems) and recorded, but only the unsmoothed test decides, so pass/fail,
-    iterations and positions are those of k = 0. Why (maintainer, 2026-11-08): where the unsmoothed ratio misranks
-    the solvers but decides correctly (BendingBeam.10MPa, the trampolines, MatOnStilts: AAAVBD 2-7x closer to the
-    reference with the largest unsmoothed ratio; data/profiling/investigations/smoothing-screen), the smoothed
-    ratio over time ranks them, shown beside the unsmoothed one.
+    ``smoothing_in_test`` off (not the default, and no scene config uses it) keeps the smoothed test out of the
+    decision: it is still measured at every outer test (not inside subproblems) and recorded, but only the unsmoothed
+    test decides, so pass/fail, iterations and positions are those of k = 0. It was made (maintainer, 2026-11-08) for
+    scenes where the unsmoothed ratio misranks the solvers but decides correctly at the budget (BendingBeam.10MPa,
+    the trampolines, MatOnStilts: AAAVBD 2-7x closer to the reference with the largest unsmoothed ratio;
+    data/profiling/investigations/smoothing-screen), before k = 4 in the test became the default.
 
     astol 0.1 (about 1 m/s^2; 0.5 until 2026-11-06), from a sweep against early-exit-off long-budget references
     (AAAVBD, Trampoline.SoftSoft 0-2.8 s and CapsulesIntoBowl 0-0.8 s; RMS_M distance in mm, the trampoline at 1 s
@@ -272,13 +281,14 @@ class ConvergenceParams(SerializableMixin):
         "follow it (GPU Newton too)",
     )
     smoothing_passes = DocField(
-        0,
+        4,
         "Residual smoothing passes k (0: off, no extra work): the stationarity test must also pass with r_bar_i, k "
         "passes of mass-weighted averaging of the residual acceleration over each free node's closed 1-ring of the "
         "tet mesh, in place of r_i, and a float32 floor under the same filter (1.4 |S_k(g(x + xi) - g(x))| / (m h^2), "
         "xi a random +-1 float32 spacing, measured once per solve) in place of phi_i; the status shows the stricter "
         "test. Float32 noise averages away, the solvers' smooth errors don't, so it fails solvers whose stiff bodies "
-        "hide a smooth error under the per-node floor. Each test costs k filter passes (VBD family and GPU Newton)",
+        "hide a smooth error under the per-node floor, which the unsmoothed test passes through its floor clause. Each "
+        "test costs k filter passes (VBD family and GPU Newton). Default 4 for every scene (2026-11-08)",
     )
     smoothing_in_test = DocField(
         True,
@@ -1810,9 +1820,10 @@ class TestStationarityTolerance(unittest.TestCase):
         np.testing.assert_allclose(out["floor_clause_ratio"], r / (kg * F), rtol=1e-6)
 
 
-def _two_resting_cubes(solver_name: str = "VBD"):
+def _two_resting_cubes(solver_name: str = "VBD", smoothing_passes: int | None = None):
     """A test scene: a free cube resting on a fixed one, settled into contact with one outer iteration per
-    step, early exit off and rstol 0. Returns the ``SimulationState``."""
+    step, early exit off and rstol 0, with ``smoothing_passes`` from the start if given (else the default). Returns
+    the ``SimulationState``."""
     from pbatoolkit import pbat, pypbat
     from ...state import SimulationState, SolverType, load_params
 
@@ -1832,6 +1843,8 @@ def _two_resting_cubes(solver_name: str = "VBD"):
     # No relative allowances, so that the recorded gradient ratios are the residuals over the absolute tolerance (or the
     # float32 floor)
     state.convergence_params.rstol = 0.0
+    if smoothing_passes is not None:
+        state.convergence_params.smoothing_passes = smoothing_passes
     state.reset()
     state.params[state.solver].data.n_max_iters = 1
     for _ in range(5):  # settle into contact
@@ -1860,6 +1873,7 @@ class TestNodeNorm(unittest.TestCase):
         check = state.convergence
         params = check.params
         params.rstol, params.astol = 2e-2, 0.1
+        params.smoothing_passes = 0  # the unsmoothed test's terms (both norms with smoothing: TestResidualSmoothing)
         kg = float(params.floor_kappa)
         self.assertEqual(params.node_norm, NodeNorm.RMS)  # the default
         check.measure_scale()
@@ -1911,17 +1925,22 @@ class TestResidualSmoothing(unittest.TestCase):
     """``smoothing_passes`` k: the stationarity test of the smoothed residual r_bar_k against the smoothed float32
     floor (:class:`ConvergenceParams`). Two resting cubes, the lower one fixed."""
 
-    def _state(self, solver_name: str = "VBD"):
-        state = _two_resting_cubes(solver_name)
+    def _state(self, solver_name: str = "VBD", smoothing_passes: int | None = None):
+        state = _two_resting_cubes(solver_name, smoothing_passes)
         check = state.convergence
         check.params.rstol, check.params.astol = 2e-2, 0.1
         return state, check
 
+    def test_default(self):
+        self.assertEqual(ConvergenceParams().smoothing_passes, 4)
+        self.assertTrue(ConvergenceParams().smoothing_in_test)
+
     def test_k0_adds_no_work(self):
-        # k = 0 (the default): the test launches exactly what it launched before smoothing existed and measures the
-        # same values, bit for bit, as the unsmoothed kernel launched directly; no smoothing buffer is allocated
-        state, check = self._state()
-        self.assertEqual(ConvergenceParams().smoothing_passes, 0)
+        # k = 0 (off, from the start): the test launches exactly what it launched before smoothing existed and
+        # measures the same values, bit for bit, as the unsmoothed kernel launched directly; no smoothing buffer is
+        # allocated
+        state, check = self._state(smoothing_passes=0)
+        self.assertEqual(check.smoothing_passes, 0)
         smoothing = {_stationarity_ratios_smoothed, _smoothing_pass, _perturb_positions, _subtract, _floor_from_probe,
                      _keep_stricter_sums}
         launched = []
@@ -2359,6 +2378,7 @@ class TestPerNodeAbsoluteAllowance(unittest.TestCase):
     def _state(self):
         state, X = _free_cube_state(1e-2)
         fem, check = state.fem, state.convergence
+        check.params.smoothing_passes = 0  # the unsmoothed test's q0_i (the smoothed one's: TestResidualSmoothing)
         m = fem.data.m.numpy().astype(np.float64)
         fext = fem.data.fext.numpy().astype(np.float64)
         factor = np.ones(X.shape[0])

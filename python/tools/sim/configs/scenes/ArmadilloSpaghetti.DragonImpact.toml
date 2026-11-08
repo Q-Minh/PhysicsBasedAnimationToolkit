@@ -156,7 +156,7 @@ ftol = 0.5
 node_norm = 0
 rstol = 0.02
 smoothing_in_test = 1
-smoothing_passes = 0
+smoothing_passes = 4
 
 [Solver.Newton]
 early_exit = -1
