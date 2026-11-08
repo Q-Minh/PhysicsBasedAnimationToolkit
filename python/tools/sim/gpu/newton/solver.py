@@ -852,11 +852,19 @@ class LinearSolverParams(SerializableMixin):
     )
 
 
+class NewtonEarlyExit(IntEnum):
+    """Whether passing a convergence test ends a Newton solve or subproblem (``Solver.Newton.early_exit``)."""
+
+    Shared = -1  # as Solver.Convergence.early_exit, the VBD family's switch
+    Off = 0  # every solve runs its full budget
+    On = 1  # passing a test ends the solve or subproblem
+
+
 class NewtonGpuParams(SerializableMixin):
     """GPU-only Newton settings, serialized next to the C++ Newton params under ``Solver/Newton``.
 
     Held by ``SimulationState.newton_gpu_params`` (kept across resets): configs set
-    ``Solver.Newton.init_strategy``. It takes effect at the next time step.
+    ``Solver.Newton.init_strategy``, ``one_sided_contact`` and ``early_exit``. They take effect at the next time step.
     """
 
     init_strategy = DocField(
@@ -874,6 +882,13 @@ class NewtonGpuParams(SerializableMixin):
         "its Hessian block is 0 otherwise. Off (as C++), the slack is fixed within each Newton step, and a contact "
         "detected but not pressed is a stiff two-sided spring that holds its gap: on Celebration, confetti stayed on "
         "vertical letter faces with friction off. Takes effect at the next time step",
+    )
+    early_exit = DocField(
+        NewtonEarlyExit.Shared,
+        "Whether passing a convergence test ends Newton's solve or subproblem: Shared (the default) follows "
+        "Solver.Convergence.early_exit, the VBD family's switch; Off runs every solve's full budget; On exits early "
+        "even with Solver.Convergence.early_exit off, so Newton, the reference, can stop at convergence in scenes "
+        "that give the VBD family fixed budgets (Celebration). Takes effect at the next time step",
     )
 
 
@@ -1088,8 +1103,12 @@ def _relative_check(params: Params):
 
 
 def _early_exit(params: Params) -> bool:
-    """Whether passing a test ends the solve or subproblem (``Solver.Convergence.early_exit``; on without
-    the shared convergence check)."""
+    """Whether passing a test ends the solve or subproblem: ``Solver.Newton.early_exit`` when On or Off, else
+    (Shared) ``Solver.Convergence.early_exit``, on without the shared convergence check."""
+    gpu = getattr(params, "gpu", None)
+    mode = NewtonEarlyExit.Shared if gpu is None else NewtonEarlyExit(gpu.early_exit)
+    if mode != NewtonEarlyExit.Shared:
+        return mode == NewtonEarlyExit.On
     return params.convergence is None or bool(params.convergence.params.early_exit)
 
 
@@ -1506,7 +1525,7 @@ def solve_subproblem(
 
     The subproblem converges when its augmented-Lagrangian gradient passes the shared stationarity test
     (``Solver.Convergence.rstol`` or ``astol > 0``, dynamic problems), or else ``|g|^2 <= gtol2``; with
-    ``Solver.Convergence.early_exit`` off, it takes all its steps anyway. Each
+    early exit off (``Solver.Newton.early_exit``, see :func:`_early_exit`), it takes all its steps anyway. Each
     gradient (the subproblem's start and after each accepted step) first refreshes the contact slack
     at the iterate (:func:`_subproblem_gradient`).
 
@@ -1807,6 +1826,27 @@ class TestSubproblemGradient(unittest.TestCase):
                 ("gradient", "stream"),
             ],
         )
+
+
+class TestEarlyExit(unittest.TestCase):
+    """Solver.Newton.early_exit overrides Solver.Convergence.early_exit unless Shared (the default)."""
+
+    def test_override(self):
+        def early_exit(newton, shared, check=True):
+            convergence = SimpleNamespace(params=SimpleNamespace(early_exit=shared)) if check else None
+            gpu = NewtonGpuParams()
+            if newton is not None:
+                gpu.early_exit = newton
+            return _early_exit(SimpleNamespace(convergence=convergence, gpu=gpu))
+
+        self.assertEqual(NewtonGpuParams().early_exit, NewtonEarlyExit.Shared)
+        for shared in (False, True):
+            self.assertEqual(early_exit(None, shared), shared)
+            self.assertEqual(early_exit(NewtonEarlyExit.Shared, shared), shared)
+            self.assertTrue(early_exit(NewtonEarlyExit.On, shared))
+            self.assertFalse(early_exit(NewtonEarlyExit.Off, shared))
+        self.assertTrue(early_exit(None, False, check=False))  # no shared check: on
+        self.assertTrue(_early_exit(SimpleNamespace(convergence=None)))  # no GPU params: Shared
 
 
 class TestOuterTestOrder(unittest.TestCase):
