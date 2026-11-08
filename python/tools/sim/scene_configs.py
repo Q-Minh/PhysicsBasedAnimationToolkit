@@ -286,6 +286,23 @@ RESIDUAL_SMOOTHING = Rule(
     "interval (Celebration).",
     {"Solver.Convergence.smoothing_passes": 4},
 )
+RESIDUAL_SMOOTHING_RECORD = Rule(
+    "Smoothed ratio recorded only, smoothing_passes = 4 with smoothing_in_test = 0 (maintainer, 2026-11-08), where "
+    "the plain (unsmoothed) ratio misranks the solvers but decides correctly: the smoothed test runs at each outer "
+    "test and is recorded beside the plain one (the status's smoothed_ratio and unsmoothed_ratio), while the plain "
+    "test alone decides, so pass/fail, iterations and positions are those of k = 0. Why: residual-over-time results "
+    "for the paper that rank the solvers by quality, beside the misleading plain ratio. Screen (2026-11-08, one step "
+    "per solver from a shared AAAVBD checkpoint at the scene budget, early exit off, reference GPU Newton; "
+    "data/profiling/investigations/smoothing-screen): on BendingBeam.10MPa, Trampoline.SoftStiff, "
+    "Trampoline.StiffSoft, Trampoline.StiffSphere and MatOnStilts AAAVBD is 2-7x closer to the reference (mass-"
+    "weighted RMS distance) but has the largest plain ratio (rough residual), with no wrong decision, so the combined "
+    "test (RESIDUAL_SMOOTHING) can't fix the ranking (it only removes false passes); the smoothed ratio alone ranks "
+    "the solvers correctly (MatOnStilts step 20: AAAVBD 6.1 vs 35-45 for VBD, Chebyshev and Anderson, 0.56 mm vs "
+    "1.9-2.0 mm from Newton). Cost about +1% per step: with every test smoothed it is +1.3% per Celebration step at "
+    "k = 4 (21 tests, 0.22 sweep per test), and recording smooths the outer tests only (not those inside "
+    "subproblems). Scenes found misranked later are added to this rule.",
+    {"Solver.Convergence.smoothing_passes": 4, "Solver.Convergence.smoothing_in_test": 0},
+)
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
@@ -343,7 +360,7 @@ SCENES = {
             ),
             *SOLVERS,
             *HET_CONTACT,
-            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
+            PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD,
             CONTACT_CAPACITIES,
         ],
         ["The paper's 10-substep file (MatOnStilts.10Substeps) differs from the 5-substep one only in "
@@ -353,13 +370,13 @@ SCENES = {
         "Trampoline.SoftStiff.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_soft-stiff[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 100 sweeps"), *SOLVERS, *HET_CONTACT, *TRAMPOLINE,
-         PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
+         PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
     ),
     "Trampoline.StiffSoft": Scene(
         "Trampoline.StiffSoft.5Substeps",
         "final_scenes/trampolines/trampoline_{circle,square}_stiff-soft[__with_sphere].h5 (Young's modulus 1e6 to 1e8)",
         [_stiff_budget("5 substeps of 1 x 25 AAAVBD sweeps, 1 x 100 for VBD"), *SOLVERS, *HET_CONTACT,
-         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
+         *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
     ),
     "Trampoline.SoftSoft": Scene(
         "Trampoline.SoftStiff.5Substeps",
@@ -380,7 +397,8 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, RESIDUAL_SMOOTHING_RECORD,
+         CONTACT_CAPACITIES],
         ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
          "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
@@ -466,7 +484,8 @@ SCENES = {
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
             [*SOLVERS, DMIN, STATIONARITY]
-            + ([RESIDUAL_SMOOTHING] if name in ("100MPa", "Heterogeneous") else []),
+            + ([RESIDUAL_SMOOTHING] if name in ("100MPa", "Heterogeneous") else [])
+            + ([RESIDUAL_SMOOTHING_RECORD] if name == "10MPa" else []),
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while "
              "VertexSdf detection is off.",
