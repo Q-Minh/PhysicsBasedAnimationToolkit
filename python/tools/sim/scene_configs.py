@@ -298,7 +298,10 @@ RESIDUAL_SMOOTHING_RECORD = Rule(
     "weighted RMS distance) but has the largest plain ratio (rough residual), with no wrong decision, so the combined "
     "test (RESIDUAL_SMOOTHING) can't fix the ranking (it only removes false passes); the smoothed ratio alone ranks "
     "the solvers correctly (MatOnStilts step 20: AAAVBD 6.1 vs 35-45 for VBD, Chebyshev and Anderson, 0.56 mm vs "
-    "1.9-2.0 mm from Newton). Cost about +1% per step: with every test smoothed it is +1.3% per Celebration step at "
+    "1.9-2.0 mm from Newton). BasketOfFruit step 100 (heavy-scene screen, reference AAAVBD at 100x the budget): "
+    "AAAVBD is the closest (3.2 mm vs 3.8-4.0 mm RMS) but has the largest plain ratio (3.54 vs 2.31-3.30); all fail "
+    "both tests at the budget; at 10x the budget the plain test passes a state 1.8 mm from the 100x one (0.92, "
+    "floor clause) that k = 4 rejects (15.1), so k = 4 in the test would only matter beyond the budget. Cost about +1% per step: with every test smoothed it is +1.3% per Celebration step at "
     "k = 4 (21 tests, 0.22 sweep per test), and recording smooths the outer tests only (not those inside "
     "subproblems). Scenes found misranked later are added to this rule.",
     {"Solver.Convergence.smoothing_passes": 4, "Solver.Convergence.smoothing_in_test": 0},
@@ -309,7 +312,7 @@ SCENES = {
         "BasketOfFruit",
         "final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8)",
         [BASKET_BUDGET, *SOLVERS, *HET_CONTACT, BASKET_MARGIN, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY,
-         CONTACT_CAPACITIES],
+         RESIDUAL_SMOOTHING_RECORD, CONTACT_CAPACITIES],
     ),
     "Celebration": Scene(
         "Celebration",
