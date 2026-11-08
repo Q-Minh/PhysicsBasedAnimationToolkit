@@ -264,6 +264,28 @@ PENALTY_FLOOR = Rule(
     "penalty at 1e-4 at 10 ms.",
     {"Contact.ContactDynamics.min_sigma_n": 1e4},
 )
+RESIDUAL_SMOOTHING = Rule(
+    "Residual smoothing, smoothing_passes = 4 (maintainer, 2026-11-07 and 2026-11-08), where the unsmoothed test "
+    "passes visibly worse states, mostly through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and "
+    "k = 4 rejects them. Celebration (2026-11-07): unsmoothed, Chebyshev and Anderson pass at 400 sweeps while their "
+    "letters visibly sag (decisive ratios 0.84/0.78; 17/41 mm from Newton vs AAAVBD's 3.3 mm); smoothed, their ratios "
+    "are 12.5/10.7 (VBD 34.9, AAAVBD 1.56), so they fail (data/profiling/investigations/residual-smoothing). "
+    "BendingBeam.100MPa (2026-11-07): VBD passed steps 0-2 with a gravity-sized smooth error under the floor at "
+    "k = 0, none at k = 4 (data/profiling/investigations/floor-clause-false-positive). Screen (2026-11-08, one step "
+    "per solver from a shared AAAVBD checkpoint at the scene budget, early exit off; decisive ratio at k = 0 / k = 4 "
+    "and mass-weighted RMS distance to the reference; data/profiling/investigations/smoothing-screen): "
+    "BendingBeam.100MPa step 3 (reference Newton): Chebyshev passes at k = 0 (0.82 / 6.72, 0.43 mm), VBD and "
+    "Anderson fail narrowly (1.05 / 11.7, 0.81 mm; 1.68 / 19.6, 1.12 mm); BendingBeam.Heterogeneous step 10 "
+    "(Newton): VBD, Chebyshev and Anderson pass at k = 0 (0.49 / 2.39, 0.46 / 1.96, 0.83 / 3.55; 0.11-0.19 mm vs "
+    "AAAVBD's 0.058 mm, 1.51 / 1.51); BirthdayBanner step 30 (AAAVBD at 100x the budget): VBD and Anderson pass at "
+    "k = 0 (0.86 / 10.9, 1.00 / 11.6) 3.5 mm off, every solver fails k = 4 (10.7-13.0) and so does the 100x "
+    "reference (1.51), so the banner practically always runs its full budget (accepted by the maintainer: a stiff, "
+    "hard scene). Scenes where the plain ratio only misranks the solvers (BendingBeam.10MPa, the trampolines, "
+    "MatOnStilts: AAAVBD 2-7x closer to the reference with the largest k = 0 ratio, no wrong decision) keep k = 0, "
+    "since the combined test can only remove false passes. Cost about +1.1-1.3% per step at a 20-sweep check "
+    "interval (Celebration).",
+    {"Solver.Convergence.smoothing_passes": 4},
+)
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
@@ -290,16 +312,11 @@ SCENES = {
             CONTACT_CAPACITIES,
             Rule(
                 "Early exit for every solver, the VBD family and Newton (maintainer, 2026-11-07; Newton follows the "
-                "shared early_exit), replacing the fixed budgets of 2026-11-01. Residual smoothing, smoothing_passes "
-                "= 4 (2026-11-07): unsmoothed, Chebyshev and Anderson pass at 400 sweeps while their letters visibly "
-                "sag (decisive ratios 0.84/0.78; 17/41 mm from Newton vs AAAVBD's 3.3 mm); smoothed, their ratios are "
-                "12.5/10.7 (VBD 34.9, AAAVBD 1.56), so they fail (data/profiling/investigations/residual-smoothing). "
-                "On BendingBeam.100MPa k = 4 removed the floor clause's false positives (VBD passed steps 0-2 with a "
-                "gravity-sized smooth error under the floor at k = 0, none at k = 4; "
-                "data/profiling/investigations/floor-clause-false-positive). Cost about +1.1-1.3% per step at a "
-                "20-sweep check interval.",
-                {"Solver.Convergence.early_exit": 1, "Solver.Convergence.smoothing_passes": 4},
+                "shared early_exit), replacing the fixed budgets of 2026-11-01 (with residual smoothing, "
+                "RESIDUAL_SMOOTHING).",
+                {"Solver.Convergence.early_exit": 1},
             ),
+            RESIDUAL_SMOOTHING,
             Rule(
                 "Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 "
                 "at most 6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed "
@@ -436,7 +453,7 @@ SCENES = {
     "BirthdayBanner": Scene(
         "BirthdayBanner",
         "the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh)",
-        [*SOLVERS, DMIN, STATIONARITY],
+        [*SOLVERS, DMIN, STATIONARITY, RESIDUAL_SMOOTHING],
         ["Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters are kept.",
          "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while VertexSdf "
          "detection is off.",
@@ -448,7 +465,8 @@ SCENES = {
             f"final_scenes/bending_beams/small_beam{'_het' if y == '_het' else 'Y' + y}.h5 ("
             + ("Young's modulus 1e6 to 1e8" if y == "_het" else f"homogeneous, Young's modulus {y}")
             + ")",
-            [*SOLVERS, DMIN, STATIONARITY],
+            [*SOLVERS, DMIN, STATIONARITY]
+            + ([RESIDUAL_SMOOTHING] if name in ("100MPa", "Heterogeneous") else []),
             ["Contact-free (single body, VertexSdf.deactivate = 1): contact parameters kept.",
              "The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while "
              "VertexSdf detection is off.",
