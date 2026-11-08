@@ -1,7 +1,7 @@
 # Scene config: BasketOfFruit, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
 # Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
-# Generated 2026-11-07 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-08 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - One budget for every VBD-family solver on the basket of fruit, so that the paper shows their different
@@ -92,6 +92,7 @@
 #   Solver.Convergence.floor_kappa
 #   Solver.Convergence.floor_local_kappa
 #   Solver.Convergence.node_norm
+#   Solver.Convergence.smoothing_in_test
 #   Solver.Convergence.smoothing_passes
 #   Solver.Newton.early_exit
 #   Solver.Newton.one_sided_contact
@@ -201,6 +202,7 @@ floor_local_kappa = 1.5
 ftol = 0.5
 node_norm = 0
 rstol = 0.02
+smoothing_in_test = 1
 smoothing_passes = 0
 
 [Solver.Newton]
