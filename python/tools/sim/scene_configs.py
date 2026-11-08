@@ -266,10 +266,11 @@ PENALTY_FLOOR = Rule(
 )
 FIXED_BUDGET = Rule(
     "Fixed compute budgets, no early exit for the VBD family (maintainer, 2026-11-01): the scene shows qualitative "
-    "differences between the solvers at equal compute. early_exit = 0 runs every solve's full budget, Newton's "
-    "included, while the usual tests still run and record their ratios (zero tolerances, used before, made them "
-    "infinite).",
-    {"Solver.Convergence.early_exit": 0},
+    "differences between the solvers at equal compute. early_exit = 0 runs every VBD-family solve's full budget, "
+    "while the usual tests still run and record their ratios (zero tolerances, used before, made them infinite). "
+    "Newton, the reference, exits early (Solver.Newton.early_exit = 1, On; maintainer, 2026-11-07): its "
+    "stationarity test has the float32 floor, so its full budget would only waste compute.",
+    {"Solver.Convergence.early_exit": 0, "Solver.Newton.early_exit": 1},
 )
 
 SCENES = {
