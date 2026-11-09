@@ -266,6 +266,12 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     (:data:`TEST_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
     docstring); ``x`` and ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the runs
     have none. Returns the speeds' legend handles."""
+    # TODO: show every convergence metric over time, the feasibility (penetration) ratio beside the stationarity
+    #  ratio (and the unsmoothed beside the smoothed one, both recorded since fd5eaa56). A per-step residual can't
+    #  carry a trajectory's past error: on BasketOfFruit, Chebyshev's smoothed ratio is 2x AAAVBD's while its net
+    #  overstretches (0.5-1.25 s, 133 infeasible steps, a fruit falls through) but lower after its net recovers
+    #  (1.5-2 s, 19 vs 28), so the stationarity ratio alone misreads a late window (maintainer, 2026-11-09;
+    #  data/profiling/investigations/BasketOfFruit-residual-misranking).
     speed = strip.twinx()
     handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
