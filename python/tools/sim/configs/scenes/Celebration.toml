@@ -36,34 +36,6 @@
 #   feasibility violations; others within noise. Median feasibility ratios rise 2-5x where contact matters,
 #   staying below 1 (measurements: gpu/contact/dynamics.py, at adapt_penalty_parameters_to_hessian).
 #     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
-# - Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the
-#   paper files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual
-#   acceleration over the largest of rstol times its largest force per mass, astol times its own external
-#   acceleration and its float32 floor must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces
-#   gave the same pass points for 1e-2 to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off
-#   reference than 0.5 at h = 10 ms for 35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py,
-#   ConvergenceParams). The norm over nodes is the mass-weighted RMS (node_norm 0, the code default); the max
-#   (1) is stricter, as single nodes at their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421
-#   steps under a max test). Residual smoothing in the test, smoothing_passes = 4 with smoothing_in_test = 1,
-#   the code default for every scene since 2026-11-08 (maintainer): the test must also pass with the residual
-#   and its float32 floor smoothed by 4 passes of 1-ring averaging. It rejects unconverged states that the
-#   unsmoothed test passes through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and it can
-#   only remove passes. Screen (2026-11-08, one step per solver from a shared AAAVBD checkpoint at the scene
-#   budget, early exit off; decisive ratio at k = 0 / k = 4 and mass-weighted RMS distance to the reference;
-#   data/profiling/investigations/smoothing-screen): BendingBeam.100MPa Chebyshev 0.82 / 6.72, 0.43 mm from
-#   Newton; BendingBeam.Heterogeneous VBD, Chebyshev and Anderson 0.46-0.83 / 1.96-3.55, 0.11-0.19 mm vs
-#   AAAVBD's 0.058 mm; BirthdayBanner VBD and Anderson 0.86 / 10.9 and 1.00 / 11.6, 3.5 mm from AAAVBD at 100x
-#   the budget, which fails k = 4 too (1.51), so the banner runs its full budget (accepted); BasketOfFruit
-#   AAAVBD at 10x the budget 0.92 / 15.1, 1.8 mm from 100x. Celebration (2026-11-07, 5 x 80;
-#   data/profiling/investigations/residual-smoothing): Chebyshev and Anderson pass unsmoothed (0.84 / 0.78)
-#   while their letters sag, 17 / 41 mm from Newton vs AAAVBD's 3.3 mm, and fail smoothed (12.5 / 10.7);
-#   BendingBeam.100MPa VBD (2026-11-07) passed steps 0-2 with a gravity-sized smooth error at k = 0, none at k =
-#   4 (data/profiling/investigations/floor-clause-false-positive). Where the unsmoothed ratio only misranks the
-#   solvers (BendingBeam.10MPa, the trampolines, MatOnStilts, BasketOfFruit: AAAVBD the closest with the largest
-#   unsmoothed ratio), the smoothed ratio ranks them; every status row records both (unsmoothed_ratio,
-#   smoothed_ratio). Cost about +1.3% per step at a 20-sweep check interval (Celebration, 0.22 sweep per test).
-#     Solver.Convergence.astol = 0.1 (source 0.5)
-#     Solver.Convergence.rstol = 0.02 (source 0.01)
 # - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
 #   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
 #   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
@@ -74,6 +46,18 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+# - Stationarity tolerances 4x the code defaults (rstol 2e-2, astol 0.1; STATIONARITY) for every solver, Newton
+#   included (the convergence parameters are shared on purpose): rstol 0.08, astol 0.4 (maintainer, 2026-11-08;
+#   the defaults stay, tolerances are loosened per scene where needed). With the floor clause failing, a step
+#   passes at s times the tolerances iff s >= its smoothed RMS q0; at the end of the 400-sweep budget AAAVBD
+#   needs 3.1-3.2x, Chebyshev about 26x, Anderson 22-43x, VBD about 50x. At 4x, 97% of AAAVBD's steps exit at
+#   sweep 341 of 400 (-14% sweeps, -13% time per step); its letters end 4.3 mm from Newton (3.3 mm at the full
+#   budget; Chebyshev 35, Anderson 80, VBD 118 mm), 1.3 mm median from the full-budget run, steady, with no
+#   drift; one impact step ends with feasibility ratio 1.30. 5x and 10x were bit-identical to 4x: the unsmoothed
+#   test passes only through its float32-floor clause, which doesn't scale with the tolerances. Data:
+#   data/profiling/investigations/celebration-tolerance-scaling.
+#     Solver.Convergence.astol = 0.4 (source 0.5)
+#     Solver.Convergence.rstol = 0.08 (source 0.01)
 # - Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 at most
 #   6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed contacts were
 #   stiff two-sided springs that held confetti on the letters' vertical faces (5 x 1: none of the 7 on walls
@@ -198,14 +182,14 @@ vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
 
 [Solver.Convergence]
-astol = 0.1
+astol = 0.4
 check_interval = 20
 early_exit = 1
 floor_kappa = 0.2
 floor_local_kappa = 1.5
 ftol = 0.5
 node_norm = 0
-rstol = 0.02
+rstol = 0.08
 smoothing_in_test = 1
 smoothing_passes = 4
 
