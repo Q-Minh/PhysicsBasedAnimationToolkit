@@ -311,6 +311,20 @@ SCENES = {
                 {"Solver.Convergence.early_exit": 1},
             ),
             Rule(
+                "Stationarity tolerances 4x the code defaults (rstol 2e-2, astol 0.1; STATIONARITY) for every "
+                "solver, Newton included (the convergence parameters are shared on purpose): rstol 0.08, astol 0.4 "
+                "(maintainer, 2026-11-08; the defaults stay, tolerances are loosened per scene where needed). With "
+                "the floor clause failing, a step passes at s times the tolerances iff s >= its smoothed RMS q0; at "
+                "the end of the 400-sweep budget AAAVBD needs "
+                "3.1-3.2x, Chebyshev about 26x, Anderson 22-43x, VBD about 50x. At 4x, 97% of AAAVBD's steps exit at "
+                "sweep 341 of 400 (-14% sweeps, -13% time per step); its letters end 4.3 mm from Newton (3.3 mm at "
+                "the full budget; Chebyshev 35, Anderson 80, VBD 118 mm), 1.3 mm median from the full-budget run, "
+                "steady, with no drift; one impact step ends with feasibility ratio 1.30. 5x and 10x were "
+                "bit-identical to 4x: the unsmoothed test passes only through its float32-floor clause, which doesn't "
+                "scale with the tolerances. Data: data/profiling/investigations/celebration-tolerance-scaling.",
+                {"Solver.Convergence.rstol": 8e-2, "Solver.Convergence.astol": 0.4},
+            ),
+            Rule(
                 "Newton, the reference, with one-sided contact at 10 outer iterations x 2 Newton steps, CG rtol 1e-7 "
                 "at most 6000 iterations (maintainer, 2026-11-01). With the slack fixed per Newton step, unpressed "
                 "contacts were stiff two-sided springs that held confetti on the letters' vertical faces (5 x 1: none "
