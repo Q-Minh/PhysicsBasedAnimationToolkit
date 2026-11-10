@@ -1,7 +1,7 @@
 # Scene config: Trampoline.StiffSphere, every serialized parameter written out (diff it against configs/paper).
 # For: the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded).
 # Source: configs/paper/Trampoline.StiffSphere.5Substeps.toml. Keys not listed below have the source's values.
-# Generated 2026-11-08 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-09 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -81,6 +81,11 @@
 #     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
 #     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
 #     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+# - One budget for every VBD-family solver, AAAVBD's 1 x 100 sweeps per substep (maintainer, 2026-11-09: the
+#   paper compares the solvers at equal cost; the paper file gives 1 x 400 to VBD).
+#     Solver.AndersonSolver.n_subproblem_max_iters = 100 (source 400)
+#     Solver.Chebyshev.n_subproblem_max_iters = 100 (source 400)
+#     Solver.VBD.n_subproblem_max_iters = 100 (source 400)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -95,8 +100,8 @@
 #   Solver.Newton.one_sided_contact
 #
 # Notes:
-# - Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per substep.
-#   The other trampoline scene configs use 1 substep of 5 x 80 instead.
+# - Substeps kept: 5 substeps of 1 x 100 sweeps, one contact detection pass per substep. The other trampoline
+#   scene configs use 1 substep of 5 x 80 instead.
 
 [Contact.CDType.OGC]
 arq = 1.0
@@ -174,7 +179,7 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 1
-n_subproblem_max_iters = 400
+n_subproblem_max_iters = 100
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -188,7 +193,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 400
+n_subproblem_max_iters = 100
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -237,7 +242,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 400
+n_subproblem_max_iters = 100
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

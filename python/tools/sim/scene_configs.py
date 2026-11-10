@@ -387,9 +387,12 @@ SCENES = {
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
         "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
-        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES],
-        ["Budgets kept: 5 substeps of 1 x 100 AAAVBD sweeps (1 x 400 for VBD), one contact detection pass per "
-         "substep. The other trampoline scene configs use 1 substep of 5 x 80 instead."],
+        [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES,
+         Rule("One budget for every VBD-family solver, AAAVBD's 1 x 100 sweeps per substep (maintainer, "
+              "2026-11-09: the paper compares the solvers at equal cost; the paper file gives 1 x 400 to VBD).",
+              _per_solver("n_subproblem_max_iters", 100))],
+        ["Substeps kept: 5 substeps of 1 x 100 sweeps, one contact detection pass per substep. The other "
+         "trampoline scene configs use 1 substep of 5 x 80 instead."],
     ),
     "CapsulesIntoBowl": Scene(
         "CapsulesIntoBowl",
