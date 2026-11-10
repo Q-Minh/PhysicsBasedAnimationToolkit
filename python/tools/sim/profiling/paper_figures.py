@@ -71,7 +71,7 @@ import numpy as np  # noqa: E402
 from matplotlib import patheffects  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
-from matplotlib.ticker import FuncFormatter, LogLocator, MultipleLocator, NullFormatter  # noqa: E402
+from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter  # noqa: E402
 from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
@@ -477,8 +477,9 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         else:
             _box(ax, yi, table["time_ms"])
     if column in ("gradient", "feasibility"):
-        _log_axis(ax)
+        # The tolerance line first, so the ticks are chosen for the final limits
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
+        _log_axis(ax, dense=NARROW_LOG_RANGE)
         ax.set_xlabel(TEST_RATIO_LABEL if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
@@ -486,10 +487,11 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         ax.set_xlabel("Early exits (%)", fontsize=FONT_SIZE)
     elif column == "sweeps":
         ax.set_xlim(left=0)
-        ax.xaxis.set_major_locator(MultipleLocator(50))
+        # A few round ticks at any budget (every 50 sweeps crowded a 750-sweep axis)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=4, steps=[1, 2, 2.5, 5, 10], integer=True))
         ax.set_xlabel("Sweeps", fontsize=FONT_SIZE)
     else:
-        _log_axis(ax)
+        _log_axis(ax, dense=NARROW_LOG_RANGE)
         ax.set_xlabel("Step time (ms)", fontsize=FONT_SIZE)
 
 
@@ -582,13 +584,25 @@ def _box(ax, y: float, values: np.ndarray, floor: float | None = None, height: f
     ax.plot(d["max"], y, marker="o", markersize=2, color=INK, linestyle="none")
 
 
-def _log_axis(ax, which: str = "x"):
-    """Log x (or y) axis with plain-number ticks: 1-2-5 within a narrow range, decades over a wide one (call
-    after drawing, so the limits are known)."""
+# solvers and budget figures: the narrow panels' log axes get 1-2-5 ticks only within this ratio of their limits
+# (about 1.5 decades), decades over a wider range, so their labels don't overlap
+NARROW_LOG_RANGE = 30.0
+
+
+def _log_axis(ax, which: str = "x", dense: float = 300.0):
+    """Log x (or y) axis with plain-number ticks: 1-2-5 within a range under ``dense`` (hi / lo), decades over a
+    wider one, and a few round linear ticks where fewer than two of those fall in range (call after drawing
+    everything, so the limits are final)."""
     getattr(ax, f"set_{which}scale")("log")
     lo, hi = getattr(ax, f"get_{which}lim")()
     axis = getattr(ax, f"{which}axis")
-    axis.set_major_locator(LogLocator(subs=(1.0, 2.0, 5.0) if hi / lo < 300 else (1.0,)))
+    subs = (1.0, 2.0, 5.0) if hi / lo < dense else (1.0,)
+    decades = range(int(np.floor(np.log10(lo))), int(np.ceil(np.log10(hi))) + 1)
+    if sum(lo <= m * 10.0**e <= hi for e in decades for m in subs) >= 2:
+        # numticks: LogLocator's default can thin a multi-decade 1-2-5 axis to no ticks at all
+        axis.set_major_locator(LogLocator(subs=subs, numticks=100))
+    else:  # LogLocator would fall back to dense linear ticks (4000, 4250, ... on a 4-5.6 s step time axis)
+        axis.set_major_locator(MaxNLocator(nbins=2, steps=[1, 2, 2.5, 5, 10]))
     axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
     axis.set_minor_formatter(NullFormatter())
 
