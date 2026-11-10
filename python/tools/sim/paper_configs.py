@@ -10,13 +10,14 @@ Usage, from the repository root:
     python -m python.tools.sim.paper_configs make --extras path/to/accelerated-vbd-extras
     python -m python.tools.sim.paper_configs check --extras path/to/accelerated-vbd-extras
 
-``make`` converts the extras repository's **committed** ``parameters/gpu/*.h5`` files (uncommitted local
-changes are ignored, by the maintainer's choice) to ``configs/paper/<name>.toml``, named by :data:`NAMES`,
+``make`` converts the extras repository's **committed** ``parameters/gpu/*.h5`` and ``*.toml`` files (the latter
+GUI exports in the config format; uncommitted local changes are ignored, by the maintainer's choice) to
+``configs/paper/<name>.toml``, named by :data:`NAMES`,
 following the rules in ``configs/README.md`` ("Paper configs"), and regenerates ``configs/defaults.toml``. Run it after a change to
 the serialized parameters (a parameter added, removed or given a new default).
 
-``check`` verifies that each paper ``.toml`` loads to exactly the same parameters as its ``.h5`` (both through
-the loaders), and that every attribute of the raw ``.h5`` matches the loaded state, except the keys the code
+``check`` verifies that each paper ``.toml`` loads to exactly the same parameters as its source (both through
+the loaders), and that every attribute (or key) of the raw source matches the loaded state, except the keys the code
 no longer serializes. It exits nonzero on any difference or ConfigWarning.
 
 Both commands build a SimulationState from ``--problem`` (default: the beam Dump in the git-ignored ``data/``).
@@ -44,6 +45,7 @@ DEFAULT_PROBLEM = "data/scenarios/MediumLongBendingBeam.Dump.h5:fem"
 # Each source's config name (CLAUDE.md, "Names of config/params and scene files"): the scene, then what tells
 # files of one scene apart. Budget digits are dropped; each header records its source file.
 NAMES = {
+    "4bunny_bounce.Params": "FourBunnies",
     "basket_5_5_40": "BasketOfOranges",
     "basket_of_fruit.Params_3_10_15": "BasketOfFruit",
     "beam1e5.GroundTruth": "BendingBeam.100kPa.GroundTruth",
@@ -78,10 +80,11 @@ def _name(rel: str) -> str:
 
 
 def _committed_sources(extras: pathlib.Path, tmp: pathlib.Path) -> list[tuple[str, pathlib.Path]]:
-    """(repo-relative path, temporary copy) of each committed parameters/gpu/*.h5 of the extras repository."""
+    """(repo-relative path, temporary copy) of each committed parameters/gpu/*.h5 and *.toml of the extras
+    repository."""
     names = _git(extras, "ls-tree", "--name-only", "HEAD", "parameters/gpu/").splitlines()
     out = []
-    for rel in sorted(n for n in names if n.endswith(".h5")):
+    for rel in sorted(n for n in names if n.endswith((".h5", ".toml"))):
         blob = subprocess.run(["git", "-C", str(extras), "show", f"HEAD:{rel}"], capture_output=True, check=True).stdout
         copy = tmp / pathlib.PurePosixPath(rel).name
         copy.write_bytes(blob)
@@ -172,19 +175,32 @@ def check(extras: pathlib.Path, problem: str) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         for rel, blob in _committed_sources(extras, pathlib.Path(tmp)):
             name = _name(rel)
-            with h5py.File(blob, "r") as f:
-                st.deserialize_params(from_h5, f)
-                present = {g for g in ("Solver/Chebyshev", "Solver/AndersonSolver") if g in f}
-                raw = {}
-                f.visititems(lambda n, o: raw.update({f"{n}/{k}": np.asarray(v).item() for k, v in o.attrs.items()}))
+            if blob.suffix == ".toml":
+                # A config-format source: through the config loader, its keys as "Group/Sub/attr". A fresh state, so
+                # that its values don't leak into the .h5 sources' shared state (which keeps the keys a file lacks)
+                source_state = _make_state(problem)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    config.load_sim_params(source_state, [str(blob)])
+                raw = {k.replace(".", "/"): v for k, v in config.flatten(config.read(blob))}
+                present = {
+                    g for g in ("Solver/Chebyshev", "Solver/AndersonSolver") if any(k.startswith(f"{g}/") for k in raw)
+                }
+            else:
+                source_state = from_h5
+                with h5py.File(blob, "r") as f:
+                    st.deserialize_params(from_h5, f)
+                    present = {g for g in ("Solver/Chebyshev", "Solver/AndersonSolver") if g in f}
+                    raw = {}
+                    f.visititems(lambda n, o: raw.update({f"{n}/{k}": np.asarray(v).item() for k, v in o.attrs.items()}))
             with warnings.catch_warnings(record=True) as caught:
                 warnings.simplefilter("always")
                 config.load_sim_params(from_toml, [str(CONFIGS / "paper" / f"{name}.toml")])
-            a, b = _serialized(from_h5), _serialized(from_toml)
-            # .toml vs .h5 through the loaders; the augmented tables have no .h5 counterpart
+            a, b = _serialized(source_state), _serialized(from_toml)
+            # paper .toml vs source through the loaders; the augmented tables have no source counterpart
             skip = {"Solver/Chebyshev", "Solver/AndersonSolver"} - present
             problems = [f"loaded differently: {k}" for k in a if k.rsplit("/", 1)[0] not in skip and a[k] != b[k]]
-            # raw .h5 attributes vs the loaded state, except keys the code no longer serializes
+            # raw source attributes vs the loaded state, except keys the code no longer serializes
             for key, value in raw.items():
                 group, attr = key.rsplit("/", 1)
                 dropped = (attr in STENCIL_GRADIENT_ACCELERATION_KEYS and not group.endswith("AAAVBD")) or (
