@@ -208,6 +208,17 @@ BASKET_BUDGET = Rule(
     {"Integration.substeps": 5, **_per_solver("n_max_iters", 3), **_per_solver("n_subproblem_max_iters", 50)},
 )
 
+FOUR_BUNNIES_BDF2 = Rule(
+    "BDF2 time integration for the four bunnies' bounce (maintainer, 2026-11-09): BDF1 at h = 10 ms damps the "
+    "rebound numerically. Rebound height over drop height of the bunnies' centers of mass (AAAVBD, 5 x 20 sweeps, "
+    "the source file's other settings with this scene's rules): on the source scene (every body 1000 kg/m^3) 0.33 "
+    "with BDF1, 0.48 with BDF2, 0.50 with 5 substeps of BDF1 (h = 2 ms) and 0.34 with 5x the sweeps (every step "
+    "converged early, so it isn't solver error); with the 250 kg/m^3 trampoline 0.41 with BDF1 and 0.65 with BDF2 "
+    "(first bounce 51 cm clear of the trampoline, a second of 45 cm). Data: "
+    "data/profiling/investigations/FourBunnies-density-tuning.",
+    {"Integration.bdf_scheme": 2},
+)
+
 BASKET_MARGIN = Rule(
     "AL contact margin dmin = 2 mm for the woven basket (maintainer, 2026-11-05; band unchanged at 2 mm): its "
     "strands are at least 8.7 mm in half-thickness, the gaps between strands are 4.7 mm at the 0.1 percentile "
@@ -382,6 +393,25 @@ SCENES = {
             CONTACT_CAPACITIES,
         ],
         ["The paper has no parameter file for the soft-soft trampolines; the source is the soft-stiff one's."],
+    ),
+    "FourBunnies.Trampoline250kgPerM3": Scene(
+        "FourBunnies",
+        "data/scenarios/FourBunnies.Trampoline250kgPerM3.h5: accelerated-vbd-extras final_scenes/4bunny_bounce.h5 "
+        "with the trampoline's density lowered from 1000 to 250 kg/m^3 (maintainer, 2026-11-09), everything else "
+        "unchanged: a circular trampoline (radius 2 m, 10 cm thick) whose rim is pulled radially to 3 m over the first "
+        "second and then held, and four bunnies (bunny.mesh, 1000 kg/m^3, 279 kg each) held 0.8 m above it until 1 s, "
+        "then dropped; Young's modulus 1 MPa and Poisson's ratio 0.45 everywhere",
+        [*SOLVERS, *CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES,
+         FOUR_BUNNIES_BDF2],
+        ["Budget kept: the source's 5 x 20 = 100 sweeps per step, no substeps, as Trampoline.SoftSoft's (homogeneous "
+         "and soft).",
+         "The trampoline's 1 cm VertexSdf band (TRAMPOLINE) also covers the bunnies' 4 m/s impacts.",
+         "Why the lighter trampoline (BDF1, AAAVBD, 0-4 s): trampoline 1000 / 250 / 100 kg/m^3 with the bunnies at "
+         "1000 gave rebound ratios 0.33 / 0.41 / 0.42 and first bounces 18 / 24 / 25 cm clear of the trampoline (second "
+         "bounce none / 11 / 16 cm), 250 with the fewest penetration violations (1 step, ratio 1.05). Heavier bunnies "
+         "(2000 and 4000 kg/m^3) kept the ratio at 0.34, sank deeper (0.5 and 0.8 m) and barely left the trampoline "
+         "(13 and 2 cm), with feasibility unmet on 56-122 steps; trampoline 250 with bunnies 4000 diverged at 2.88 s. "
+         "Data: data/profiling/investigations/FourBunnies-density-tuning."],
     ),
     # The other paper configs: the durable rules only, budgets unchanged
     "Trampoline.StiffSphere": Scene(
