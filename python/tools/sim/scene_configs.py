@@ -386,7 +386,8 @@ SCENES = {
     # The other paper configs: the durable rules only, budgets unchanged
     "Trampoline.StiffSphere": Scene(
         "Trampoline.StiffSphere.5Substeps",
-        "the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded)",
+        "data/scenarios/Trampoline.Square.Soft.StiffSphere.h5, converted from final_scenes/trampoline_update.zip "
+        "(trampoline_soft_sphere_stiff.Dump.h5): the square 1 MPa trampoline with a 100 MPa sphere",
         [*SOLVERS, *HET_CONTACT, *TRAMPOLINE, PENALTY_FLOOR, LOCAL_PENALTY, STATIONARITY, CONTACT_CAPACITIES,
          Rule("One budget for every VBD-family solver, AAAVBD's 1 x 100 sweeps per substep (maintainer, "
               "2026-11-09: the paper compares the solvers at equal cost; the paper file gives 1 x 400 to VBD).",

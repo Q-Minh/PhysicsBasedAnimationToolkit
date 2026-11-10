@@ -1,5 +1,5 @@
 # Scene config: Trampoline.StiffSphere, every serialized parameter written out (diff it against configs/paper).
-# For: the trampolines with a sphere (final_scenes/trampolines/*__with_sphere.h5; which variant is not recorded).
+# For: data/scenarios/Trampoline.Square.Soft.StiffSphere.h5, converted from final_scenes/trampoline_update.zip (trampoline_soft_sphere_stiff.Dump.h5): the square 1 MPa trampoline with a 100 MPa sphere.
 # Source: configs/paper/Trampoline.StiffSphere.5Substeps.toml. Keys not listed below have the source's values.
 # Generated 2026-11-09 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
