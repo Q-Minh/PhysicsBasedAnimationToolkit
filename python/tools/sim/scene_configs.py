@@ -291,6 +291,47 @@ PENALTY_FLOOR = Rule(
     "penalty at 1e-4 at 10 ms.",
     {"Contact.ContactDynamics.min_sigma_n": 1e4},
 )
+
+
+# Real-time frame steps. Each real-time entry is its 10 ms entry plus the frame step and its budget.
+REALTIME_SCREEN = "data/profiling/investigations/RealtimeTimeSteps-screen"
+
+
+def _realtime_step(hz: int) -> Rule:
+    """The frame step dt = 1/``hz`` s, as the float32 value the screens used."""
+    return Rule(
+        "Real-time frame steps instead of 10 ms (maintainer, 2026-11-10): a 1/30 s frame first, then 1/60 s, and "
+        "never a frame below 1/60 s. Substeps only as a last resort: when the sweeps needed at the full step would be "
+        "prohibitive (caps of about 200 sweeps per solve for soft scenes and about 500 for heavy ones), or when the "
+        "scene explodes because contact detection can't cope at that step. Each substep keeps the full per-solve "
+        "budget, the same for every VBD-family solver; Newton keeps its 10 ms entry's outer x Newton iterations and "
+        "CG cap per solve (untested at these steps). Screen (AAAVBD, early exit on): at the 10 ms budgets the "
+        "dominant failure at larger steps is under-convergence (soft bodies sag and stretch, then contact scenes "
+        "explode), not missed contacts; no scene keeps its 10 ms behaviour at 1/30 s without substeps, "
+        "CapsulesIntoBowl comes closest (outcome kept, 23 mm overlaps). A 1/30 s frame with 2N substeps is bit for "
+        "bit a 1/60 s frame with N. At 1/60 s, AAAVBD was the only VBD-family solver that kept the 10 ms outcome in "
+        f"every scene (phase 2). Data: {REALTIME_SCREEN} (phases 1, 1b, 2 and 3, and FourBunnies without "
+        "substeps).",
+        {"Integration.dt": float(np.float32(1 / hz))},
+    )
+
+
+REALTIME_60HZ = _realtime_step(60)
+REALTIME_30HZ = _realtime_step(30)
+
+
+def _realtime_budget(substeps: int, outer: int, sweeps: int, why: str) -> Rule:
+    """``substeps`` per frame step, each of ``outer`` x ``sweeps`` for every VBD-family solver; Newton keeps its own."""
+    steps = "no substeps" if substeps == 1 else f"{substeps} substeps per frame step"
+    return Rule(
+        f"Real-time budget (maintainer, 2026-11-10): {steps}, {outer} outer iteration{'s' if outer > 1 else ''} x "
+        f"{sweeps} sweeps = {outer * sweeps} sweeps per solve ({substeps * outer * sweeps} per frame step) for every "
+        f"VBD-family solver. {why}",
+        {"Integration.substeps": substeps, **_per_solver("n_max_iters", outer),
+         **_per_solver("n_subproblem_max_iters", sweeps)},
+    )
+
+
 SCENES = {
     # The six scene configs that predate the explicit form: their values are kept, plus the 2 mm band.
     "BasketOfFruit": Scene(
@@ -532,6 +573,60 @@ SCENES["ArmadilloSpaghetti.DragonImpact.Fast"] = Scene(
      "ArmadilloSpaghetti.DragonImpact's budget.",
      *_DRAGON_IMPACT.notes],
 )
+
+
+def _realtime(base: str, step: Rule, budget: Rule, notes=()) -> Scene:
+    """``base``'s 10 ms entry at a real-time frame ``step`` with its ``budget``."""
+    scene = SCENES[base]
+    return Scene(
+        scene.source,
+        scene.scene_files,
+        [*scene.rules, step, budget],
+        [*notes, f"Every other setting is {base}'s (10 ms); its rules above keep their 10 ms wording, and their "
+         "per-solve settings apply per substep.", *(f"10 ms entry: {note}" for note in scene.notes)],
+    )
+
+
+# Real-time entries, next to their 10 ms entries until those are removed (maintainer, 2026-11-10). The evidence quoted
+# is AAAVBD's, against its 10 ms run (REALTIME_SCREEN).
+SCENES.update({
+    "CapsulesIntoBowl.60Hz": _realtime("CapsulesIntoBowl", REALTIME_60HZ, _realtime_budget(
+        1, 10, 20,
+        "1/30 s already runs the 200 cap and keeps the outcome, but with contact worse than at 10 ms "
+        "(CapsulesIntoBowl.30Hz). 1/60 s is as clean as 10 ms: interpenetration at most 10 mm (dmin 10 mm; 10 ms "
+        "10.1 mm), feasibility max 0.23, stationarity ratio median 0.61 (smoothed 0.04), 100% early exits, 5.6 GPU s "
+        "per simulated s (10 ms 6.7).")),
+    "CapsulesIntoBowl.30Hz": _realtime("CapsulesIntoBowl", REALTIME_30HZ, _realtime_budget(
+        1, 10, 20,
+        "A showcase of the large step (maintainer, 2026-11-10), next to the rule's choice CapsulesIntoBowl.60Hz. "
+        "AAAVBD keeps the outcome (all 26 capsules in the bowl) but leaves contact overlaps up to 23 mm (dmin 10 mm; "
+        "12 frames with a vertex more than 1 cm inside a partner, feasibility > 1 on 71 solves, max 6.6; 10 ms: 1 "
+        "frame and 0 solves), from contact at this step rather than the budget (a 10x-sweep reference still reaches "
+        "feasibility 21). At the same budget the other solvers leave capsules stuck in the tubes: VBD 21 of 26, "
+        "Chebyshev 7, Anderson 2 (none at 10 ms or 1/60 s), with overlaps of 44, 40 and 69 mm.")),
+    "Celebration.60Hz": _realtime("Celebration", REALTIME_60HZ, _realtime_budget(
+        1, 5, 80,
+        "1/30 s blows up as the confetti land (0.47-0.53 s, contact overflow) at 5 x 80 and at 5 x 160. 1/60 s: no "
+        "interpenetration, feasibility max 1.4 (> 1 on 4 solves; 10 ms 1.3, 1), stationarity ratio median 2.1 "
+        "(smoothed 0.86; 10 ms 0.90 (0.81)), 0% early exits (10 ms 97%), 47 GPU s per simulated s (10 ms 68).")),
+    "MatOnStilts.60Hz": _realtime("MatOnStilts", REALTIME_60HZ, _realtime_budget(
+        1, 5, 160,
+        "At 1/30 s and 5 x 80 the mat drapes over the stilt like a cloth. At 1/60 s, 5 x 80 and 5 x 120 change the "
+        "outcome (the cow slides off first; at 5 x 120 the mat tips about 0.5 s later). At 5 x 160 the mat tips off "
+        "with the cow as at 10 ms, 0.2-0.3 s later: no interpenetration, feasibility max 2.0 (> 1 on 4 solves; 10 ms "
+        "4.9, 4), stationarity ratio median 13.0 (smoothed 3.6; 10 ms 7.8 (2.9)), 19% early exits (10 ms 16%), 11.5 "
+        "GPU s per simulated s. 800 sweeps per step is above the ~500 cap, accepted by the maintainer: it costs the "
+        "same as 2 substeps of 5 x 80 (11.7).")),
+    "FourBunnies.Trampoline250kgPerM3.60Hz": _realtime("FourBunnies.Trampoline250kgPerM3", REALTIME_60HZ,
+                                                       _realtime_budget(
+        1, 5, 60,
+        "1/30 s blows up at the first impact (1.43 s), at 5 x 20 and 5 x 60 and with a 14 cm band. At 1/60 s the 10 "
+        "ms budget, 5 x 20, loses a bounce (second apex 0.49-0.59 m vs 0.84-0.89 m) with 11.6 mm interpenetration "
+        "(dmin 1 mm). At 5 x 60 the bounces match 10 ms within 3 cm (0.98-0.99 and 0.83-0.89 m), all four bunnies "
+        "stay on the trampoline for 10 s, interpenetration at most 6.3 mm with no vertex more than 1 cm inside "
+        "another body, 9.7 GPU s per simulated s (3 substeps of 5 x 20: 10.9). More outer iterations (15 x 20) lost "
+        "a bunny off the edge at 5.68 s; a 7 cm band alone still lost the second bounce.")),
+})
 
 
 def _flatten(d: dict, prefix: str = "") -> dict:

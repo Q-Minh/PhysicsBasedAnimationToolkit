@@ -1,0 +1,267 @@
+# Scene config: CapsulesIntoBowl.30Hz, every serialized parameter written out (diff it against configs/paper).
+# For: final_scenes/capsule_bowl.h5 and sessions/capsule_bowl.h5 (tuned on the latter; Young's modulus 1e5 to 1e6; the bodies span about 8.8 x 8.8 x 8.5 m).
+# Source: configs/paper/CapsulesIntoBowl.toml. Keys not listed below have the source's values.
+# Generated 2026-11-10 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
+#     Solver.AAAVBD.vlinsolve = 0 (source 3)
+#     Solver.AndersonSolver.vlinsolve = 0 (source 3)
+#     Solver.Chebyshev.vlinsolve = 0 (source 3)
+#     Solver.VBD.vlinsolve = 0 (source 3)
+# - Adaptive contact penalty per time step (TIMESTEP, the code default; maintainer: CONSTANT only with a stated
+#   justification), with the code's gamman_adaptive / gammaf_adaptive, instead of the paper's constant gamman.
+#     Contact.ContactDynamics.penalty_adaptivity = 1 (source 0)
+# - Contact scaled to the capsule bowl's size, about 8.8 m across (maintainer, 2026-10-21): VertexSdf max_dist
+#   50 cm and band 1 cm, and a 1 cm AL margin dmin; the friction (mu_f 0.2) it was tested with, the code
+#   default.
+#     Contact.CDType.VertexSdf.band = 0.01 (source 0.001)
+#     Contact.CDType.VertexSdf.max_dist = 0.5 (source 0.019999999552965164)
+#     Contact.ContactDynamics.dmin = 0.01 (source -9.999999747378752e-05)
+#     Contact.ContactDynamics.mu_f = 0.2 (source 0.30000001192092896)
+# - The maintainer's budget for the capsule bowl (2026-10-21): no substeps, 10 outer iterations (contact
+#   detection passes) x 20 sweeps = 200 sweeps per step for every VBD-family solver, and Newton 10 x 2 (the
+#   paper file gives 5 substeps of 3 x 3 sweeps).
+#     Solver.Newton.n_max_iters = 10 (source 100)
+#     Solver.Newton.newton.n_max_iters = 2 (source 1)
+# - Contact penalty floor stiffness min_sigma_n = 1e4 N/m, the code default (maintainer, 2026-10-26): the
+#   effective normal penalty is floored at h2 * min_sigma_n (h2 the substep's BetaTilde^2), 1 at h = 10 ms with
+#   BDF1 like the former fixed floor of 1. The paper files' 1.0 is that former floor; read as a stiffness, it
+#   would floor the penalty at 1e-4 at 10 ms.
+#     Contact.ContactDynamics.min_sigma_n = 10000.0 (source 1.0)
+# - Per-contact penalties (LocalMaxRayleighQuotient), the code default since 2026-11-06 (maintainer; the paper
+#   files have the global one): one global penalty, set by the stiffest contact, also stiffened soft-side
+#   contacts and slowed the sweeps. Global -> local, outer gradient ratio: Celebration median AAAVBD 40 -> 21,
+#   Newton 302 -> 20; BasketOfFruit 2 s median/max AAAVBD 117/1241 -> 51/306, VBD 270/2462 -> 41/220;
+#   DragonImpact impact p90/max AAAVBD 13.7/58.5 -> 6.3/15.0; CapsulesIntoBowl early exits 93% -> 100% and no
+#   feasibility violations; others within noise. Median feasibility ratios rise 2-5x where contact matters,
+#   staying below 1 (measurements: gpu/contact/dynamics.py, at adapt_penalty_parameters_to_hessian).
+#     Contact.ContactDynamics.penalty_stiffness = 1 (source 0)
+# - Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the
+#   paper files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual
+#   acceleration over the largest of rstol times its largest force per mass, astol times its own external
+#   acceleration and its float32 floor must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces
+#   gave the same pass points for 1e-2 to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off
+#   reference than 0.5 at h = 10 ms for 35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py,
+#   ConvergenceParams). The norm over nodes is the mass-weighted RMS (node_norm 0, the code default); the max
+#   (1) is stricter, as single nodes at their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421
+#   steps under a max test). Residual smoothing in the test, smoothing_passes = 4 with smoothing_in_test = 1,
+#   the code default for every scene since 2026-11-08 (maintainer): the test must also pass with the residual
+#   and its float32 floor smoothed by 4 passes of 1-ring averaging. It rejects unconverged states that the
+#   unsmoothed test passes through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and it can
+#   only remove passes. Screen (2026-11-08, one step per solver from a shared AAAVBD checkpoint at the scene
+#   budget, early exit off; decisive ratio at k = 0 / k = 4 and mass-weighted RMS distance to the reference;
+#   data/profiling/investigations/smoothing-screen): BendingBeam.100MPa Chebyshev 0.82 / 6.72, 0.43 mm from
+#   Newton; BendingBeam.Heterogeneous VBD, Chebyshev and Anderson 0.46-0.83 / 1.96-3.55, 0.11-0.19 mm vs
+#   AAAVBD's 0.058 mm; BirthdayBanner VBD and Anderson 0.86 / 10.9 and 1.00 / 11.6, 3.5 mm from AAAVBD at 100x
+#   the budget, which fails k = 4 too (1.51), so the banner runs its full budget (accepted); BasketOfFruit
+#   AAAVBD at 10x the budget 0.92 / 15.1, 1.8 mm from 100x. Celebration (2026-11-07, 5 x 80;
+#   data/profiling/investigations/residual-smoothing): Chebyshev and Anderson pass unsmoothed (0.84 / 0.78)
+#   while their letters sag, 17 / 41 mm from Newton vs AAAVBD's 3.3 mm, and fail smoothed (12.5 / 10.7);
+#   BendingBeam.100MPa VBD (2026-11-07) passed steps 0-2 with a gravity-sized smooth error at k = 0, none at k =
+#   4 (data/profiling/investigations/floor-clause-false-positive). Where the unsmoothed ratio only misranks the
+#   solvers (BendingBeam.10MPa, the trampolines, MatOnStilts, BasketOfFruit: AAAVBD the closest with the largest
+#   unsmoothed ratio), the smoothed ratio ranks them; every status row records both (unsmoothed_ratio,
+#   smoothed_ratio). Cost about +1.3% per step at a 20-sweep check interval (Celebration, 0.22 sweep per test).
+#     Solver.Convergence.astol = 0.1 (source 0.5)
+#     Solver.Convergence.rstol = 0.02 (source 0.01)
+# - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
+#   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
+#   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
+#   = 2V; the measured peaks were at most 39% VE and 7% VV pairs), and no EE pairs, which VertexSdf doesn't
+#   detect (the storage keeps 1 slot) (maintainer, 2026-10-22: conservatively rather than minimally; dropped
+#   pairs now warn).
+#     Contact.ContactStorage.n_ee_contact_capacity = 0.0 (source 0.20000000298023224)
+#     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05000000074505806)
+#     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.20000000298023224)
+#     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05000000074505806)
+# - Real-time frame steps instead of 10 ms (maintainer, 2026-11-10): a 1/30 s frame first, then 1/60 s, and
+#   never a frame below 1/60 s. Substeps only as a last resort: when the sweeps needed at the full step would be
+#   prohibitive (caps of about 200 sweeps per solve for soft scenes and about 500 for heavy ones), or when the
+#   scene explodes because contact detection can't cope at that step. Each substep keeps the full per-solve
+#   budget, the same for every VBD-family solver; Newton keeps its 10 ms entry's outer x Newton iterations and
+#   CG cap per solve (untested at these steps). Screen (AAAVBD, early exit on): at the 10 ms budgets the
+#   dominant failure at larger steps is under-convergence (soft bodies sag and stretch, then contact scenes
+#   explode), not missed contacts; no scene keeps its 10 ms behaviour at 1/30 s without substeps,
+#   CapsulesIntoBowl comes closest (outcome kept, 23 mm overlaps). A 1/30 s frame with 2N substeps is bit for
+#   bit a 1/60 s frame with N. At 1/60 s, AAAVBD was the only VBD-family solver that kept the 10 ms outcome in
+#   every scene (phase 2). Data: data/profiling/investigations/RealtimeTimeSteps-screen (phases 1, 1b, 2 and 3,
+#   and FourBunnies without substeps).
+#     Integration.dt = 0.03333333507180214 (source 0.009999999776482582)
+# - Real-time budget (maintainer, 2026-11-10): no substeps, 10 outer iterations x 20 sweeps = 200 sweeps per
+#   solve (200 per frame step) for every VBD-family solver. A showcase of the large step (maintainer,
+#   2026-11-10), next to the rule's choice CapsulesIntoBowl.60Hz. AAAVBD keeps the outcome (all 26 capsules in
+#   the bowl) but leaves contact overlaps up to 23 mm (dmin 10 mm; 12 frames with a vertex more than 1 cm inside
+#   a partner, feasibility > 1 on 71 solves, max 6.6; 10 ms: 1 frame and 0 solves), from contact at this step
+#   rather than the budget (a 10x-sweep reference still reaches feasibility 21). At the same budget the other
+#   solvers leave capsules stuck in the tubes: VBD 21 of 26, Chebyshev 7, Anderson 2 (none at 10 ms or 1/60 s),
+#   with overlaps of 44, 40 and 69 mm.
+#     Integration.substeps = 1 (source 5)
+#     Solver.AAAVBD.n_max_iters = 10 (source 3)
+#     Solver.AAAVBD.n_subproblem_max_iters = 20 (source 3)
+#     Solver.AndersonSolver.n_max_iters = 10 (source 3)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 20 (source 3)
+#     Solver.Chebyshev.n_max_iters = 10 (source 3)
+#     Solver.Chebyshev.n_subproblem_max_iters = 20 (source 3)
+#     Solver.VBD.n_max_iters = 10 (source 3)
+#     Solver.VBD.n_subproblem_max_iters = 20 (source 3)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Contact.CDType.VertexSdf.freeze_within_solve
+#   Contact.ContactDynamics.vbd_slack_at_evaluation
+#   Solver.Convergence.early_exit
+#   Solver.Convergence.floor_kappa
+#   Solver.Convergence.floor_local_kappa
+#   Solver.Convergence.node_norm
+#   Solver.Convergence.smoothing_in_test
+#   Solver.Convergence.smoothing_passes
+#   Solver.Newton.early_exit
+#   Solver.Newton.one_sided_contact
+#
+# Notes:
+# - Every other setting is CapsulesIntoBowl's (10 ms); its rules above keep their 10 ms wording, and their
+#   per-solve settings apply per substep.
+
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
+
+[Contact.CDType.VertexSdf]
+band = 0.01
+deactivate = 0
+freeze_within_solve = 1
+max_dist = 0.5
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.01
+gammaf = 10000.0
+gammaf_adaptive = 0.01
+gamman = 20000.0
+gamman_adaptive = 1.0
+min_sigma_n = 10000.0
+mu_f = 0.2
+multiplier_step = 1.0
+penalty_adaptivity = 1
+penalty_stiffness = 1
+vbd_slack_at_evaluation = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.0
+n_ve_contact_capacity = 0.5
+n_vf_contact_capacity = 1.0
+n_vv_contact_capacity = 0.17
+
+[Integration]
+bdf_scheme = 1
+dt = 0.03333333507180214
+init_strategy = 2
+substeps = 1
+
+[Solver.AAAVBD]
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.9900000095367432
+gammadownS = 0.949999988079071
+gammaup = 0.5
+gammaupS = 0.30000001192092896
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
+n_max_iters = 10
+n_subproblem_max_iters = 20
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
+
+[Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 10
+n_subproblem_max_iters = 20
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 10
+n_subproblem_max_iters = 20
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.1
+check_interval = 20
+early_exit = 1
+floor_kappa = 0.2
+floor_local_kappa = 1.5
+ftol = 0.5
+node_norm = 0
+rstol = 0.02
+smoothing_in_test = 1
+smoothing_passes = 4
+
+[Solver.Newton]
+early_exit = -1
+init_strategy = 0
+linear_solver = 1
+n_max_iters = 10
+one_sided_contact = 0
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 2000
+rtol = 1e-06
+
+[Solver.Newton.newton]
+gtol2 = 4.999999873689376e-06
+n_max_iters = 2
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 10
+n_subproblem_max_iters = 20
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
