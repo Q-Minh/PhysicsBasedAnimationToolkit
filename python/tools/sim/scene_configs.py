@@ -626,6 +626,42 @@ SCENES.update({
         "stay on the trampoline for 10 s, interpenetration at most 6.3 mm with no vertex more than 1 cm inside "
         "another body, 9.7 GPU s per simulated s (3 substeps of 5 x 20: 10.9). More outer iterations (15 x 20) lost "
         "a bunny off the edge at 5.68 s; a 7 cm band alone still lost the second bounce.")),
+    "BirthdayBanner.60Hz": _realtime("BirthdayBanner", REALTIME_60HZ, _realtime_budget(
+        2, 1, 2000,
+        "Substeps: with 1 substep the banner goes NaN at 1/30 s (1.0 s, stretched to 3.7 m) and is far too soft at "
+        "1/60 s (centroid -0.79 m at 0.5 s vs -0.57 m). With 2 (h = 1/120 s) it sags and swings as at 10 ms "
+        "(centroid -0.51 m at 0.5 s, 5 cm from 10 ms at 8 s), stationarity ratio median 8.7 (10 ms 12.6), 71.6 GPU "
+        "s per simulated s (10 ms 58.9). 1 substep of 1 x 4000, at equal cost, followed 10 ms about as closely but "
+        "was less converged (ratio 17.2 vs 8.0 over 0-2 s).")),
+    "ArmadilloPull.60Hz": _realtime("ArmadilloPull", REALTIME_60HZ, _realtime_budget(
+        2, 1, 1000,
+        "Substeps: with 1 substep the armadillo goes NaN at 1/60 s right after the release (1.05-1.08 s), even with "
+        "10x the sweeps, and is far too soft at 1/30 s (stationarity ratio 31 vs 1.4). With 2 (h = 1/120 s) it stays "
+        "finite through the release with the same swing and final pose (centroid 0.15 m from 10 ms at 8 s), "
+        "stationarity ratio median 0.98 (smoothed 0.26), 77% early exits (10 ms 28%), 26.6 GPU s per simulated s "
+        "(10 ms 25.0).")),
+    "Trampoline.StiffSphere.60Hz": _realtime("Trampoline.StiffSphere", REALTIME_60HZ, _realtime_budget(
+        5, 1, 100,
+        "Substeps: with 1 substep the scene blows up (1/30 s at 1 x 200 and 1 x 500, 1/60 s at 1 x 200), and at "
+        "1/60 s and 1 x 500 the sphere sinks to -1.84 m (10 ms -0.65 m) with feasibility > 1 on 122 solves. 5 "
+        "substeps at the config's 1 x 100 are cheaper and tighter than 2 at the cap (maintainer, 2026-11-10): "
+        "bounces within about 2 cm of 10 ms (1.34 vs 1.32 m), feasibility > 1 on 14 solves (10 ms 9), 53% early "
+        "exits, 7.3 GPU s per simulated s, against 2 substeps of 1 x 500: feasibility > 1 on 32, 13.0 GPU s per "
+        "simulated s.")),
+    "BasketOfFruit.60Hz": _realtime("BasketOfFruit", REALTIME_60HZ, _realtime_budget(
+        5, 3, 50,
+        "Substeps: with 1 substep the scene blows up (1/60 s at 3 x 70 and 3 x 170, contact overflow), so 1/30 s "
+        "wasn't tried. 5 substeps at the config's 3 x 50 are cheaper and "
+        "tighter than 2 at the cap (maintainer, 2026-11-10): every fruit stays in the basket, no interpenetration, "
+        "feasibility max 3.1 (> 1 on 8 solves), 292 GPU s per simulated s (10 ms 521), against 2 substeps of 3 x 170: "
+        "max 4.5 (> 1 on 66 solves over 2 s), 373-381 GPU s per simulated s.")),
+    "ArmadilloSpaghetti.DragonImpact.60Hz": _realtime("ArmadilloSpaghetti.DragonImpact", REALTIME_60HZ,
+                                                      _realtime_budget(
+        10, 1, 100,
+        "Substeps: 1-3 substeps explode at the impact (at 1 x 500: 1 substep at 4.65 s, 2 at 4.15 s as the pillars "
+        "spring back when their twist stops, 3 at 4.25 s); 4-9 at 1 x 500 would cost 2-4.5x the 10 substeps of 1 x "
+        "100. With 10 (h = 1/600 s): the same outcome as 10 ms, no interpenetration, feasibility > 1 on 8 solves "
+        "(10 ms 612), 242 GPU s per simulated s (10 ms 394); the dragons' rebound is 1.1 m from 10 ms at 6 s.")),
 })
 
 
