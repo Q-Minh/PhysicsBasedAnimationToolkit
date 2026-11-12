@@ -682,6 +682,19 @@ SCENES["Trampoline.SoftStiff.60Hz"] = _realtime("Trampoline.SoftStiff", REALTIME
     "5 x 100 (the cap) didn't restore the BDF1 bounce (0.86 m), a smaller step or BDF2 does."))
 SCENES["Trampoline.SoftStiff.60Hz"].rules.append(SOFT_STIFF_BDF2)
 
+STIFF_SPHERE_BDF2 = Rule(
+    "BDF2 time integration for the sphere's bounce at 1/60 s (maintainer, 2026-11-11): BDF1 damps it numerically. "
+    "Against a small-step reference (AAAVBD, 1 x 100, 0-6 s; BDF2 at h = 1/3000 s, 4 mm median RMS from h = 1/1500 "
+    "s; bounces 1.53 m at 3.72 s and 1.23 m at 5.32 s), 1/60 s x 5 with BDF2: 1.45 and 1.15 m, mean / max RMS "
+    "distance 46 / 188 mm, 5.5 GPU s per simulated s; with BDF1: 1.35 and 0.99 m (0.2 s early), 158 / 789 mm, 6.0; "
+    "10 ms with BDF1: 1.35 and 0.93 m, 110 / 596 mm. With BDF2 more solves end slightly deeper in the 1 mm margin "
+    "than ftol allows (feasibility > 1 on 122 substeps, max 4.8, vs 13 and 1.9), with no interpenetration above "
+    "0.75 mm; the converged BDF2 references do so on 362-603 substeps, so it comes with the livelier bounce. Data: "
+    f"{REALTIME_SCREEN}.",
+    {"Integration.bdf_scheme": 2},
+)
+SCENES["Trampoline.StiffSphere.60Hz"].rules.append(STIFF_SPHERE_BDF2)
+
 
 def _flatten(d: dict, prefix: str = "") -> dict:
     out = {}

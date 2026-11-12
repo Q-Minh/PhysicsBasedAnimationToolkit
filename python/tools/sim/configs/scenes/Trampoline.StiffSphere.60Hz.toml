@@ -1,7 +1,7 @@
 # Scene config: Trampoline.StiffSphere.60Hz, every serialized parameter written out (diff it against configs/paper).
 # For: data/scenarios/Trampoline.Square.Soft.StiffSphere.h5, converted from final_scenes/trampoline_update.zip (trampoline_soft_sphere_stiff.Dump.h5): the square 1 MPa trampoline with a 100 MPa sphere.
 # Source: configs/paper/Trampoline.StiffSphere.5Substeps.toml. Keys not listed below have the source's values.
-# Generated 2026-11-10 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-11 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -104,6 +104,15 @@
 #     Solver.AndersonSolver.n_subproblem_max_iters = 100 (source 400)
 #     Solver.Chebyshev.n_subproblem_max_iters = 100 (source 400)
 #     Solver.VBD.n_subproblem_max_iters = 100 (source 400)
+# - BDF2 time integration for the sphere's bounce at 1/60 s (maintainer, 2026-11-11): BDF1 damps it numerically.
+#   Against a small-step reference (AAAVBD, 1 x 100, 0-6 s; BDF2 at h = 1/3000 s, 4 mm median RMS from h =
+#   1/1500 s; bounces 1.53 m at 3.72 s and 1.23 m at 5.32 s), 1/60 s x 5 with BDF2: 1.45 and 1.15 m, mean / max
+#   RMS distance 46 / 188 mm, 5.5 GPU s per simulated s; with BDF1: 1.35 and 0.99 m (0.2 s early), 158 / 789 mm,
+#   6.0; 10 ms with BDF1: 1.35 and 0.93 m, 110 / 596 mm. With BDF2 more solves end slightly deeper in the 1 mm
+#   margin than ftol allows (feasibility > 1 on 122 substeps, max 4.8, vs 13 and 1.9), with no interpenetration
+#   above 0.75 mm; the converged BDF2 references do so on 362-603 substeps, so it comes with the livelier
+#   bounce. Data: data/profiling/investigations/RealtimeTimeSteps-screen.
+#     Integration.bdf_scheme = 2 (source 1)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -158,7 +167,7 @@ n_vf_contact_capacity = 1.0
 n_vv_contact_capacity = 0.17
 
 [Integration]
-bdf_scheme = 1
+bdf_scheme = 2
 dt = 0.01666666753590107
 init_strategy = 2
 substeps = 5
