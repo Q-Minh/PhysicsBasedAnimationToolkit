@@ -23,11 +23,17 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
   (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
-  entry (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only.
-  ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above (``profiling/snapshots.py`` renders
-  them), numbered, with the numbers marked at their times on the plots (first row only). Steps a result lacks,
-  the warm-up steps at the seams of a run merged from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that
-  hold them), not interpolated.
+  entry (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only. Last,
+  when any run recorded a penetration (a scene with contact), a thin strip of each production run's feasibility
+  (penetration) ratio per step (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; the same rolling
+  median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut at a
+  detected blow-up). It has its own strip rather than sharing the residual's: penetration ratios span other decades
+  (0 without contact, up to ~100 at impacts), so a shared log axis would flatten the residual curves, and eight
+  curves in one strip don't read. The strips take their height from the cost plot, so a row is as tall as with the
+  residual strip alone. ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above
+  (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times on the plots (first
+  row only). Steps a result lacks, the warm-up steps at the seams of a run merged from legs (``profiling/legs.py``),
+  are gaps in every curve (with ``--bin``, the bins that hold them), not interpolated.
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
@@ -229,12 +235,14 @@ TEST_RATIO = "test_ratio"
 # TEST_RATIO for runs without smoothed ratios
 STRIP_RATIO = "strip_ratio"
 STRIP_RATIO_LABEL = "Smoothed stationarity ratio"
+FEASIBILITY_STRIP = "feasibility_strip"  # ratio_table: the timeline's per-step feasibility ratio, cut at a blow-up
 DECISIVE_MARK = " (decisive)"  # legend or row label suffix of runs plotted with the decisive ratio instead
 
 
 def ratio_table(result: dict) -> dict:
     """:func:`step_stats.per_step` with :data:`STRIP_RATIO`, each step's smoothed stationarity ratio (the worst over
-    its substeps, ``status_ratio.smoothed_test_ratio``), else, for runs without any, :data:`TEST_RATIO`; NaN from a
+    its substeps, ``status_ratio.smoothed_test_ratio``), else, for runs without any, :data:`TEST_RATIO`, and
+    :data:`FEASIBILITY_STRIP`, its feasibility (penetration) ratio (the worst over its substeps); both NaN from a
     detected blow-up on (:func:`blowup_time`). ``smoothed`` says which; ``decisive_fallback`` is true for a run
     plotted with the decisive ratio (it has some, and no smoothed ones)."""
     table = step_stats.per_step(result)
@@ -248,11 +256,14 @@ def ratio_table(result: dict) -> dict:
     smoothed = np.array(smoothed, dtype=float)
     has_smoothed = bool(np.isfinite(smoothed).any())
     ratio = smoothed if has_smoothed else np.array(table[TEST_RATIO], dtype=float)
+    feasibility = np.array(table["feasibility_ratio"], dtype=float)
     blowup = blowup_time(result)
     if blowup is not None:
         dt = float(result["metadata"].get("dt", 1.0))
-        ratio = np.where((table["t"] + 1) * dt >= blowup - 0.5 * dt, np.nan, ratio)
-    return {**table, STRIP_RATIO: ratio, "smoothed": has_smoothed,
+        after = (table["t"] + 1) * dt >= blowup - 0.5 * dt
+        ratio = np.where(after, np.nan, ratio)
+        feasibility = np.where(after, np.nan, feasibility)
+    return {**table, STRIP_RATIO: ratio, FEASIBILITY_STRIP: feasibility, "smoothed": has_smoothed,
             "decisive_fallback": not has_smoothed and bool(np.isfinite(ratio).any())}
 
 
@@ -435,6 +446,31 @@ def _vbd_ratio_strip(ax, runs: list[dict], baseline: dict, smooth: int):
     _style(ax)
 
 
+def _feasibility_strip(ax, runs: list[dict], smooth: int):
+    """The timeline's feasibility strip: each run's per-step feasibility (penetration) ratio to its tolerance
+    (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; its rolling median of ``smooth`` steps, gaps kept;
+    values below :data:`RATIO_FLOOR`, e.g. no penetration, drawn at it) on a log axis, with a dashed line at 1."""
+    curves = [np.array([1.0])]
+    for run in runs:
+        table = step_stats.on_step_grid(ratio_table(run))
+        ratio = np.maximum(table[FEASIBILITY_STRIP], RATIO_FLOOR)
+        curves.append(np.where(table["measured"] & np.isfinite(ratio), rolling_median(ratio, smooth), np.nan))
+        ax.plot(step_seconds(run, table["t"]), curves[-1], color=solver_color(run), linewidth=0.8)
+    ax.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
+    values = np.concatenate(curves)
+    values = values[np.isfinite(values) & (values > 0)]
+    ax.set_ylim(values.min() / 1.25, values.max() * 1.25)
+    _log_axis(ax, "y")
+    ax.set_ylabel("Penetration\nratio", fontsize=FONT_SIZE)
+    _style(ax)
+
+
+def has_contact(run: dict) -> bool:
+    """Whether a run recorded any penetration ratio above :data:`RATIO_FLOOR` (scenes without contact record 0)."""
+    feasibility = ratio_table(run)[FEASIBILITY_STRIP]
+    return bool((feasibility[np.isfinite(feasibility)] > RATIO_FLOOR).any())
+
+
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
                   bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None,
                   others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS, rms_speed: str = "paired"):
@@ -450,13 +486,18 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
     baselines = [next((run for run in runs if run["metadata"].get("solver") == BASELINE), None)
                  for runs in runs_per_row]
+    has_feasibility = [any(has_contact(run) for run in runs) for runs in runs_per_row]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
     image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
     heights = []
-    for ratio, speed, baseline in zip(has_ratio, has_speed, baselines):
-        # With the ratio strip, the cost plot holds one run's line and is shorter: the row stays as tall as without
-        heights += ([1.0, 0.5] if baseline is not None else [1.5, 0.001]) + [0.9 if ratio else 0.5 if speed else 0.001]
+    for ratio, speed, baseline, feasibility in zip(has_ratio, has_speed, baselines, has_feasibility):
+        # The strips take their height from the cost plot, so a row is as tall as it was with the residual strip
+        # alone (1.5 + 0.9 in), down to a cost plot of 0.85 in
+        strips = [0.45 if baseline is not None else 1e-4, 0.65 if ratio else 0.5 if speed else 1e-4,
+                  0.45 if feasibility else 1e-4]  # 1e-4: an absent strip
+        before = 1.5 + (0.9 if ratio else 0.5 if speed else 0.0)
+        heights += [max(before - sum(h for h in strips if h > 0.01), 0.85)] + strips
     fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
     outer = fig.add_gridspec(2, 1, height_ratios=[max(image_height, 1e-3), sum(heights) + 0.45 * rows], hspace=0.12)
     if images:
@@ -467,7 +508,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             ax.set_axis_off()
             ax.text(0.04, 0.96, str(i + 1), transform=ax.transAxes, ha="left", va="top", fontsize=8,
                     fontweight="bold", color=INK)
-    grid = outer[1].subgridspec(3 * rows, 1, height_ratios=heights, hspace=0.15)
+    grid = outer[1].subgridspec(4 * rows, 1, height_ratios=heights, hspace=0.15)
     present: list[str] = []  # phase groups with a legend entry
     solvers: dict[str, str] = {}  # drawn production runs: solver name -> color
     speeds: dict[str, object] = {}  # speeds' legend handles by label
@@ -476,7 +517,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
         total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
         present += [g for g in groups if g not in present and groups[g].sum() >= TIMELINE_MIN_SHARE * total]
         x = bin_steps(step_seconds(result, table["t"]), bin_n)
-        area = fig.add_subplot(grid[3 * r])
+        area = fig.add_subplot(grid[4 * r])
         area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
                        colors=[group_color(g) for g in groups], linewidth=0)
         for run in runs:
@@ -497,12 +538,12 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
         axes = [area]
         if baselines[r] is not None:
             area.tick_params(labelbottom=False)
-            relative = fig.add_subplot(grid[3 * r + 1], sharex=area)
+            relative = fig.add_subplot(grid[4 * r + 1], sharex=area)
             _vbd_ratio_strip(relative, [run for run in runs if run is not baselines[r]], baselines[r], smooth)
             axes.append(relative)
         if has_ratio[r] or has_speed[r]:
             axes[-1].tick_params(labelbottom=False)
-            strip = fig.add_subplot(grid[3 * r + 2], sharex=area)
+            strip = fig.add_subplot(grid[4 * r + 2], sharex=area)
             if has_ratio[r]:
                 for h in _residual_strip(strip, step_seconds(result, table["t"]), result, table[SPEED], runs,
                                          smooth, rms_speed):
@@ -513,6 +554,11 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                 strip.set_ylabel("Speed\n(m/s)", fontsize=FONT_SIZE)
                 _style(strip)
             axes.append(strip)
+        if has_feasibility[r]:
+            axes[-1].tick_params(labelbottom=False)
+            penetration = fig.add_subplot(grid[4 * r + 3], sharex=area)
+            _feasibility_strip(penetration, runs, smooth)
+            axes.append(penetration)
         if r == rows - 1:
             axes[-1].set_xlabel("Time (s)" if "dt" in result["metadata"] else "Time step", fontsize=FONT_SIZE)
         if r == 0:
@@ -1696,6 +1742,41 @@ class TestPaperFigures(unittest.TestCase):
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[cheb]])
         self.assertNotIn("Step time /\nVBD's", [ax.get_ylabel() for ax in fig.axes])
         self.assertEqual(len(fig.axes[0].lines), 2)
+        plt.close(fig)
+
+    def test_feasibility_strip(self):
+        k = self._kernels()  # steps 10-49 at 10 ms, feasibility ratio 0.1
+        run = self._production(k)
+        run["steps"][0] = {**run["steps"][0], "status": {"vbd": [
+            {**run["steps"][0]["status"]["vbd"][0], "feasibility_ratio": 0.3},
+            {**run["steps"][0]["status"]["vbd"][0], "substep": 1, "feasibility_ratio": 4.0}]}}
+        for step in run["steps"]:
+            step["peak_speed"] = 2 * BLOWUP_SPEED if step["t"] >= 40 else 5.0  # blown up from step 40
+        feasibility = ratio_table(run)[FEASIBILITY_STRIP]
+        self.assertEqual(feasibility[0], 4.0)  # the worst over the step's substeps
+        np.testing.assert_allclose(feasibility[1:30], 0.1)
+        self.assertTrue(np.isnan(feasibility[30:]).all())  # cut at the blow-up
+        self.assertTrue(has_contact(run))
+        no_contact = self._production(self._kernels("VBD"))
+        no_contact["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "feasibility_ratio": 0.0}]}}
+                               for s in no_contact["steps"]]
+        self.assertFalse(has_contact(no_contact))
+        # Its own thin strip, last, on a log axis; the row keeps the height of the residual strip alone
+        vbd = self._production(self._kernels("VBD"))
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
+        labels = [ax.get_ylabel() for ax in fig.axes]
+        self.assertEqual(labels[-1], "Penetration\nratio")
+        self.assertEqual(fig.axes[-1].get_yscale(), "log")
+        self.assertEqual([line.get_color() for line in fig.axes[-1].lines if line.get_linestyle() == "-"],
+                         [SOLVER_COLORS["AAAVBD"], SOLVER_COLORS["VBD"]])
+        height = fig.get_size_inches()[1]
+        plt.close(fig)
+        without = self._production(k)
+        without["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "feasibility_ratio": 0.0}]}}
+                            for s in without["steps"]]
+        fig = plot_timeline([k], [without], ["A"])  # no VBD, no contact: the cost plot and the residual strip
+        self.assertNotIn("Penetration\nratio", [ax.get_ylabel() for ax in fig.axes])
+        self.assertAlmostEqual(fig.get_size_inches()[1], height, places=3)
         plt.close(fig)
 
     def test_timeline_rms_speed(self):
