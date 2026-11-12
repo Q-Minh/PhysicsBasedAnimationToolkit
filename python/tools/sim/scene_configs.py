@@ -664,6 +664,24 @@ SCENES.update({
         "(10 ms 612), 242 GPU s per simulated s (10 ms 394); the dragons' rebound is 1.1 m from 10 ms at 6 s.")),
 })
 
+SOFT_STIFF_BDF2 = Rule(
+    "BDF2 time integration for the sphere's bounce at 1/60 s (maintainer, 2026-11-11): BDF1 damps it numerically. "
+    "Bounce heights of the sphere (AAAVBD, 5 x 80, 0-6 s) against a small-step reference, 1/60 s x 10 substeps (h = "
+    "1/600 s) with BDF2, whose bounce is nearly elastic (1.70 then 1.71 m; BDF1 at that step 1.64 then 1.43 m): "
+    "1/60 s with BDF2 1.58 and 1.12 m, mean / max RMS distance to the reference 195 / 599 mm, 6.1 GPU s per "
+    "simulated s; 2 substeps with BDF1 1.34 and 0.88 m, 244 / 1144 mm, 13.5; 1/60 s with BDF1 0.79 and 0.64 m, 355 "
+    f"/ 1257 mm; 10 ms with BDF1 1.36 and 0.82 m, 243 / 1107 mm. Data: {REALTIME_SCREEN}.",
+    {"Integration.bdf_scheme": 2},
+)
+
+SCENES["Trampoline.SoftStiff.60Hz"] = _realtime("Trampoline.SoftStiff", REALTIME_60HZ, _realtime_budget(
+    1, 5, 80,
+    "1/30 s at 5 x 160 sags the trampoline (0.19-0.30 m vs 0.14-0.19 m at 10 ms) and loses the bounce (0.52 vs 1.34 "
+    "m), with feasibility > 1 on 12 solves. 1/60 s without substeps at the 10 ms budget: no interpenetration, "
+    "feasibility max 1.1 (> 1 on 1 solve), stationarity ratio median 15.1 (smoothed 6.0), as at 10 ms (15.0); "
+    "5 x 100 (the cap) didn't restore the BDF1 bounce (0.86 m), a smaller step or BDF2 does."))
+SCENES["Trampoline.SoftStiff.60Hz"].rules.append(SOFT_STIFF_BDF2)
+
 
 def _flatten(d: dict, prefix: str = "") -> dict:
     out = {}
