@@ -13,7 +13,7 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
   a legend entry only if it reaches 3% itself), with the step time of the paired production run and of the
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
-  the production runs' final stationarity test ratio per step (:data:`TEST_RATIO`; log axis, its rolling median
+  the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median
   over ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
   (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
@@ -27,12 +27,20 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
   solver and negligible (:data:`SOLVERS_OMITTED`) are left out without renormalizing, so the bars end short of
   100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
-  the distribution per step of the final stationarity test ratio (:data:`TEST_RATIO`) and of the penetration
+  the distribution per step of the smoothed stationarity ratio (:func:`ratio_table`) and of the penetration
   (feasibility) ratio to its tolerance (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below
-  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with ``--step-times``, the step time.
+  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with
+  ``--step-times``, the step time.
   Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
   sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
   exits aren't shown: their fraction doesn't say how soon a solver exits.
+- The residual ratio of the ``timeline`` strips and the ``solvers`` and ``budget`` boxes is each step's smoothed
+  stationarity ratio, the smoothed test's own (``status_ratio.smoothed_test_ratio``, the worst over the step's
+  substeps; the ratio the maintainer trusts, as in the ``scenes`` table): the decisive ratio follows the plain test,
+  whose float32 noise misranks solvers (FourBunnies.Trampoline250kgPerM3.60Hz, medians AAAVBD 4.18 / Anderson 3.24
+  decisive, 0.24 / 2.23 smoothed). Runs without smoothed ratios (recorded before them, or without smoothing) fall
+  back to the decisive ratio (``status_ratio.stationarity_test_ratio``), marked "(decisive)" in the legend or row
+  label. Steps from a detected blow-up on (:func:`blowup_time`) are left out.
 - ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
   (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
   median iterations and early exits, for the paper's text.
@@ -57,10 +65,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   for a run whose output ends before the scene's longest run. Scene labels wrap over the scene's lines
   (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
 - ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
-  solver's median stationarity ratio over its solves, the decisive one (solid, filled) and the smoothed test's own
-  (dotted, hollow; ``status_ratio``), divided by AAAVBD's at the same scene and solver step h = dt / substeps
-  (log x, ticks at the steps run), over the same window (log y, a dashed line at 1, above it AAAVBD is more
-  converged). The positional runs are compared over their scene's common span (circles: from the latest first
+  solver's median smoothed stationarity ratio over its solves (``status_ratio.smoothed_test_ratio`` only, as the
+  other figures; runs without smoothed ratios give no point), one line per solver, divided by AAAVBD's at the same
+  scene and solver step h = dt / substeps (log x, ticks at the steps run), over the same window (log y, a dashed
+  line at 1, above it AAAVBD is more converged). The positional runs are compared over their scene's common span (circles: from the latest first
   recorded step, production runs skip their warm-up, to the end of the shortest campaign); ``--windowed`` runs over
   their scene's ``--window`` (squares; e.g. the real-time screen's phase-2 windows). Either is narrowed to what both
   runs recorded and to before either blew up (crossed: compared up to it). The points are also printed as Markdown.
@@ -211,7 +219,39 @@ SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step resi
 # on a step that failed the test's floor clause (CapsulesIntoBowl VBD, 58fd2f99: median 0.23, while 389 of 591
 # steps failed).
 TEST_RATIO = "test_ratio"
-TEST_RATIO_LABEL = "Stationarity test ratio"
+# The ratio the timeline strips and the solvers and budget boxes plot (ratio_table): the smoothed test's own, else
+# TEST_RATIO for runs without smoothed ratios
+STRIP_RATIO = "strip_ratio"
+STRIP_RATIO_LABEL = "Smoothed stationarity ratio"
+DECISIVE_MARK = " (decisive)"  # legend or row label suffix of runs plotted with the decisive ratio instead
+
+
+def ratio_table(result: dict) -> dict:
+    """:func:`step_stats.per_step` with :data:`STRIP_RATIO`, each step's smoothed stationarity ratio (the worst over
+    its substeps, ``status_ratio.smoothed_test_ratio``), else, for runs without any, :data:`TEST_RATIO`; NaN from a
+    detected blow-up on (:func:`blowup_time`). ``smoothed`` says which; ``decisive_fallback`` is true for a run
+    plotted with the decisive ratio (it has some, and no smoothed ones)."""
+    table = step_stats.per_step(result)
+    smoothed = []
+    for step in result["steps"]:
+        status = step.get("status") or {}
+        values = np.array([status_ratio.smoothed_test_ratio(r) for r in status.get("vbd", status.get("newton", []))],
+                          dtype=float)
+        values = values[np.isfinite(values)]
+        smoothed.append(values.max() if values.size else np.nan)
+    smoothed = np.array(smoothed, dtype=float)
+    has_smoothed = bool(np.isfinite(smoothed).any())
+    ratio = smoothed if has_smoothed else np.array(table[TEST_RATIO], dtype=float)
+    blowup = blowup_time(result)
+    if blowup is not None:
+        dt = float(result["metadata"].get("dt", 1.0))
+        ratio = np.where((table["t"] + 1) * dt >= blowup - 0.5 * dt, np.nan, ratio)
+    return {**table, STRIP_RATIO: ratio, "smoothed": has_smoothed,
+            "decisive_fallback": not has_smoothed and bool(np.isfinite(ratio).any())}
+
+
+def _ratio_label(name: str, table: dict) -> str:
+    return name + (DECISIVE_MARK if table["decisive_fallback"] else "")
 # timeline: phase groups under this share of a row's GPU time fold into Other, which gets a legend entry only if
 # it reaches it too (thinner bands are under ~1 pt at print size)
 TIMELINE_MIN_SHARE = 0.03
@@ -290,8 +330,8 @@ RMS_SPEED_MODES = ("paired", "all")  # timeline: whose RMS speed the strip draws
 
 def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
                     smooth: int, rms_speed: str = "paired") -> list:
-    """The timeline's lower strip: each production run's final stationarity test ratio per step
-    (:data:`TEST_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
+    """The timeline's lower strip: each production run's smoothed stationarity ratio per step
+    (:data:`STRIP_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
     docstring): the paired run's (``runs[0]``), and with ``rms_speed`` ``"all"`` the other runs' too; ``x`` and
     ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the paired run has none. Returns
     the speeds' legend handles."""
@@ -305,7 +345,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
     for i, run in enumerate(runs):
-        table = step_stats.on_step_grid(step_stats.per_step(run))
+        table = step_stats.on_step_grid(ratio_table(run))
         xr = step_seconds(run, table["t"])
         if i == 0 and np.isfinite(table[SPEED]).any():
             speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
@@ -314,7 +354,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
             speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
             handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
                                   label=f"{solver_name(run)} {SPEED_NAME}"))
-        ratio = np.maximum(table[TEST_RATIO], RATIO_FLOOR)
+        ratio = np.maximum(table[STRIP_RATIO], RATIO_FLOOR)
         medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
         strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
     if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
@@ -326,7 +366,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
-    strip.set_ylabel("Stationarity\ntest ratio", fontsize=FONT_SIZE)
+    strip.set_ylabel("Smoothed\nstationarity ratio", fontsize=FONT_SIZE)
     speed.set_ylim(bottom=0)
     speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
     # The ratios over the speed fill: the left axes in front, without their background
@@ -351,8 +391,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     rows = len(kernels)
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
-    has_ratio = [any(np.isfinite(step_stats.per_step(run)[TEST_RATIO]).any() for run in runs)
-                 for runs in runs_per_row]
+    has_ratio = [any(np.isfinite(ratio_table(run)[STRIP_RATIO]).any() for run in runs) for runs in runs_per_row]
     has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
@@ -386,7 +425,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             ptable = step_stats.on_step_grid(step_stats.per_step(run))
             area.plot(bin_steps(step_seconds(run, ptable["t"]), bin_n), bin_steps(ptable["time_ms"], bin_n),
                       color=solver_color(run), linewidth=0.6, path_effects=HALO)
-            solvers.setdefault(solver_name(run), solver_color(run))
+            solvers.setdefault(_ratio_label(solver_name(run), ratio_table(run)), solver_color(run))
         area.set_xlim(x[0], x[-1])
         area.set_ylim(bottom=0)
         area.set_ylabel("GPU time (ms)", fontsize=FONT_SIZE)
@@ -493,7 +532,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         if table is None:
             continue
         if column == "gradient":
-            _box(ax, yi, table[TEST_RATIO], RATIO_FLOOR)
+            _box(ax, yi, table[STRIP_RATIO], RATIO_FLOOR)
         elif column == "feasibility":
             _box(ax, yi, table["feasibility_ratio"], RATIO_FLOOR)
         elif column == "early":
@@ -510,7 +549,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         # The tolerance line first, so the ticks are chosen for the final limits
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
         _log_axis(ax, dense=NARROW_LOG_RANGE)
-        ax.set_xlabel(TEST_RATIO_LABEL if column == "gradient" else "Penetration ratio",
+        ax.set_xlabel(STRIP_RATIO_LABEL if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
         ax.set_xlim(0, 100)
@@ -560,10 +599,11 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     ratios = [2.4] + [1.5] * len(columns)
     fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
                              gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
-    names = [solver_name(k or p) for k, p in rows]
+    tables = [ratio_table(p) if p is not None else None for _, p in rows]
+    names = [solver_name(k or p) if t is None else _ratio_label(solver_name(k or p), t)
+             for (k, p), t in zip(rows, tables)]
     present = _sweeps_panel(axes[0], [k for k, _ in rows], y, SOLVERS_OMITTED)
     _row_axes(axes[0], y, names)
-    tables = [step_stats.per_step(p) if p is not None else None for _, p in rows]
     for ax, column in zip(axes[1:], columns):
         _budget_panel(ax, column, tables, y)
         _row_axes(ax, y, None)
@@ -665,11 +705,12 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
                             width_ratios=[{"early": 1.0}.get(c, 1.6) for c in columns])
     for s, (scene, rows) in enumerate(scenes.items()):
         y = np.arange(len(rows))[::-1]
-        tables = [step_stats.per_step(r) for r in rows]
+        tables = [ratio_table(r) for r in rows]
         axes = [fig.add_subplot(grid[s, c]) for c in range(len(columns))]
         for ax, column in zip(axes, columns):
             _budget_panel(ax, column, tables, y)
-            _row_axes(ax, y, [solver_name(r) for r in rows] if ax is axes[0] else None)
+            _row_axes(ax, y, [_ratio_label(solver_name(r), t) for r, t in zip(rows, tables)] if ax is axes[0]
+                      else None)
         axes[0].text(0, 1.06, labels.get(scene, scene), transform=axes[0].transAxes, ha="left", va="bottom",
                      fontsize=8, fontweight="bold", color=INK)
     _legend(fig, _box_handles())
@@ -929,10 +970,13 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
 
 LEAD_REFERENCE = "AAAVBD"  # lead: the solver every other one is divided by
 LEAD_SOLVERS = ("VBD", "Chebyshev", "AndersonSolver")  # lead: one line each
-# lead: the stationarity ratios compared, each a function of a status row (status_ratio): the decisive one, at most 1
-# iff the test passed, and the smoothed test's own, which ranks solvers where float32 noise makes the unsmoothed one
-# rough (NaN on rows without smoothing)
-LEAD_RATIOS = {"decisive": status_ratio.stationarity_test_ratio, "smoothed": status_ratio.smoothed_test_ratio}
+# The stationarity ratios of a status row (status_ratio): the decisive one, at most 1 iff the test passed, and the
+# smoothed test's own, which ranks solvers where float32 noise makes the unsmoothed one rough (NaN on rows without
+# smoothing)
+STATIONARITY_RATIOS = {"decisive": status_ratio.stationarity_test_ratio, "smoothed": status_ratio.smoothed_test_ratio}
+# lead: the ratios compared, the smoothed one only (maintainer, 2026-11-12: the only one trusted, as in the scenes
+# table and the timeline; until then the decisive ratio was drawn too)
+LEAD_RATIOS = ("smoothed",)
 LEAD_SOURCES = {"full": "o", "window": "s"}  # lead: the marker of points from full runs and from time windows
 
 
@@ -944,10 +988,10 @@ def solve_end_times(result: dict) -> np.ndarray:
 
 
 def window_median(result: dict, ratio: str, t0: float, t1: float) -> float | None:
-    """The median of a :data:`LEAD_RATIOS` ratio over the result's solves that end within (t0, t1] (s), leaving out
-    non-finite values; None if none is left."""
+    """The median of a :data:`STATIONARITY_RATIOS` ratio over the result's solves that end within (t0, t1] (s),
+    leaving out non-finite values; None if none is left."""
     rows = solve_rows(result)
-    values = np.array([np.nan if (v := LEAD_RATIOS[ratio](r)) is None else v for r in rows], dtype=float)
+    values = np.array([np.nan if (v := STATIONARITY_RATIOS[ratio](r)) is None else v for r in rows], dtype=float)
     end = solve_end_times(result)
     # Window ends on the step grid, and dt is float32-rounded (90 x 1/30 s ends at 3.0000001 s): compare within a
     # small fraction of a substep
@@ -1016,14 +1060,15 @@ def lead_points(full: list[dict], windowed: list[dict] | None = None,
 
 def lead_text(points: list[dict], labels: dict[str, str]) -> str:
     """Markdown: the ``lead`` figure's points, for checking them against the text."""
-    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD decisive (smoothed) | Solver | "
-           "Lead: decisive (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD smoothed ratio | Solver | "
+           "Lead (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+
     def times(x):
         return "--" if x is None else f"{_num(x, 2)}x"
 
     for p in points:
-        ref = f"{_num(p['decisive_reference'])} ({_num(p['smoothed_reference'])})"
-        lead = f"{times(p['decisive'])} ({times(p['smoothed'])})"
+        ref = _num(p["smoothed_reference"])
+        lead = times(p["smoothed"])
         window = f"{p['window'][0]:.3g}-{p['window'][1]:.3g}" + (" (blow-up)" if p["blowup"] else "")
         out.append(f"| {labels.get(p['scene'], p['scene'])} | {p['source']} | {window} | {_num(1e3 * p['h'])} | "
                    f"{_num(1e3 * p['dt'])} x {p['substeps']} | {ref} | {SOLVER_NAMES.get(p['solver'], p['solver'])} | "
@@ -1045,18 +1090,14 @@ def plot_lead(points: list[dict], labels: dict[str, str], width: float = 7.0):
         for solver in LEAD_SOLVERS:
             color = SOLVER_COLORS.get(solver, INK)
             for source, marker in LEAD_SOURCES.items():
-                for ratio in reversed(LEAD_RATIOS):  # the decisive ratio on top where the two coincide
+                for ratio in LEAD_RATIOS:
                     series = sorted((p["h"], p[ratio]) for p in mine
                                     if p["solver"] == solver and p["source"] == source and p[ratio] is not None)
                     if not series:
                         continue
                     h, y = (np.array(v) for v in zip(*series))
                     values += list(y)
-                    decisive = ratio == "decisive"
-                    ax.plot(1e3 * h, y, color=color, linewidth=0.9 if decisive else 0.6,
-                            linestyle="-" if decisive else (0, (1, 1.2)), marker=marker, markersize=3.2,
-                            markerfacecolor=color if decisive else "white", markeredgecolor=color,
-                            markeredgewidth=0.6, alpha=1.0 if decisive else 0.85)
+                    ax.plot(1e3 * h, y, color=color, linewidth=0.9, marker=marker, markersize=3.2)
         for p in mine:  # compared only up to a blow-up
             if p["blowup"]:
                 y = [p[ratio] for ratio in LEAD_RATIOS if p[ratio] is not None]
@@ -1091,9 +1132,6 @@ def plot_lead(points: list[dict], labels: dict[str, str], width: float = 7.0):
             axes[rows[-1], c].set_xlabel("Time step $h$ (ms)", fontsize=FONT_SIZE)
     handles = [Line2D([], [], color=SOLVER_COLORS.get(s, INK), linewidth=0.9, label=SOLVER_NAMES.get(s, s))
                for s in LEAD_SOLVERS if any(p["solver"] == s for p in points)]
-    handles += [Line2D([], [], color=INK, linewidth=0.9, marker="o", markersize=3.2, label="Decisive"),
-                Line2D([], [], color=INK, linewidth=0.6, linestyle=(0, (1, 1.2)), marker="o", markersize=3.2,
-                       markerfacecolor="white", markeredgewidth=0.6, label="Smoothed")]
     sources = {p["source"] for p in points}
     handles += [Line2D([], [], color=INK, marker=LEAD_SOURCES[s], markersize=3.2, linestyle="none",
                        label={"full": "Full run", "window": "Window"}[s]) for s in LEAD_SOURCES if s in sources]
@@ -1225,6 +1263,7 @@ class TestPaperFigures(unittest.TestCase):
                 "status": {"vbd": [{"substep": 0, "outer": 1 if t % 4 == 0 else 5, "sweeps": 20 if t % 4 == 0 else 100,
                                     "reason": "CONVERGED" if t % 4 == 0 else "GRADIENT_UNMET",
                                     "gradient_ratio": 0.5 if t % 4 == 0 else 3.0, "feasibility_ratio": 0.1,
+                                    "smoothed_ratio": 0.2 if t % 4 == 0 else 1.5,
                                     "max_outer": 5, "max_sweeps": 100}]},
                 "rms_speed": 0.1 * t,
             })
@@ -1422,11 +1461,12 @@ class TestPaperFigures(unittest.TestCase):
         self.assertEqual(window_median(run, "decisive", 0.08, 0.11), 4.0)  # solves ending in (0.08, 0.11]: 4, 4, 5
         self.assertIsNone(window_median(run, "smoothed", 0.0, 1.0))  # recorded without smoothing
         self.assertIsNone(window_median(run, "decisive", 0.2, 0.3))
-        # Two campaigns of one scene: 10 ms (steps 2-99, 0.02-1 s) and 20 ms (steps 10-39, 0.2-0.8 s)
+        # Two campaigns of one scene: 10 ms (steps 2-99, 0.02-1 s) and 20 ms (steps 10-39, 0.2-0.8 s); the decisive
+        # ratios (first function) don't count, only the smoothed ones (second)
         full = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0, lambda t: 0.5, steps=range(2, 100)),
-                self._lead_run("VBD", 0.01, lambda t: 6.0 if t > 20 else 1e3, lambda t: 1.0, steps=range(2, 100)),
+                self._lead_run("VBD", 0.01, lambda t: 1.0, lambda t: 3.0 if t > 20 else 1e3, steps=range(2, 100)),
                 self._lead_run("AAAVBD", 0.02, lambda t: 2.0, lambda t: 0.5, steps=range(10, 40)),
-                self._lead_run("VBD", 0.02, lambda t: 20.0, lambda t: 10.0, steps=range(10, 40)),
+                self._lead_run("VBD", 0.02, lambda t: 1.0, lambda t: 10.0, steps=range(10, 40)),
                 self._lead_run("Chebyshev", 0.02, lambda t: 1.0, lambda t: 0.0005, steps=range(10, 30))]
         points = lead_points(full)
         self.assertEqual([(p["solver"], p["h"]) for p in points], [("VBD", 0.01), ("VBD", 0.02), ("Chebyshev", 0.02)])
@@ -1434,33 +1474,39 @@ class TestPaperFigures(unittest.TestCase):
         # The common span: from the latest first step (0.2 s) to the shorter campaign's end (0.8 s), so the 10 ms
         # VBD run's early 1e3 ratios (steps up to 20, ending by 0.21 s) are left out but one
         self.assertEqual((p["source"], p["span"], p["window"], p["blowup"]), ("full", (0.2, 0.8), (0.2, 0.8), False))
-        self.assertEqual((p["decisive"], p["smoothed"], p["decisive_reference"]), (3.0, 2.0, 2.0))
-        self.assertEqual((points[1]["decisive"], points[1]["smoothed"]), (10.0, 20.0))
-        # Chebyshev stops at 0.6 s: compared up to its stop; its smoothed median 5e-4 is floored, never divided by 0
+        self.assertEqual((p["smoothed"], p["smoothed_reference"]), (6.0, 0.5))
+        self.assertNotIn("decisive", p)
+        self.assertEqual(points[1]["smoothed"], 20.0)
+        # Chebyshev stops at 0.6 s: compared up to its stop; its median 5e-4 is floored, never divided by 0
         np.testing.assert_allclose(points[2]["window"], (0.2, 0.6))
-        self.assertEqual((points[2]["decisive"], points[2]["smoothed"]), (0.5, RATIO_FLOOR / 0.5))
+        self.assertEqual(points[2]["smoothed"], RATIO_FLOOR / 0.5)
         # A blow-up (a node at 2 km/s from step 30) cuts the window before it; the ratios after it don't count
-        blown = self._lead_run("VBD", 0.02, lambda t: 20.0 if t < 30 else 1e9, steps=range(10, 40))
+        blown = self._lead_run("VBD", 0.02, lambda t: 1.0, lambda t: 5.0 if t < 30 else 1e9, steps=range(10, 40))
         for step in blown["steps"][20:]:
             step["peak_speed"] = 2 * BLOWUP_SPEED
         p = lead_points([full[2], blown])[0]
         np.testing.assert_allclose(p["window"], (0.2, 0.6))
-        self.assertEqual((p["blowup"], p["decisive"]), (True, 10.0))
+        self.assertEqual((p["blowup"], p["smoothed"]), (True, 10.0))
+        # Without smoothed ratios: no point
+        unsmoothed = self._lead_run("VBD", 0.02, lambda t: 9.0, steps=range(10, 40))
+        self.assertIsNone(lead_points([full[2], unsmoothed])[0]["smoothed"])
         # Windowed runs: over their scene's window, narrowed to what both recorded
-        windowed = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0 if t < 50 else 4.0, steps=range(0, 100)),
-                    self._lead_run("AndersonSolver", 0.01, lambda t: 1.0, steps=range(42, 60))]
+        windowed = [self._lead_run("AAAVBD", 0.01, lambda t: 1.0, lambda t: 2.0 if t < 50 else 4.0,
+                                   steps=range(0, 100)),
+                    self._lead_run("AndersonSolver", 0.01, lambda t: 1.0, lambda t: 1.0, steps=range(42, 60))]
         with self.assertRaises(SystemExit):  # no window for the scene
             lead_points([], windowed)
         p = lead_points([], windowed, {"capsule_bowl": (0.3, 0.55)})[0]
         self.assertEqual((p["source"], p["span"]), ("window", (0.3, 0.55)))
         self.assertAlmostEqual(p["window"][0], 0.42)
-        self.assertEqual(p["decisive"], 0.5)  # AAAVBD's median over (0.42, 0.55]: 2.0 (8 solves) vs 4.0 (5)
+        self.assertEqual(p["smoothed"], 0.5)  # AAAVBD's median over (0.42, 0.55]: 2.0 (8 solves) vs 4.0 (5)
         text = lead_text(points, {"capsule_bowl": "Capsules"})
-        self.assertIn("| Capsules | full | 0.2-0.8 | 10 | 10 x 1 | 2 (0.5) | VBD | 3x (2x) |", text)
+        self.assertIn("| Capsules | full | 0.2-0.8 | 10 | 10 x 1 | 0.5 | VBD | 6x |", text)
         fig = plot_lead(points + lead_points([full[2], blown]) + [p], {})
         self.assertEqual([t.get_text() for t in fig.legends[0].get_texts()],
-                         ["VBD", "Chebyshev", "Anderson", "Decisive", "Smoothed", "Full run", "Window",
-                          "Until a blow-up", "AAAVBD"])
+                         ["VBD", "Chebyshev", "Anderson", "Full run", "Window", "Until a blow-up", "AAAVBD"])
+        # One solid line per solver and source (no dotted decisive/smoothed pairs), and the dashed line at 1
+        self.assertEqual({line.get_linestyle() for ax in fig.axes for line in ax.lines}, {"-", "None", "--"})
         plt.close(fig)
 
     def test_sweeps_budget_scenes(self):
@@ -1502,7 +1548,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             [TEST_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
+                             [STRIP_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
@@ -1515,6 +1561,41 @@ class TestPaperFigures(unittest.TestCase):
         text = slices_text(k[:1], {"basket_of_fruit": "Basket"})
         self.assertIn("## Basket, AAAVBD", text)
         self.assertIn("| Fastest 10% | 15 | 8.95 ms | 100 sweeps | 27% |", text)  # ties: every no-contact step
+
+    def test_strip_ratio(self):
+        run = self._production(self._kernels())
+        # The worst smoothed ratio over a step's substeps, not the decisive ratio (0.5 or 3.0)
+        run["steps"][0] = {**run["steps"][0], "status": {"vbd": [
+            {**run["steps"][0]["status"]["vbd"][0], "smoothed_ratio": 0.4},
+            {**run["steps"][0]["status"]["vbd"][0], "substep": 1, "smoothed_ratio": 0.9}]}}
+        table = ratio_table(run)
+        self.assertTrue(table["smoothed"])
+        self.assertFalse(table["decisive_fallback"])
+        self.assertEqual(table[STRIP_RATIO][:3].tolist(), [0.9, 1.5, 0.2])
+        self.assertEqual(table[TEST_RATIO][1], 3.0)
+        # From a detected blow-up on (a node at 2 km/s at step 40), the steps are left out
+        for step in run["steps"]:
+            step["peak_speed"] = 2 * BLOWUP_SPEED if step["t"] >= 40 else 5.0
+        ratio = ratio_table(run)[STRIP_RATIO]
+        self.assertTrue(np.isfinite(ratio[:30]).all())
+        self.assertTrue(np.isnan(ratio[30:]).all())
+        # Without smoothed ratios: the decisive ratio, marked in the legend and row labels
+        vbd = self._production(self._kernels("VBD"))
+        vbd["steps"] = [{**s, "status": {"vbd": [{k: v for k, v in s["status"]["vbd"][0].items()
+                                                   if k != "smoothed_ratio"}]}} for s in vbd["steps"]]
+        table = ratio_table(vbd)
+        self.assertEqual((table["smoothed"], table["decisive_fallback"]), (False, True))
+        np.testing.assert_array_equal(table[STRIP_RATIO], table[TEST_RATIO])
+        k = self._kernels()
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
+        self.assertIn(f"VBD{DECISIVE_MARK}", [t.get_text() for t in fig.legends[0].get_texts()])
+        self.assertIn("AAAVBD", [t.get_text() for t in fig.legends[0].get_texts()])
+        self.assertEqual(fig.axes[1].get_ylabel(), "Smoothed\nstationarity ratio")
+        plt.close(fig)
+        fig = plot_budget([self._production(k), vbd], {})
+        self.assertEqual([t.get_text() for t in fig.axes[0].get_yticklabels()], [f"VBD{DECISIVE_MARK}", "AAAVBD"])
+        self.assertEqual(fig.axes[0].get_xlabel(), STRIP_RATIO_LABEL)
+        plt.close(fig)
 
     def test_timeline_rms_speed(self):
         k = self._kernels()
