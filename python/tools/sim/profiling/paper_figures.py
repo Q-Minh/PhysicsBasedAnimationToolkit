@@ -39,12 +39,16 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 - ``sweeps``: the ``solvers`` figure's first column for several scenes, one panel per scene.
 - ``budget``: the ``solvers`` figure's other columns for several scenes, one block of rows per scene.
 - ``scenes``: the paper's LaTeX ``table*`` of production runs (graph replay for the VBD family, eager for
-  Newton): three or four lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
+  Newton): four or five lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
   Chebyshev, Anderson, Newton; -- without a run): the mean step time in ms with the P90 in parentheses, then
-  the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits, then contact: the
+  the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits, then the residual: the
+  median smoothed stationarity ratio over the run's solves with its minimum and maximum in brackets
+  (``status_ratio.smoothed_test_ratio``, the smoothed test's own ratio, the reliable one by the maintainer; no plain
+  or decisive ratio; -- for runs recorded without smoothing), then contact: the
   largest penetration (feasibility) ratio over the run's solves (substeps), from the same solve statuses, with the
   number of solves above 1 (contact constraints unmet at the end of the solve) in parentheses. A run stopped early
-  (e.g. by a blow-up watchdog) counts its solves up to the stop. A fourth line, written for the scenes where any
+  (e.g. by a blow-up watchdog) counts its solves up to the stop, and both lines leave out non-finite ratios (after
+  a blow-up). A fifth line, written for the scenes where any
   cell has one, gives each run's outcome: a short note from ``--outcomes`` (TOML: a table per scene key, optionally
   qualified by the frame rate, e.g. ``["capsule_bowl.30Hz"]``, with a note per solver; judgments made by watching
   the runs, not computed), else an automatic mark, ``stopped at t = X s`` for a run whose output ends before the
@@ -697,10 +701,22 @@ def contact_summary(result: dict) -> dict | None:
     return {"max": float(values.max()), "unmet": int((values > 1.0).sum())}
 
 
+def residual_summary(result: dict) -> dict | None:
+    """The run's residual: the median, minimum and maximum over its solves of the smoothed stationarity test's own
+    ratio (:func:`status_ratio.smoothed_test_ratio`); None without smoothed ratios (recorded without smoothing, or
+    before the field existed). Non-finite ratios (after a blow-up) are left out."""
+    values = np.array([status_ratio.smoothed_test_ratio(r) for r in solve_rows(result)], dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return None
+    return {"median": float(np.median(values)), "min": float(values.min()), "max": float(values.max())}
+
+
 def scene_cell(production: dict) -> dict:
     """One solver's cell of the ``scenes`` table, from its production run: the step time's mean and P90 (ms),
-    the median iterations per step (VBD sweeps, Newton steps), the fraction of early exits and the contact
-    (:func:`contact_summary`, None without feasibility ratios)."""
+    the median iterations per step (VBD sweeps, Newton steps), the fraction of early exits, the residual
+    (:func:`residual_summary`, None without smoothed ratios) and the contact (:func:`contact_summary`, None without
+    feasibility ratios)."""
     table = step_stats.per_step(production)
     time = step_stats.describe(table["time_ms"])
     iterations = step_stats.describe(table["iterations"])
@@ -710,6 +726,7 @@ def scene_cell(production: dict) -> dict:
         "P90": time["P90"] if time else None,
         "iterations": iterations["median"] if iterations else None,
         "early_exit": summary["early_exit"],
+        "residual": residual_summary(production),
         "contact": contact_summary(production),
     }
 
@@ -818,11 +835,12 @@ def _latex_text(text: str) -> str:
 
 
 def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, dict[str, str]] | None = None) -> str:
-    """The ``scenes`` table (booktabs, multirow): three or four lines per scene, a column per solver of
+    """The ``scenes`` table (booktabs, multirow): four or five lines per scene, a column per solver of
     :data:`SCENE_SOLVERS`. The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver,
     the first line is the mean step time (P90) in ms, the second the median iterations per step and the early exits,
-    the third the largest penetration ratio over the solves and the number of solves above 1
-    (:func:`contact_summary`), the fourth, written where any of the scene's cells has one, the outcome: the run's note
+    the third the median smoothed stationarity ratio [min, max] over the solves (:func:`residual_summary`), the
+    fourth the largest penetration ratio over the solves and the number of solves above 1
+    (:func:`contact_summary`), the fifth, written where any of the scene's cells has one, the outcome: the run's note
     in ``outcomes`` (:func:`outcome_note`), else its :func:`automatic_outcome` (against the scene's longest run)."""
     outcomes = outcomes or {}
     body = []
@@ -835,11 +853,12 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
         first = ["", _compact(meta["n_nodes"]) if "n_nodes" in meta else "--",
                  _compact(meta["n_elements"]) if "n_elements" in meta else "--", _num(h)]
         second = ["", "", "", ""]
-        third = ["", "", "", ""]
-        fourth = ["", "", "", ""]
+        residual = ["", "", "", ""]
+        contact_line = ["", "", "", ""]
+        outcome_line = ["", "", "", ""]
         for solver in SCENE_SOLVERS:
             if solver not in by_solver:
-                for line in (first, second, third, fourth):
+                for line in (first, second, residual, contact_line, outcome_line):
                     line.append("--")
                 continue
             c = scene_cell(by_solver[solver])
@@ -847,14 +866,16 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
             iterations = "--" if c["iterations"] is None else f"{c['iterations']:.0f}"
             early = "--" if c["early_exit"] is None else f"{100 * c['early_exit']:.0f}\\%"
             second.append(f"{iterations}, {early}")
+            r = c["residual"]
+            residual.append("--" if r is None else f"{_num(r['median'], 2)} [{_num(r['min'], 2)}, {_num(r['max'], 2)}]")
             contact = c["contact"]
-            third.append("--" if contact is None else f"{_num(contact['max'], 2)} ({contact['unmet']})")
+            contact_line.append("--" if contact is None else f"{_num(contact['max'], 2)} ({contact['unmet']})")
             note = outcome_note(outcomes, by_solver[solver]) or automatic_outcome(by_solver[solver], scene_end)
-            fourth.append(rf"\parbox[t]{{{OUTCOME_WIDTH}}}{{\centering\scriptsize {_latex_text(note)}}}"
+            outcome_line.append(rf"\parbox[t]{{{OUTCOME_WIDTH}}}{{\centering\scriptsize {_latex_text(note)}}}"
                           if note else "")
-        lines = [first, second, third]
-        if any(cell not in ("", "--") for cell in fourth[4:]):
-            lines.append(fourth)
+        lines = [first, second, residual, contact_line]
+        if any(cell not in ("", "--") for cell in outcome_line[4:]):
+            lines.append(outcome_line)
             any_outcome = True
         # The label spans the scene's lines, wrapped, so a long one doesn't widen the table
         label = labels.get(scene, scene.replace("_", r"\_"))
@@ -868,6 +889,9 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
            r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
            r"Newton steps) and the fraction of time steps that pass their convergence test within the budget; third, "
+           r"the median over the run's solves (substeps) of the smoothed stationarity ratio, the residual of the "
+           r"stationarity test after smoothing over each node's neighbours over its tolerance, at most 1 where that "
+           r"test passes, with its minimum and maximum in brackets; fourth, "
            r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
            r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
            r"the number of solves above 1 in parentheses." + outcome_caption + r" Newton "
@@ -877,6 +901,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{lrrr ccccc}", r"\toprule",
            r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; } \\",
+           r"& & & & \multicolumn{5}{c}{smoothed stationarity ratio, median [min, max] \;/\; } \\",
            r"& & & & \multicolumn{5}{c}{max.\ penetration ratio (solves $>1$)"
            + (r" \;/\; outcome" if any_outcome else "") + r"} \\",
            r"\cmidrule(lr){5-9}",
@@ -1243,13 +1268,24 @@ class TestPaperFigures(unittest.TestCase):
         self.assertAlmostEqual(cell["mean"], (15 * 8.95 + 25 * 14.45) / 40 * 1.08)
         self.assertEqual((cell["iterations"], cell["early_exit"]), (100.0, 0.25))
         capsules = self._production(self._kernels("VBD", scene="path/to/capsule_bowl.h5"))
-        text = latex_scenes([self._production(k), newton, capsules], {"basket_of_fruit": "Basket of fruit"})
-        self.assertIn(r"\multirow[t]{3}{2.6cm}{\raggedright Basket of fruit} & 54.5k & 231k & 10 & -- & 13.4 (15.6) "
+        basket = self._production(k)
+        # Smoothed ratios 0.1, 0.2, ..., 3.9, then a blow-up's NaN; the decisive ratios (0.5, 3.0) don't count
+        for i, step in enumerate(basket["steps"]):
+            step["status"] = {"vbd": [{**step["status"]["vbd"][0],
+                                       "smoothed_ratio": round(0.1 * (i + 1), 1) if i < 39 else float("nan")}]}
+        self.assertEqual(residual_summary(basket), {"median": 2.0, "min": 0.1, "max": 3.9})
+        self.assertIsNone(residual_summary(newton))  # recorded without smoothing
+        text = latex_scenes([basket, newton, capsules], {"basket_of_fruit": "Basket of fruit"})
+        self.assertIn(r"\multirow[t]{4}{2.6cm}{\raggedright Basket of fruit} & 54.5k & 231k & 10 & -- & 13.4 (15.6) "
                       r"& -- & -- & 13.4 (15.6) \\", text)
         self.assertIn(r" &  &  &  & -- & 100, 25\% & -- & -- & 6, 50\% \\", text)
+        self.assertIn(r" &  &  &  & -- & 2 [0.1, 3.9] & -- & -- & -- \\", text)  # smoothed ratio, median [min, max]
         self.assertIn(r" &  &  &  & -- & 0.1 (0) & -- & -- & 0 (0) \\", text)  # max penetration ratio (solves > 1)
-        self.assertIn(r"\multirow[t]{3}{2.6cm}{\raggedright capsule\_bowl} & 54.5k & 231k & 10 & 13.4 (15.6) & -- & "
+        self.assertIn(r"\multirow[t]{4}{2.6cm}{\raggedright capsule\_bowl} & 54.5k & 231k & 10 & 13.4 (15.6) & -- & "
                       r"-- & -- & -- \\", text)
+        # Lines in order: time, iterations, residual, contact
+        self.assertLess(text.index("2 [0.1, 3.9]"), text.index(" & 0.1 (0) & "))
+        self.assertLess(text.index("100, 25"), text.index("2 [0.1, 3.9]"))
         self.assertNotIn(r"\parbox", text)  # no notes and no blow-ups: no outcome line
         self.assertNotIn(r"\;/\; outcome", text)
         self.assertEqual((_compact(3269), _compact(1809486)), ("3269", "1.81M"))
@@ -1299,7 +1335,7 @@ class TestPaperFigures(unittest.TestCase):
         self.assertIsNone(outcome_note(outcomes, anderson))  # by display name, empty
         self.assertEqual(outcome_note(outcomes, capsules), "funnel to −2.6 m")  # the 100 Hz table, not the 30 Hz
         text = latex_scenes([aaavbd, vbd, anderson, capsules], {}, outcomes)
-        self.assertIn(r"\multirow[t]{4}{2.6cm}{\raggedright basket\_of\_fruit}", text)
+        self.assertIn(r"\multirow[t]{5}{2.6cm}{\raggedright basket\_of\_fruit}", text)
         self.assertIn(r" &  &  &  & \parbox[t]{1.9cm}{\centering\scriptsize loses 9 of 9 \& more} & "
                       r"\parbox[t]{1.9cm}{\centering\scriptsize all 9 stay} & -- & "
                       r"\parbox[t]{1.9cm}{\centering\scriptsize stopped at t = 0.3 s} & -- \\", text)
