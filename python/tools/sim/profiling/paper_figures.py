@@ -46,14 +46,15 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   (``status_ratio.smoothed_test_ratio``, the smoothed test's own ratio, the reliable one by the maintainer; no plain
   or decisive ratio; -- for runs recorded without smoothing), then contact: the
   largest penetration (feasibility) ratio over the run's solves (substeps), from the same solve statuses, with the
-  number of solves above 1 (contact constraints unmet at the end of the solve) in parentheses. A run stopped early
-  (e.g. by a blow-up watchdog) counts its solves up to the stop, and both lines leave out non-finite ratios (after
-  a blow-up). A fifth line, written for the scenes where any
+  number of solves above 1 (contact constraints unmet at the end of the solve) in parentheses. A run that blew up
+  counts only its steps before the blow-up in these two lines (:func:`before_blowup`, at the outcome mark's
+  :func:`blowup_time`); a run stopped early without blowing up counts all its steps; non-finite ratios are left out
+  either way. A fifth line, written for the scenes where any
   cell has one, gives each run's outcome: a short note from ``--outcomes`` (TOML: a table per scene key, optionally
   qualified by the frame rate, e.g. ``["capsule_bowl.30Hz"]``, with a note per solver; judgments made by watching
-  the runs, not computed), else an automatic mark, ``stopped at t = X s`` for a run whose output ends before the
-  scene's longest run, or ``blew up at t = X s`` where its positions went non-finite or very far (a non-finite
-  residual or speed, or a node faster than :data:`BLOWUP_SPEED`). Scene labels wrap over the scene's lines
+  the runs, not computed), else an automatic mark, ``blew up at t = X s`` where its positions went non-finite or
+  very far (a non-finite residual or speed, or a node faster than :data:`BLOWUP_SPEED`), else ``stopped at t = X s``
+  for a run whose output ends before the scene's longest run. Scene labels wrap over the scene's lines
   (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
 - ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
   solver's median stationarity ratio over its solves, the decisive one (solid, filled) and the smoothed test's own
@@ -716,7 +717,7 @@ def scene_cell(production: dict) -> dict:
     """One solver's cell of the ``scenes`` table, from its production run: the step time's mean and P90 (ms),
     the median iterations per step (VBD sweeps, Newton steps), the fraction of early exits, the residual
     (:func:`residual_summary`, None without smoothed ratios) and the contact (:func:`contact_summary`, None without
-    feasibility ratios)."""
+    feasibility ratios), the last two over the steps before a blow-up (:func:`before_blowup`)."""
     table = step_stats.per_step(production)
     time = step_stats.describe(table["time_ms"])
     iterations = step_stats.describe(table["iterations"])
@@ -726,8 +727,8 @@ def scene_cell(production: dict) -> dict:
         "P90": time["P90"] if time else None,
         "iterations": iterations["median"] if iterations else None,
         "early_exit": summary["early_exit"],
-        "residual": residual_summary(production),
-        "contact": contact_summary(production),
+        "residual": residual_summary(before_blowup(production)),
+        "contact": contact_summary(before_blowup(production)),
     }
 
 
@@ -766,15 +767,29 @@ def blowup_time(result: dict) -> float | None:
     return None
 
 
+def before_blowup(result: dict) -> dict:
+    """The result with only its steps before its :func:`blowup_time` (the first blown-up step left out too), or the
+    result itself if it didn't blow up: the ``scenes`` table's residual and contact statistics stop at a blow-up,
+    after which they measure nothing (BirthdayBanner.60Hz Anderson's smoothed ratio reached 2.8e16 before turning
+    NaN)."""
+    blowup = blowup_time(result)
+    if blowup is None:
+        return result
+    dt = float(result["metadata"].get("dt", 1.0))
+    return {**result, "steps": [s for s in result["steps"] if (s["t"] + 1) * dt < blowup - 0.5 * dt]}
+
+
 def automatic_outcome(result: dict, scene_end: float) -> str | None:
-    """The table's automatic outcome mark of a run: ``stopped at t = X s`` if its output ends before the scene's
-    (``scene_end``, the longest run's end; e.g. a blow-up watchdog's stop), else ``blew up at t = X s`` at
-    :func:`blowup_time`, else None."""
+    """The table's automatic outcome mark of a run: ``blew up at t = X s`` at its :func:`blowup_time` (where its
+    residual and contact statistics stop, :func:`before_blowup`), else ``stopped at t = X s`` if its output ends
+    before the scene's (``scene_end``, the longest run's end; e.g. a watchdog's stop), else None."""
+    blowup = blowup_time(result)
+    if blowup is not None:
+        return f"blew up at t = {blowup:.3g} s"
     end = run_end(result)
     if end < scene_end - 0.5 * float(result["metadata"].get("dt", 1.0)):
         return f"stopped at t = {end:.3g} s"
-    blowup = blowup_time(result)
-    return None if blowup is None else f"blew up at t = {blowup:.3g} s"
+    return None
 
 
 def load_outcomes(path: str) -> dict[str, dict[str, str]]:
@@ -881,9 +896,10 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
         label = labels.get(scene, scene.replace("_", r"\_"))
         first[0] = rf"\multirow[t]{{{len(lines)}}}{{{SCENE_LABEL_WIDTH}}}{{\raggedright {label}}}"
         body += ([r"\addlinespace"] if body else []) + [" & ".join(line) + r" \\" for line in lines]
-    outcome_caption = (r" Last, the outcome of each run by eye, against AAAVBD's where it differs, and ``stopped at "
-                       r"$t$'' for a run stopped early after a blow-up, whose other numbers cover the steps up to the "
-                       r"stop." if any_outcome else "")
+    outcome_caption = (r" Last, the outcome of each run by eye, against AAAVBD's where it differs; ``blew up at $t$'' "
+                       r"marks a run that blew up, whose stationarity and penetration ratios stop there, and ``stopped "
+                       r"at $t$'' a run stopped early, whose numbers cover the steps up to the stop." if any_outcome
+                       else "")
     out = [r"\begin{table*}", r"\centering", r"\small",
            r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
            r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
@@ -894,7 +910,8 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"test passes, with its minimum and maximum in brackets; fourth, "
            r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
            r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
-           r"the number of solves above 1 in parentheses." + outcome_caption + r" Newton "
+           r"the number of solves above 1 in parentheses. A run that blew up counts only its solves before the "
+           r"blow-up in these two lines." + outcome_caption + r" Newton "
            r"and the VBD-family solvers handle contact differently, so their trajectories are not expected to match: "
            r"the Newton column reports its cost on the same scene, not the same outcome.}",
            r"\label{tab:scenes}",
@@ -1307,9 +1324,33 @@ class TestPaperFigures(unittest.TestCase):
         nan["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "gradient_ratio": None}]}} if s["t"] >= 40
                         else s for s in nan["steps"]]
         self.assertAlmostEqual(blowup_time(nan), 0.41)  # a non-finite residual: non-finite positions
-        stopped = {**far, "steps": far["steps"][:25]}  # a watchdog's stop at step 34
+        stopped = {**far, "steps": far["steps"][:25]}  # a watchdog's stop at step 34, after the blow-up at 30
+        self.assertEqual(automatic_outcome(stopped, 0.5), "blew up at t = 0.31 s")  # where its statistics stop
+        stopped = {**ok, "steps": ok["steps"][:25]}  # stopped without blowing up
         self.assertEqual(automatic_outcome(stopped, 0.5), "stopped at t = 0.35 s")
         self.assertIsNone(automatic_outcome(ok, 0.505))  # within half a step of the scene's end
+
+    def test_statistics_stop_at_blowup(self):
+        run = self._production(self._kernels())
+        steps = []
+        for i, step in enumerate(run["steps"]):  # steps 10-49 at 10 ms
+            blown = step["t"] >= 30  # a node at 2 km/s from step 30: blown up, its ratios huge but finite
+            row = {**step["status"]["vbd"][0], "smoothed_ratio": 1e16 if blown else 0.5 + 0.1 * (i % 3),
+                   "feasibility_ratio": 900.0 if blown else 0.6 * (i % 3)}
+            steps.append({**step, "status": {"vbd": [row]}, "peak_speed": 2 * BLOWUP_SPEED if blown else 5.0})
+        run["steps"] = steps
+        self.assertAlmostEqual(blowup_time(run), 0.31)
+        self.assertEqual([s["t"] for s in before_blowup(run)["steps"]], list(range(10, 30)))  # step 30 left out too
+        self.assertEqual(residual_summary(run)["max"], 1e16)  # uncut
+        cell = scene_cell(run)
+        self.assertEqual(cell["residual"], {"median": 0.6, "min": 0.5, "max": 0.7})
+        self.assertEqual(cell["contact"], {"max": 1.2, "unmet": 6})  # 0.6 (i % 3) over steps 10-29: 1.2 six times
+        self.assertEqual(scene_cell(run)["iterations"], 100.0)  # the other lines keep every step
+        # A run stopped by a watchdog without blowing up keeps all its steps
+        stopped = self._production(self._kernels())
+        stopped["steps"] = stopped["steps"][:25]
+        self.assertIs(before_blowup(stopped), stopped)
+        self.assertEqual(scene_cell(stopped)["contact"], {"max": 0.1, "unmet": 0})
 
     def test_outcomes(self):
         import tempfile
