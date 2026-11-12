@@ -51,6 +51,14 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   scene's longest run, or ``blew up at t = X s`` where its positions went non-finite or very far (a non-finite
   residual or speed, or a node faster than :data:`BLOWUP_SPEED`). Scene labels wrap over the scene's lines
   (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
+- ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
+  solver's median stationarity ratio over its solves, the decisive one (solid, filled) and the smoothed test's own
+  (dotted, hollow; ``status_ratio``), divided by AAAVBD's at the same scene and solver step h = dt / substeps
+  (log x, ticks at the steps run), over the same window (log y, a dashed line at 1, above it AAAVBD is more
+  converged). The positional runs are compared over their scene's common span (circles: from the latest first
+  recorded step, production runs skip their warm-up, to the end of the shortest campaign); ``--windowed`` runs over
+  their scene's ``--window`` (squares; e.g. the real-time screen's phase-2 windows). Either is narrowed to what both
+  runs recorded and to before either blew up (crossed: compared up to it). The points are also printed as Markdown.
 
 Usage (from the repo root):
 
@@ -64,6 +72,8 @@ Usage (from the repo root):
     python -m python.tools.sim.profiling.paper_figures budget p_*.json -o data/figures/profiling/budget [--step-times]
     python -m python.tools.sim.profiling.paper_figures scenes p_*.json -o data/tables/scenes.tex [--labels ...] \
         [--outcomes outcomes.toml]
+    python -m python.tools.sim.profiling.paper_figures lead p_10ms_*.json p_60Hz_*.json -o data/figures/lead \
+        [--windowed w_*.json --window armadillo-pull=0:3 ...] [--labels ...] [--width 7]
 
 Figures follow ``benchmark_plot.py``: Linux Biolinum (``--font-dir``, ``PBAT_FONT_DIR`` or installed), rendered
 at the printed width (``--width``, inches) with 7-8 pt text, no titles (the LaTeX caption carries them; rows
@@ -82,10 +92,11 @@ import numpy as np  # noqa: E402
 from matplotlib import patheffects  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
-from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter  # noqa: E402
+from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter, NullLocator  # noqa: E402
 from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
+from .. import status_ratio  # noqa: E402
 from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noqa: E402
 
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
@@ -874,6 +885,184 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
     return "\n".join(out) + "\n"
 
 
+LEAD_REFERENCE = "AAAVBD"  # lead: the solver every other one is divided by
+LEAD_SOLVERS = ("VBD", "Chebyshev", "AndersonSolver")  # lead: one line each
+# lead: the stationarity ratios compared, each a function of a status row (status_ratio): the decisive one, at most 1
+# iff the test passed, and the smoothed test's own, which ranks solvers where float32 noise makes the unsmoothed one
+# rough (NaN on rows without smoothing)
+LEAD_RATIOS = {"decisive": status_ratio.stationarity_test_ratio, "smoothed": status_ratio.smoothed_test_ratio}
+LEAD_SOURCES = {"full": "o", "window": "s"}  # lead: the marker of points from full runs and from time windows
+
+
+def solve_end_times(result: dict) -> np.ndarray:
+    """Simulated time (s) at the end of each solve of :func:`solve_rows`: its step's start plus its substep's share."""
+    meta = result["metadata"]
+    dt, substeps = float(meta.get("dt", 1.0)), max(int(meta.get("substeps", 1)), 1)
+    return np.array([(r["t"] + (r.get("substep", 0) + 1) / substeps) * dt for r in solve_rows(result)])
+
+
+def window_median(result: dict, ratio: str, t0: float, t1: float) -> float | None:
+    """The median of a :data:`LEAD_RATIOS` ratio over the result's solves that end within (t0, t1] (s), leaving out
+    non-finite values; None if none is left."""
+    rows = solve_rows(result)
+    values = np.array([np.nan if (v := LEAD_RATIOS[ratio](r)) is None else v for r in rows], dtype=float)
+    end = solve_end_times(result)
+    # Window ends on the step grid, and dt is float32-rounded (90 x 1/30 s ends at 3.0000001 s): compare within a
+    # small fraction of a substep
+    eps = 1e-3 * float(result["metadata"].get("dt", 1.0)) / max(int(result["metadata"].get("substeps", 1)), 1)
+    inside = (end > t0 + eps) & (end <= t1 + eps)
+    values = values[inside & np.isfinite(values)]
+    return float(np.median(values)) if values.size else None
+
+
+def lead_points(full: list[dict], windowed: list[dict] | None = None,
+                windows: dict[str, tuple[float, float]] | None = None) -> list[dict]:
+    """The ``lead`` figure's points: per scene, solver step h (dt / substeps) and solver of :data:`LEAD_SOLVERS`, the
+    median of each :data:`LEAD_RATIOS` ratio over its solves divided by :data:`LEAD_REFERENCE`'s at the same scene and
+    step, over the same window (the medians floored at :data:`RATIO_FLOOR`). ``full`` runs are compared over their
+    scene's common window: from the latest first recorded step of any of its runs (production runs skip their warm-up
+    steps) to the end of the shortest campaign (the longest run at each step); ``windowed`` runs over their scene's
+    ``windows`` entry (s). Either is narrowed to the span both runs recorded and to before either blew up
+    (:func:`blowup_time`), so a run stopped early or blown up is compared with AAAVBD up to then: after a blow-up its
+    ratios measure nothing (BirthdayBanner at 10 ms, VBD from 2.66 s: smoothed ratios at 0).
+
+    Returns:
+        list[dict]: ``scene``, ``source`` (``full`` or ``window``), ``h``, ``dt``, ``substeps`` (s), ``solver``,
+        ``span`` (the scene's window or common span, s), ``window`` (the point's, narrowed), ``blowup`` (whether a
+        blow-up cut the window), and per ratio its lead (None where either
+        median is unknown) and AAAVBD's median (``<ratio>_reference``).
+    """
+    points = []
+    for source, runs in (("full", full), ("window", windowed or [])):
+        for scene, scene_runs in by_scene(runs).items():
+            steps: dict[tuple, dict[str, dict]] = {}
+            for r in scene_runs:
+                meta = r["metadata"]
+                key = (round(float(meta["dt"]), 9), max(int(meta.get("substeps", 1)), 1))
+                steps.setdefault(key, {})[meta.get("solver")] = r
+            if source == "full":
+                t0 = max(float(r["steps"][0]["t"]) * float(r["metadata"]["dt"]) for r in scene_runs)
+                t1 = min(max(run_end(r) for r in by_solver.values()) for by_solver in steps.values())
+            elif scene in (windows or {}):
+                t0, t1 = windows[scene]
+            else:
+                raise SystemExit(f"lead: the windowed runs of {scene} need --window {scene}=T0:T1")
+            for (dt, substeps), by_solver in sorted(steps.items()):
+                reference = by_solver.get(LEAD_REFERENCE)
+                if reference is None:
+                    warnings.warn(f"lead: {scene} at dt {dt:g} s x {substeps} has no {LEAD_REFERENCE} run")
+                    continue
+                for solver in LEAD_SOLVERS:
+                    run = by_solver.get(solver)
+                    if run is None:
+                        continue
+                    lo = max(t0, *(float(r["steps"][0]["t"]) * dt for r in (run, reference)))
+                    hi = min(t1, run_end(run), run_end(reference))
+                    # Up to the step before the first blown-up one
+                    blowups = [b - dt for b in map(blowup_time, (run, reference)) if b is not None and b - dt < hi]
+                    hi = min([hi, *blowups])
+                    point = {"scene": scene, "source": source, "h": dt / substeps, "dt": dt, "substeps": substeps,
+                             "solver": solver, "span": (t0, t1), "window": (lo, hi), "blowup": bool(blowups)}
+                    for ratio in LEAD_RATIOS:
+                        ref, other = window_median(reference, ratio, lo, hi), window_median(run, ratio, lo, hi)
+                        point[f"{ratio}_reference"] = ref
+                        point[ratio] = (None if ref is None or other is None
+                                        else max(other, RATIO_FLOOR) / max(ref, RATIO_FLOOR))
+                    points.append(point)
+    return points
+
+
+def lead_text(points: list[dict], labels: dict[str, str]) -> str:
+    """Markdown: the ``lead`` figure's points, for checking them against the text."""
+    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD decisive (smoothed) | Solver | "
+           "Lead: decisive (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+    def times(x):
+        return "--" if x is None else f"{_num(x, 2)}x"
+
+    for p in points:
+        ref = f"{_num(p['decisive_reference'])} ({_num(p['smoothed_reference'])})"
+        lead = f"{times(p['decisive'])} ({times(p['smoothed'])})"
+        window = f"{p['window'][0]:.3g}-{p['window'][1]:.3g}" + (" (blow-up)" if p["blowup"] else "")
+        out.append(f"| {labels.get(p['scene'], p['scene'])} | {p['source']} | {window} | {_num(1e3 * p['h'])} | "
+                   f"{_num(1e3 * p['dt'])} x {p['substeps']} | {ref} | {SOLVER_NAMES.get(p['solver'], p['solver'])} | "
+                   f"{lead} |")
+    return "\n".join(out) + "\n"
+
+
+def plot_lead(points: list[dict], labels: dict[str, str], width: float = 7.0):
+    """The ``lead`` figure (see the module docstring): one panel per scene, each other solver's lead over AAAVBD
+    (:func:`lead_points`) against the solver step h, both on log axes."""
+    scenes = list(dict.fromkeys(p["scene"] for p in points))
+    ncols = min(len(scenes), max(1, int(width // 2.2)))
+    nrows = -(-len(scenes) // ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(width, 1.5 * nrows + 0.2), squeeze=False,
+                             gridspec_kw={"wspace": 0.38, "hspace": 0.75})
+    for ax, scene in zip(axes.flat, scenes):
+        mine = [p for p in points if p["scene"] == scene]
+        values = [1.0]
+        for solver in LEAD_SOLVERS:
+            color = SOLVER_COLORS.get(solver, INK)
+            for source, marker in LEAD_SOURCES.items():
+                for ratio in reversed(LEAD_RATIOS):  # the decisive ratio on top where the two coincide
+                    series = sorted((p["h"], p[ratio]) for p in mine
+                                    if p["solver"] == solver and p["source"] == source and p[ratio] is not None)
+                    if not series:
+                        continue
+                    h, y = (np.array(v) for v in zip(*series))
+                    values += list(y)
+                    decisive = ratio == "decisive"
+                    ax.plot(1e3 * h, y, color=color, linewidth=0.9 if decisive else 0.6,
+                            linestyle="-" if decisive else (0, (1, 1.2)), marker=marker, markersize=3.2,
+                            markerfacecolor=color if decisive else "white", markeredgecolor=color,
+                            markeredgewidth=0.6, alpha=1.0 if decisive else 0.85)
+        for p in mine:  # compared only up to a blow-up
+            if p["blowup"]:
+                y = [p[ratio] for ratio in LEAD_RATIOS if p[ratio] is not None]
+                ax.plot([1e3 * p["h"]] * len(y), y, color=INK, marker="x", markersize=4.5, markeredgewidth=0.7,
+                        linestyle="none", zorder=5)
+        ax.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
+        ax.set_xscale("log")
+        steps = sorted({1e3 * p["h"] for p in mine})
+        ax.set_xlim(steps[0] / 1.35, steps[-1] * 1.35)
+        ticks = ax.set_xticks(steps, [_num(h) for h in steps])
+        for a, b, label_a, label_b in zip(steps, steps[1:], ticks, ticks[1:]):
+            if b / a < 1.4:  # close steps (8.33 and 10 ms): their labels apart
+                label_a.label1.set_horizontalalignment("right")
+                label_b.label1.set_horizontalalignment("left")
+        ax.xaxis.set_minor_locator(NullLocator())
+        ax.set_ylim(min(values) / 1.4, max(values) * 1.4)
+        _log_axis(ax, "y")
+        _style(ax)
+        ax.text(0, 1.06, labels.get(scene, scene), transform=ax.transAxes, ha="left", va="bottom", fontsize=8,
+                fontweight="bold", color=INK)
+        spans = sorted({p["span"] for p in mine if p["source"] == "window"})
+        if spans:  # the scene's window, which the caption can't hold per scene
+            ax.text(1, 1.06, ", ".join(f"{a:g}–{b:g} s" for a, b in spans), transform=ax.transAxes, ha="right",
+                    va="bottom", fontsize=FONT_SIZE - 1, color="#7f7f7f")
+    for ax in axes.flat[len(scenes):]:
+        ax.set_axis_off()
+    for ax in axes[:, 0]:
+        ax.set_ylabel(f"Ratio to {LEAD_REFERENCE}", fontsize=FONT_SIZE)
+    for c in range(ncols):  # the lowest panel of each column
+        rows = [r for r in range(nrows) if r * ncols + c < len(scenes)]
+        if rows:
+            axes[rows[-1], c].set_xlabel("Time step $h$ (ms)", fontsize=FONT_SIZE)
+    handles = [Line2D([], [], color=SOLVER_COLORS.get(s, INK), linewidth=0.9, label=SOLVER_NAMES.get(s, s))
+               for s in LEAD_SOLVERS if any(p["solver"] == s for p in points)]
+    handles += [Line2D([], [], color=INK, linewidth=0.9, marker="o", markersize=3.2, label="Decisive"),
+                Line2D([], [], color=INK, linewidth=0.6, linestyle=(0, (1, 1.2)), marker="o", markersize=3.2,
+                       markerfacecolor="white", markeredgewidth=0.6, label="Smoothed")]
+    sources = {p["source"] for p in points}
+    handles += [Line2D([], [], color=INK, marker=LEAD_SOURCES[s], markersize=3.2, linestyle="none",
+                       label={"full": "Full run", "window": "Window"}[s]) for s in LEAD_SOURCES if s in sources]
+    if any(p["blowup"] for p in points):
+        handles.append(Line2D([], [], color=INK, marker="x", markersize=4.5, markeredgewidth=0.7, linestyle="none",
+                              label="Until a blow-up"))
+    handles.append(Line2D([], [], color=INK, linewidth=0.5, linestyle=(0, (3, 2)), label=LEAD_REFERENCE))
+    _legend(fig, handles)
+    return fig
+
+
 def _parse_labels(items: list[str]) -> dict[str, str]:
     labels = {}
     for item in items:
@@ -886,11 +1075,11 @@ def _parse_labels(items: list[str]) -> dict[str, str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Paper figures and tables of profiling results.")
-    parser.add_argument("kind", choices=["timeline", "solvers", "slices", "sweeps", "budget", "scenes"],
+    parser.add_argument("kind", choices=["timeline", "solvers", "slices", "sweeps", "budget", "scenes", "lead"],
                         help="What to write (see the docstring).")
     parser.add_argument("kernels", nargs="+",
                         help="Results (.json), one per row: kernels-backend runs (timeline, solvers, slices, sweeps) "
-                        "or production runs (budget, scenes).")
+                        "or production runs (budget, scenes; lead: the runs compared over their full common span).")
     parser.add_argument("--production", nargs="*", default=[],
                         help="Production results (.json), paired with the kernels results by scene and solver.")
     parser.add_argument("-o", "--output", required=True,
@@ -913,6 +1102,10 @@ def main():
                         help="slices: percentile edges of the step-time slices (default: 10,90).")
     parser.add_argument("--outcomes", default=None, metavar="FILE.toml",
                         help="scenes: per scene and solver, a short note on the run's outcome (see load_outcomes).")
+    parser.add_argument("--windowed", nargs="*", default=[],
+                        help="lead: runs compared over their scene's --window instead of their full common span.")
+    parser.add_argument("--window", nargs="*", default=[], metavar="SCENE=T0:T1",
+                        help="lead: the time window (s) of a scene's --windowed runs, e.g. armadillo-pull=0:3.")
     parser.add_argument("--step-times", action="store_true", dest="step_times",
                         help="solvers, budget: add a column with the step time distribution.")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
@@ -949,6 +1142,17 @@ def main():
         fig = plot_solvers(kernels, production_runs, args.width, args.step_times)
     elif args.kind == "sweeps":
         fig = plot_sweeps(kernels, labels, args.width)
+    elif args.kind == "lead":
+        windows = {}
+        for item in args.window:
+            scene, sep, span = item.rpartition("=")
+            t0, sep2, t1 = span.partition(":")
+            if not sep or not sep2:
+                raise SystemExit(f"--window expects SCENE=T0:T1, got {item!r}")
+            windows[scene] = (float(t0), float(t1))
+        points = lead_points(kernels, [results.load(p) for p in args.windowed], windows)
+        print(lead_text(points, labels))
+        fig = plot_lead(points, labels, args.width)
     else:
         fig = plot_budget(kernels, labels, args.width, args.step_times)
     path = f"{args.output}.pdf"
@@ -1121,6 +1325,66 @@ class TestPaperFigures(unittest.TestCase):
         for step in run["steps"]:
             del step["status"]
         self.assertIsNone(contact_summary(run))
+
+    @staticmethod
+    def _lead_run(solver, dt, ratio, smoothed=None, steps=range(10, 50), substeps=1, scene="path/to/capsule_bowl.h5"):
+        """A production run whose every solve records the stationarity ratio ``ratio(t)`` (and ``smoothed(t)``)."""
+        def rows(t):
+            return [{"substep": s, "outer": 1, "sweeps": 100, "reason": "GRADIENT_UNMET", "gradient_ratio": ratio(t),
+                     "no_floor_ratio": ratio(t), "floor_clause_ratio": ratio(t), "feasibility_ratio": 0.0,
+                     **({} if smoothed is None else {"smoothed_ratio": smoothed(t)})} for s in range(substeps)]
+
+        return {"source": "production",
+                "metadata": {"scene": scene, "solver": solver, "dt": dt, "substeps": substeps},
+                "steps": [{"t": t, "step_timeline_ms": 1.0, "peak_speed": 1.0, "status": {"vbd": rows(t)}}
+                          for t in steps]}
+
+    def test_lead(self):
+        run = self._lead_run("VBD", 0.02, lambda t: float(t), substeps=2, steps=range(3, 6))
+        np.testing.assert_allclose(solve_end_times(run), [0.07, 0.08, 0.09, 0.1, 0.11, 0.12])
+        self.assertEqual(window_median(run, "decisive", 0.08, 0.11), 4.0)  # solves ending in (0.08, 0.11]: 4, 4, 5
+        self.assertIsNone(window_median(run, "smoothed", 0.0, 1.0))  # recorded without smoothing
+        self.assertIsNone(window_median(run, "decisive", 0.2, 0.3))
+        # Two campaigns of one scene: 10 ms (steps 2-99, 0.02-1 s) and 20 ms (steps 10-39, 0.2-0.8 s)
+        full = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0, lambda t: 0.5, steps=range(2, 100)),
+                self._lead_run("VBD", 0.01, lambda t: 6.0 if t > 20 else 1e3, lambda t: 1.0, steps=range(2, 100)),
+                self._lead_run("AAAVBD", 0.02, lambda t: 2.0, lambda t: 0.5, steps=range(10, 40)),
+                self._lead_run("VBD", 0.02, lambda t: 20.0, lambda t: 10.0, steps=range(10, 40)),
+                self._lead_run("Chebyshev", 0.02, lambda t: 1.0, lambda t: 0.0005, steps=range(10, 30))]
+        points = lead_points(full)
+        self.assertEqual([(p["solver"], p["h"]) for p in points], [("VBD", 0.01), ("VBD", 0.02), ("Chebyshev", 0.02)])
+        p = points[0]
+        # The common span: from the latest first step (0.2 s) to the shorter campaign's end (0.8 s), so the 10 ms
+        # VBD run's early 1e3 ratios (steps up to 20, ending by 0.21 s) are left out but one
+        self.assertEqual((p["source"], p["span"], p["window"], p["blowup"]), ("full", (0.2, 0.8), (0.2, 0.8), False))
+        self.assertEqual((p["decisive"], p["smoothed"], p["decisive_reference"]), (3.0, 2.0, 2.0))
+        self.assertEqual((points[1]["decisive"], points[1]["smoothed"]), (10.0, 20.0))
+        # Chebyshev stops at 0.6 s: compared up to its stop; its smoothed median 5e-4 is floored, never divided by 0
+        np.testing.assert_allclose(points[2]["window"], (0.2, 0.6))
+        self.assertEqual((points[2]["decisive"], points[2]["smoothed"]), (0.5, RATIO_FLOOR / 0.5))
+        # A blow-up (a node at 2 km/s from step 30) cuts the window before it; the ratios after it don't count
+        blown = self._lead_run("VBD", 0.02, lambda t: 20.0 if t < 30 else 1e9, steps=range(10, 40))
+        for step in blown["steps"][20:]:
+            step["peak_speed"] = 2 * BLOWUP_SPEED
+        p = lead_points([full[2], blown])[0]
+        np.testing.assert_allclose(p["window"], (0.2, 0.6))
+        self.assertEqual((p["blowup"], p["decisive"]), (True, 10.0))
+        # Windowed runs: over their scene's window, narrowed to what both recorded
+        windowed = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0 if t < 50 else 4.0, steps=range(0, 100)),
+                    self._lead_run("AndersonSolver", 0.01, lambda t: 1.0, steps=range(42, 60))]
+        with self.assertRaises(SystemExit):  # no window for the scene
+            lead_points([], windowed)
+        p = lead_points([], windowed, {"capsule_bowl": (0.3, 0.55)})[0]
+        self.assertEqual((p["source"], p["span"]), ("window", (0.3, 0.55)))
+        self.assertAlmostEqual(p["window"][0], 0.42)
+        self.assertEqual(p["decisive"], 0.5)  # AAAVBD's median over (0.42, 0.55]: 2.0 (8 solves) vs 4.0 (5)
+        text = lead_text(points, {"capsule_bowl": "Capsules"})
+        self.assertIn("| Capsules | full | 0.2-0.8 | 10 | 10 x 1 | 2 (0.5) | VBD | 3x (2x) |", text)
+        fig = plot_lead(points + lead_points([full[2], blown]) + [p], {})
+        self.assertEqual([t.get_text() for t in fig.legends[0].get_texts()],
+                         ["VBD", "Chebyshev", "Anderson", "Decisive", "Smoothed", "Full run", "Window",
+                          "Until a blow-up", "AAAVBD"])
+        plt.close(fig)
 
     def test_sweeps_budget_scenes(self):
         import tempfile
