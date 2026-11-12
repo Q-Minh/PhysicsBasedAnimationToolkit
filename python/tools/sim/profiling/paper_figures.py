@@ -39,12 +39,18 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 - ``sweeps``: the ``solvers`` figure's first column for several scenes, one panel per scene.
 - ``budget``: the ``solvers`` figure's other columns for several scenes, one block of rows per scene.
 - ``scenes``: the paper's LaTeX ``table*`` of production runs (graph replay for the VBD family, eager for
-  Newton): three lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
+  Newton): three or four lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
   Chebyshev, Anderson, Newton; -- without a run): the mean step time in ms with the P90 in parentheses, then
   the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits, then contact: the
   largest penetration (feasibility) ratio over the run's solves (substeps), from the same solve statuses, with the
   number of solves above 1 (contact constraints unmet at the end of the solve) in parentheses. A run stopped early
-  (e.g. by a blow-up watchdog) counts its solves up to the stop.
+  (e.g. by a blow-up watchdog) counts its solves up to the stop. A fourth line, written for the scenes where any
+  cell has one, gives each run's outcome: a short note from ``--outcomes`` (TOML: a table per scene key, optionally
+  qualified by the frame rate, e.g. ``["capsule_bowl.30Hz"]``, with a note per solver; judgments made by watching
+  the runs, not computed), else an automatic mark, ``stopped at t = X s`` for a run whose output ends before the
+  scene's longest run, or ``blew up at t = X s`` where its positions went non-finite or very far (a non-finite
+  residual or speed, or a node faster than :data:`BLOWUP_SPEED`). Scene labels wrap over the scene's lines
+  (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
 
 Usage (from the repo root):
 
@@ -56,7 +62,8 @@ Usage (from the repo root):
     python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
     python -m python.tools.sim.profiling.paper_figures sweeps k_fixed_*.json -o data/figures/profiling/sweeps
     python -m python.tools.sim.profiling.paper_figures budget p_*.json -o data/figures/profiling/budget [--step-times]
-    python -m python.tools.sim.profiling.paper_figures scenes p_*.json -o data/tables/scenes.tex [--labels ...]
+    python -m python.tools.sim.profiling.paper_figures scenes p_*.json -o data/tables/scenes.tex [--labels ...] \
+        [--outcomes outcomes.toml]
 
 Figures follow ``benchmark_plot.py``: Linux Biolinum (``--font-dir``, ``PBAT_FONT_DIR`` or installed), rendered
 at the printed width (``--width``, inches) with 7-8 pt text, no titles (the LaTeX caption carries them; rows
@@ -705,43 +712,124 @@ def _compact(count: float) -> str:
     return f"{count:.0f}"
 
 
-def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
-    """The ``scenes`` table (booktabs): three lines per scene, a column per solver of :data:`SCENE_SOLVERS`.
-    The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver, the first line is
-    the mean step time (P90) in ms, the second the median iterations per step and the early exits, the third the
-    largest penetration ratio over the solves and the number of solves above 1 (:func:`contact_summary`)."""
-    out = [r"\begin{table*}", r"\centering", r"\small",
-           r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
-           r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
-           r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
-           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget; third, "
-           r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
-           r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
-           r"the number of solves above 1 in parentheses. Newton "
-           r"and the VBD-family solvers handle contact differently, so their trajectories are not expected to match: "
-           r"the Newton column reports its cost on the same scene, not the same outcome.}",
-           r"\label{tab:scenes}",
-           r"\setlength{\tabcolsep}{4pt}",
-           r"\begin{tabular}{lrrr ccccc}", r"\toprule",
-           r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; "
-           r"max.\ penetration ratio (solves $>1$)} \\",
-           r"\cmidrule(lr){5-9}",
-           r"Scene & Nodes & Tets & $h$ (ms) & " + " & ".join(SOLVER_NAMES.get(v, v) for v in SCENE_SOLVERS) + r" \\",
-           r"\midrule"]
+# scenes: a node's peak speed (``profiling/trajectory.py``) above this means the run blew up. Physical motion in the
+# paper's scenes stays far below it (fastest at 7ce4082b: 58 m/s, ArmadilloPull's snap-back; free fall from rest
+# reaches 98 m/s in 10 s), while the blown-up runs reach it within a few steps of diverging (BirthdayBanner.60Hz
+# Anderson 2.2e3 m/s at 1.83 s, then 2e5; Trampoline.StiffSphere.60Hz BDF1 VBD 3.9e3 m/s at its watchdog stop)
+BLOWUP_SPEED = 1e3
+
+
+def run_end(result: dict) -> float:
+    """Simulated time (s) at the end of the result's last step."""
+    return float(result["steps"][-1]["t"] + 1) * float(result["metadata"].get("dt", 1.0))
+
+
+def blowup_time(result: dict) -> float | None:
+    """Simulated time (s) at the end of the first step whose positions went non-finite or very far, or None: a
+    non-finite RMS or peak speed, a peak speed above :data:`BLOWUP_SPEED`, or a solve's non-finite
+    ``gradient_ratio`` (its residual is computed from the positions)."""
+    for step in result["steps"]:
+        speeds = [step[k] for k in ("peak_speed", "rms_speed") if k in step]
+        status = step.get("status") or {}
+        ratios = [r.get("gradient_ratio") for r in status.get("vbd", status.get("newton", [])) if "gradient_ratio" in r]
+        if (any(v is None or not np.isfinite(v) for v in speeds + ratios)
+                or step.get("peak_speed", 0.0) > BLOWUP_SPEED):
+            return float(step["t"] + 1) * float(result["metadata"].get("dt", 1.0))
+    return None
+
+
+def automatic_outcome(result: dict, scene_end: float) -> str | None:
+    """The table's automatic outcome mark of a run: ``stopped at t = X s`` if its output ends before the scene's
+    (``scene_end``, the longest run's end; e.g. a blow-up watchdog's stop), else ``blew up at t = X s`` at
+    :func:`blowup_time`, else None."""
+    end = run_end(result)
+    if end < scene_end - 0.5 * float(result["metadata"].get("dt", 1.0)):
+        return f"stopped at t = {end:.3g} s"
+    blowup = blowup_time(result)
+    return None if blowup is None else f"blew up at t = {blowup:.3g} s"
+
+
+def load_outcomes(path: str) -> dict[str, dict[str, str]]:
+    """The ``scenes`` table's outcome annotations (``--outcomes``, TOML): one table per scene, keyed like the table's
+    rows by the scene file's key (:func:`scene_key`), optionally qualified by the frame rate 1/dt for scenes run at
+    several (``"capsule_bowl.30Hz"``), with a short note per solver (its ``solver`` metadata, e.g. ``AndersonSolver``,
+    or its display name). Unquoted dotted table names (``[capsule_bowl.30Hz]``) are read as the quoted ones."""
+    import tomllib
+
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    out: dict[str, dict[str, str]] = {}
+
+    def walk(prefix: str, table: dict):
+        notes = {k: v for k, v in table.items() if not isinstance(v, dict)}
+        if notes:
+            out[prefix] = {k: str(v) for k, v in notes.items()}
+        for k, v in table.items():
+            if isinstance(v, dict):
+                walk(f"{prefix}.{k}" if prefix else k, v)
+
+    walk("", data)
+    known = set(SCENE_SOLVERS) | {SOLVER_NAMES.get(s, s) for s in SCENE_SOLVERS}
+    for scene, notes in out.items():
+        for solver in set(notes) - known:
+            warnings.warn(f"{path}: [{scene}] has an unknown solver {solver!r}")
+    return out
+
+
+def frame_rate(result: dict) -> str:
+    """The result's frame rate 1/dt as an outcome key qualifier, e.g. ``30Hz``."""
+    return f"{round(1.0 / float(result['metadata']['dt']))}Hz" if result["metadata"].get("dt") else ""
+
+
+def outcome_note(outcomes: dict[str, dict[str, str]], result: dict) -> str | None:
+    """A run's annotation in ``outcomes`` (:func:`load_outcomes`): the scene's table qualified by the run's frame rate
+    first, then the plain one; its solver's note by ``solver`` metadata, then display name. None if not annotated
+    (an empty note counts as none)."""
+    solver = str(result["metadata"].get("solver", ""))
+    for key in (f"{scene_key(result)}.{frame_rate(result)}", scene_key(result)):
+        notes = outcomes.get(key)
+        if notes is not None:
+            note = notes.get(solver, notes.get(SOLVER_NAMES.get(solver, solver)))
+            return note or None
+    return None
+
+
+# LaTeX for the characters an outcome note may hold (the rest are written as they are)
+LATEX_TEXT = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\{",
+              "}": r"\}", "~": r"\textasciitilde{}", "^": r"\textasciicircum{}", "−": "$-$", "–": "--",
+              "—": "---", "×": r"$\times$"}
+SCENE_LABEL_WIDTH = "2.6cm"  # scenes: the scene column, its label wrapped over the scene's lines
+OUTCOME_WIDTH = "1.9cm"  # scenes: an outcome cell, wrapped
+
+
+def _latex_text(text: str) -> str:
+    return "".join(LATEX_TEXT.get(c, c) for c in text)
+
+
+def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, dict[str, str]] | None = None) -> str:
+    """The ``scenes`` table (booktabs, multirow): three or four lines per scene, a column per solver of
+    :data:`SCENE_SOLVERS`. The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver,
+    the first line is the mean step time (P90) in ms, the second the median iterations per step and the early exits,
+    the third the largest penetration ratio over the solves and the number of solves above 1
+    (:func:`contact_summary`), the fourth, written where any of the scene's cells has one, the outcome: the run's note
+    in ``outcomes`` (:func:`outcome_note`), else its :func:`automatic_outcome` (against the scene's longest run)."""
+    outcomes = outcomes or {}
+    body = []
+    any_outcome = False
     for scene, rows in by_scene(runs).items():
         by_solver = {r["metadata"].get("solver"): r for r in rows}
         meta = rows[0]["metadata"]
         h = 1e3 * float(meta.get("dt", float("nan"))) / max(int(meta.get("substeps", 1)), 1)
-        first = [labels.get(scene, scene.replace("_", r"\_")),
-                 _compact(meta["n_nodes"]) if "n_nodes" in meta else "--",
+        scene_end = max(run_end(r) for r in rows)
+        first = ["", _compact(meta["n_nodes"]) if "n_nodes" in meta else "--",
                  _compact(meta["n_elements"]) if "n_elements" in meta else "--", _num(h)]
         second = ["", "", "", ""]
         third = ["", "", "", ""]
+        fourth = ["", "", "", ""]
         for solver in SCENE_SOLVERS:
             if solver not in by_solver:
-                first.append("--")
-                second.append("--")
-                third.append("--")
+                for line in (first, second, third, fourth):
+                    line.append("--")
                 continue
             c = scene_cell(by_solver[solver])
             first.append(f"{_num(c['mean'])} ({_num(c['P90'])})")
@@ -750,8 +838,39 @@ def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
             second.append(f"{iterations}, {early}")
             contact = c["contact"]
             third.append("--" if contact is None else f"{_num(contact['max'], 2)} ({contact['unmet']})")
-        out += [" & ".join(line) + r" \\" for line in (first, second, third)]
-    out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
+            note = outcome_note(outcomes, by_solver[solver]) or automatic_outcome(by_solver[solver], scene_end)
+            fourth.append(rf"\parbox[t]{{{OUTCOME_WIDTH}}}{{\centering\scriptsize {_latex_text(note)}}}"
+                          if note else "")
+        lines = [first, second, third]
+        if any(cell not in ("", "--") for cell in fourth[4:]):
+            lines.append(fourth)
+            any_outcome = True
+        # The label spans the scene's lines, wrapped, so a long one doesn't widen the table
+        label = labels.get(scene, scene.replace("_", r"\_"))
+        first[0] = rf"\multirow[t]{{{len(lines)}}}{{{SCENE_LABEL_WIDTH}}}{{\raggedright {label}}}"
+        body += ([r"\addlinespace"] if body else []) + [" & ".join(line) + r" \\" for line in lines]
+    outcome_caption = (r" Last, the outcome of each run by eye, against AAAVBD's where it differs, and ``stopped at "
+                       r"$t$'' for a run stopped early after a blow-up, whose other numbers cover the steps up to the "
+                       r"stop." if any_outcome else "")
+    out = [r"\begin{table*}", r"\centering", r"\small",
+           r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
+           r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
+           r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
+           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget; third, "
+           r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
+           r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
+           r"the number of solves above 1 in parentheses." + outcome_caption + r" Newton "
+           r"and the VBD-family solvers handle contact differently, so their trajectories are not expected to match: "
+           r"the Newton column reports its cost on the same scene, not the same outcome.}",
+           r"\label{tab:scenes}",
+           r"\setlength{\tabcolsep}{4pt}",
+           r"\begin{tabular}{lrrr ccccc}", r"\toprule",
+           r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; } \\",
+           r"& & & & \multicolumn{5}{c}{max.\ penetration ratio (solves $>1$)"
+           + (r" \;/\; outcome" if any_outcome else "") + r"} \\",
+           r"\cmidrule(lr){5-9}",
+           r"Scene & Nodes & Tets & $h$ (ms) & " + " & ".join(SOLVER_NAMES.get(v, v) for v in SCENE_SOLVERS) + r" \\",
+           r"\midrule", *body, r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
 
@@ -792,6 +911,8 @@ def main():
                         help="timeline: snapshot images and their simulated times (s), e.g. 0.9=snap_1.png.")
     parser.add_argument("--slices", default="10,90",
                         help="slices: percentile edges of the step-time slices (default: 10,90).")
+    parser.add_argument("--outcomes", default=None, metavar="FILE.toml",
+                        help="scenes: per scene and solver, a short note on the run's outcome (see load_outcomes).")
     parser.add_argument("--step-times", action="store_true", dest="step_times",
                         help="solvers, budget: add a column with the step time distribution.")
     parser.add_argument("--font-dir", default=None, dest="font_dir",
@@ -805,7 +926,8 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     if args.kind in ("scenes", "slices"):
         if args.kind == "scenes":
-            text = "% Needs \\usepackage{booktabs}\n\n" + latex_scenes(kernels, labels)
+            outcomes = load_outcomes(args.outcomes) if args.outcomes else None
+            text = "% Needs \\usepackage{booktabs,multirow}\n\n" + latex_scenes(kernels, labels, outcomes)
         else:
             text = slices_text(kernels, labels, tuple(float(e) for e in args.slices.split(",")))
         with open(args.output, "w", encoding="utf-8") as f:
@@ -918,11 +1040,71 @@ class TestPaperFigures(unittest.TestCase):
         self.assertEqual((cell["iterations"], cell["early_exit"]), (100.0, 0.25))
         capsules = self._production(self._kernels("VBD", scene="path/to/capsule_bowl.h5"))
         text = latex_scenes([self._production(k), newton, capsules], {"basket_of_fruit": "Basket of fruit"})
-        self.assertIn(r"Basket of fruit & 54.5k & 231k & 10 & -- & 13.4 (15.6) & -- & -- & 13.4 (15.6) \\", text)
+        self.assertIn(r"\multirow[t]{3}{2.6cm}{\raggedright Basket of fruit} & 54.5k & 231k & 10 & -- & 13.4 (15.6) "
+                      r"& -- & -- & 13.4 (15.6) \\", text)
         self.assertIn(r" &  &  &  & -- & 100, 25\% & -- & -- & 6, 50\% \\", text)
         self.assertIn(r" &  &  &  & -- & 0.1 (0) & -- & -- & 0 (0) \\", text)  # max penetration ratio (solves > 1)
-        self.assertIn(r"capsule\_bowl & 54.5k & 231k & 10 & 13.4 (15.6) & -- & -- & -- & -- \\", text)
+        self.assertIn(r"\multirow[t]{3}{2.6cm}{\raggedright capsule\_bowl} & 54.5k & 231k & 10 & 13.4 (15.6) & -- & "
+                      r"-- & -- & -- \\", text)
+        self.assertNotIn(r"\parbox", text)  # no notes and no blow-ups: no outcome line
+        self.assertNotIn(r"\;/\; outcome", text)
         self.assertEqual((_compact(3269), _compact(1809486)), ("3269", "1.81M"))
+
+    def test_blowup_marks(self):
+        k = self._kernels()
+        ok = self._production(k)
+        for step in ok["steps"]:
+            step.update(peak_speed=5.0, rms_speed=1.0)
+        self.assertEqual(run_end(ok), 0.5)  # steps 10-49 at 10 ms
+        self.assertIsNone(blowup_time(ok))
+        self.assertIsNone(automatic_outcome(ok, 0.5))
+        far = self._production(k)
+        for step in far["steps"]:
+            step.update(peak_speed=5.0 if step["t"] < 30 else 2 * BLOWUP_SPEED, rms_speed=1.0)
+        self.assertAlmostEqual(blowup_time(far), 0.31)
+        self.assertEqual(automatic_outcome(far, 0.5), "blew up at t = 0.31 s")
+        nan = self._production(k)
+        nan["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "gradient_ratio": None}]}} if s["t"] >= 40
+                        else s for s in nan["steps"]]
+        self.assertAlmostEqual(blowup_time(nan), 0.41)  # a non-finite residual: non-finite positions
+        stopped = {**far, "steps": far["steps"][:25]}  # a watchdog's stop at step 34
+        self.assertEqual(automatic_outcome(stopped, 0.5), "stopped at t = 0.35 s")
+        self.assertIsNone(automatic_outcome(ok, 0.505))  # within half a step of the scene's end
+
+    def test_outcomes(self):
+        import tempfile
+
+        k = self._kernels()
+        aaavbd, vbd, anderson = (self._production(self._kernels(s)) for s in ("AAAVBD", "VBD", "AndersonSolver"))
+        anderson["steps"] = anderson["steps"][:20]  # stopped at 0.3 s
+        capsules = self._production(self._kernels("VBD", scene="path/to/capsule_bowl.h5"))
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "outcomes.toml")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write('[basket_of_fruit]\nAAAVBD = "all 9 stay"\nVBD = "loses 9 of 9 & more"\n'
+                        'Anderson = ""\n\n'  # a placeholder: the automatic mark shows
+                        '[capsule_bowl.30Hz]\nVBD = "21 stuck"\n[capsule_bowl.100Hz]\nVBD = "funnel to −2.6 m"\n')
+            outcomes = load_outcomes(path)
+            with open(path, "a", encoding="utf-8") as f:
+                f.write('[celebration]\nVDB = "typo"\n')
+            with self.assertWarns(UserWarning):
+                load_outcomes(path)
+        self.assertEqual(set(outcomes), {"basket_of_fruit", "capsule_bowl.30Hz", "capsule_bowl.100Hz"})
+        self.assertEqual(frame_rate(capsules), "100Hz")
+        self.assertEqual(outcome_note(outcomes, aaavbd), "all 9 stay")
+        self.assertIsNone(outcome_note(outcomes, anderson))  # by display name, empty
+        self.assertEqual(outcome_note(outcomes, capsules), "funnel to −2.6 m")  # the 100 Hz table, not the 30 Hz
+        text = latex_scenes([aaavbd, vbd, anderson, capsules], {}, outcomes)
+        self.assertIn(r"\multirow[t]{4}{2.6cm}{\raggedright basket\_of\_fruit}", text)
+        self.assertIn(r" &  &  &  & \parbox[t]{1.9cm}{\centering\scriptsize loses 9 of 9 \& more} & "
+                      r"\parbox[t]{1.9cm}{\centering\scriptsize all 9 stay} & -- & "
+                      r"\parbox[t]{1.9cm}{\centering\scriptsize stopped at t = 0.3 s} & -- \\", text)
+        self.assertIn(r"\parbox[t]{1.9cm}{\centering\scriptsize funnel to $-$2.6 m}", text)
+        self.assertIn(r"\;/\; outcome", text)
+        # Without notes, the automatic marks alone
+        text = latex_scenes([aaavbd, vbd, anderson], {})
+        self.assertIn(r" &  &  &  &  &  & -- & \parbox[t]{1.9cm}{\centering\scriptsize stopped at t = 0.3 s} & -- \\",
+                      text)
 
     def test_contact_summary(self):
         run = self._production(self._kernels())
