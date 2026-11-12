@@ -11,15 +11,15 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 
 - ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): GPU time per step over the simulated
   time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
-  a legend entry only if it reaches 3% itself), with the step time of the paired production run as a line in its
-  solver's color. Under it, when a VBD production run is given, a thin strip of every other production run's step
-  time over VBD's at the same step, the paired run's included (:func:`vbd_time_ratio`; VBD is the baseline, so the
-  strip reads as each solver's overhead or saving per step; no VBD curve, a dashed line at 1, the same rolling
+  a legend entry only if it reaches 3% itself), with the step time of every production run as a line in its
+  solver's color (the paired one and the scene's others, e.g. VBD). With ``--vbd-ratio`` (off by default: the
+  maintainer found it too busy) and a VBD production run, a thin strip under it shows every other production run's
+  step time over VBD's at the same step, the paired run's included (:func:`vbd_time_ratio`; VBD is the baseline, so
+  the strip reads as each solver's overhead or saving per step; no VBD curve, a dashed line at 1, the same rolling
   median; log axis when the curves span more than :data:`VBD_RATIO_LOG_SPAN`, else linear; steps either run lacks
-  are gaps, steps from either run's detected blow-up on are left out); the other runs' absolute step times aren't
-  drawn then, and the shorter cost plot keeps the row's height. Without a VBD run, every production run's step
-  time is a line on the cost plot, as before. Below them, on the same time axis, the production runs' smoothed
-  stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median over ``--smooth`` steps, a dashed
+  are gaps, steps from either run's detected blow-up on are left out); the cost plot then keeps only the paired
+  run's step-time line and is shorter, keeping the row's height (without the strip, the cost plot has that height).
+  Below them, on the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median over ``--smooth`` steps, a dashed
   line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
   (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
@@ -89,7 +89,8 @@ Usage (from the repo root):
 
     python -m python.tools.sim.profiling.paper_figures timeline k_capsules.json --production p_capsules.json \
         p_capsules_vbd.json -o data/figures/profiling/timeline [--labels capsule_bowl="Capsules into bowl"] \
-        [--width 7] [--bin 5] [--smooth 9] [--rms-speed paired|all] [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
+        [--width 7] [--bin 5] [--smooth 9] [--rms-speed paired|all] [--vbd-ratio] \
+        [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
     python -m python.tools.sim.profiling.paper_figures solvers k_fixed_*.json --production p_*.json \
         -o data/figures/profiling/solvers [--step-times]
     python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
@@ -473,19 +474,22 @@ def has_contact(run: dict) -> bool:
 
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
                   bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None,
-                  others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS, rms_speed: str = "paired"):
+                  others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS, rms_speed: str = "paired",
+                  vbd_ratio: bool = False):
     """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
     ``snapshots`` (simulated time, image path), numbered at their times on the plots. ``others`` are each row's
     production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run;
-    ``rms_speed`` (:data:`RMS_SPEED_MODES`) says whose RMS speed the lower strip draws."""
+    ``rms_speed`` (:data:`RMS_SPEED_MODES`) says whose RMS speed the lower strip draws; ``vbd_ratio`` adds the
+    step-time-over-VBD strip (``--vbd-ratio``; off by default, the maintainer found it too busy), which then replaces
+    the other runs' step-time lines on the cost plot."""
     tables = [step_stats.on_step_grid(step_stats.per_step(k)) for k in kernels]
     rows = len(kernels)
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
     has_ratio = [any(np.isfinite(ratio_table(run)[STRIP_RATIO]).any() for run in runs) for runs in runs_per_row]
     has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
-    baselines = [next((run for run in runs if run["metadata"].get("solver") == BASELINE), None)
-                 for runs in runs_per_row]
+    baselines = [next((run for run in runs if run["metadata"].get("solver") == BASELINE), None) if vbd_ratio
+                 else None for runs in runs_per_row]
     has_feasibility = [any(has_contact(run) for run in runs) for runs in runs_per_row]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
@@ -1288,6 +1292,9 @@ def main():
     parser.add_argument("--rms-speed", choices=RMS_SPEED_MODES, default="paired", dest="rms_speed",
                         help="timeline: draw the RMS speed of the paired production run only (default), or of every "
                         "production run (the others' as dotted lines).")
+    parser.add_argument("--vbd-ratio", action="store_true", dest="vbd_ratio",
+                        help="timeline: add a strip of each production run's step time over VBD's, which replaces the "
+                        "other runs' step-time lines on the cost plot (off by default).")
     parser.add_argument("--snapshots", nargs="*", default=[], metavar="TIME=IMAGE",
                         help="timeline: snapshot images and their simulated times (s), e.g. 0.9=snap_1.png.")
     parser.add_argument("--slices", default="10,90",
@@ -1329,7 +1336,7 @@ def main():
             snapshots.append((float(time), path))
         fig = plot_timeline(kernels, production, [labels.get(scene_key(k), scene_key(k)) for k in kernels],
                             args.width, args.bin_n, snapshots, other_production(kernels, production_runs),
-                            args.smooth, args.rms_speed)
+                            args.smooth, args.rms_speed, args.vbd_ratio)
     elif args.kind == "solvers":
         fig = plot_solvers(kernels, production_runs, args.width, args.step_times)
     elif args.kind == "sweeps":
@@ -1727,9 +1734,11 @@ class TestPaperFigures(unittest.TestCase):
         _, ratio = vbd_time_ratio(aaavbd, vbd)
         self.assertTrue(np.isnan(ratio[30:]).all())  # t = 40 on: the blown-up step and after
         self.assertTrue(np.isfinite(ratio[[0, 9, 29]]).all())
-        # With VBD: the cost plot draws the paired run's step time only, the strip every other run's ratio to VBD
+        # With the strip (vbd_ratio) and VBD: the cost plot draws the paired run's step time only, the strip every
+        # other run's ratio to VBD
         cheb = self._production(self._kernels("Chebyshev"))
-        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[cheb, self._production(self._kernels("VBD"))]])
+        runs = [cheb, self._production(self._kernels("VBD"))]
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[runs], vbd_ratio=True)
         cost, relative = fig.axes[0], fig.axes[1]
         self.assertEqual(relative.get_ylabel(), "Step time /\nVBD's")
         self.assertEqual([line.get_color() for line in cost.lines], [SOLVER_COLORS["AAAVBD"]])
@@ -1738,8 +1747,18 @@ class TestPaperFigures(unittest.TestCase):
         self.assertEqual(relative.get_yscale(), "linear")  # every ratio 1: within VBD_RATIO_LOG_SPAN
         self.assertEqual([t.get_text() for t in fig.legends[0].get_texts()][-4:-1], ["AAAVBD", "Chebyshev", "VBD"])
         plt.close(fig)
-        # Without VBD: no strip, every run's step time on the cost plot
-        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[cheb]])
+        with_strip = fig.get_size_inches()[1]
+        plt.close(fig)
+        # By default (the strip off, the maintainer's choice): no strip, every run's step time on the cost plot in its
+        # solver's color, and the freed height goes back to the cost plot
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[runs])
+        self.assertNotIn("Step time /\nVBD's", [ax.get_ylabel() for ax in fig.axes])
+        self.assertEqual([line.get_color() for line in fig.axes[0].lines],
+                         [SOLVER_COLORS[s] for s in ("AAAVBD", "Chebyshev", "VBD")])
+        self.assertAlmostEqual(fig.get_size_inches()[1], with_strip, places=3)
+        plt.close(fig)
+        # With the strip asked for but no VBD run: no strip, every run's step time on the cost plot
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[cheb]], vbd_ratio=True)
         self.assertNotIn("Step time /\nVBD's", [ax.get_ylabel() for ax in fig.axes])
         self.assertEqual(len(fig.axes[0].lines), 2)
         plt.close(fig)
