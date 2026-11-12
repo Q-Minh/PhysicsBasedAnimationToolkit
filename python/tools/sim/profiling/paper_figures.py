@@ -65,10 +65,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   for a run whose output ends before the scene's longest run. Scene labels wrap over the scene's lines
   (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
 - ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
-  solver's median stationarity ratio over its solves, the decisive one (solid, filled) and the smoothed test's own
-  (dotted, hollow; ``status_ratio``), divided by AAAVBD's at the same scene and solver step h = dt / substeps
-  (log x, ticks at the steps run), over the same window (log y, a dashed line at 1, above it AAAVBD is more
-  converged). The positional runs are compared over their scene's common span (circles: from the latest first
+  solver's median smoothed stationarity ratio over its solves (``status_ratio.smoothed_test_ratio`` only, as the
+  other figures; runs without smoothed ratios give no point), one line per solver, divided by AAAVBD's at the same
+  scene and solver step h = dt / substeps (log x, ticks at the steps run), over the same window (log y, a dashed
+  line at 1, above it AAAVBD is more converged). The positional runs are compared over their scene's common span (circles: from the latest first
   recorded step, production runs skip their warm-up, to the end of the shortest campaign); ``--windowed`` runs over
   their scene's ``--window`` (squares; e.g. the real-time screen's phase-2 windows). Either is narrowed to what both
   runs recorded and to before either blew up (crossed: compared up to it). The points are also printed as Markdown.
@@ -970,10 +970,13 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
 
 LEAD_REFERENCE = "AAAVBD"  # lead: the solver every other one is divided by
 LEAD_SOLVERS = ("VBD", "Chebyshev", "AndersonSolver")  # lead: one line each
-# lead: the stationarity ratios compared, each a function of a status row (status_ratio): the decisive one, at most 1
-# iff the test passed, and the smoothed test's own, which ranks solvers where float32 noise makes the unsmoothed one
-# rough (NaN on rows without smoothing)
-LEAD_RATIOS = {"decisive": status_ratio.stationarity_test_ratio, "smoothed": status_ratio.smoothed_test_ratio}
+# The stationarity ratios of a status row (status_ratio): the decisive one, at most 1 iff the test passed, and the
+# smoothed test's own, which ranks solvers where float32 noise makes the unsmoothed one rough (NaN on rows without
+# smoothing)
+STATIONARITY_RATIOS = {"decisive": status_ratio.stationarity_test_ratio, "smoothed": status_ratio.smoothed_test_ratio}
+# lead: the ratios compared, the smoothed one only (maintainer, 2026-11-12: the only one trusted, as in the scenes
+# table and the timeline; until then the decisive ratio was drawn too)
+LEAD_RATIOS = ("smoothed",)
 LEAD_SOURCES = {"full": "o", "window": "s"}  # lead: the marker of points from full runs and from time windows
 
 
@@ -985,10 +988,10 @@ def solve_end_times(result: dict) -> np.ndarray:
 
 
 def window_median(result: dict, ratio: str, t0: float, t1: float) -> float | None:
-    """The median of a :data:`LEAD_RATIOS` ratio over the result's solves that end within (t0, t1] (s), leaving out
-    non-finite values; None if none is left."""
+    """The median of a :data:`STATIONARITY_RATIOS` ratio over the result's solves that end within (t0, t1] (s),
+    leaving out non-finite values; None if none is left."""
     rows = solve_rows(result)
-    values = np.array([np.nan if (v := LEAD_RATIOS[ratio](r)) is None else v for r in rows], dtype=float)
+    values = np.array([np.nan if (v := STATIONARITY_RATIOS[ratio](r)) is None else v for r in rows], dtype=float)
     end = solve_end_times(result)
     # Window ends on the step grid, and dt is float32-rounded (90 x 1/30 s ends at 3.0000001 s): compare within a
     # small fraction of a substep
@@ -1057,14 +1060,15 @@ def lead_points(full: list[dict], windowed: list[dict] | None = None,
 
 def lead_text(points: list[dict], labels: dict[str, str]) -> str:
     """Markdown: the ``lead`` figure's points, for checking them against the text."""
-    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD decisive (smoothed) | Solver | "
-           "Lead: decisive (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD smoothed ratio | Solver | "
+           "Lead (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+
     def times(x):
         return "--" if x is None else f"{_num(x, 2)}x"
 
     for p in points:
-        ref = f"{_num(p['decisive_reference'])} ({_num(p['smoothed_reference'])})"
-        lead = f"{times(p['decisive'])} ({times(p['smoothed'])})"
+        ref = _num(p["smoothed_reference"])
+        lead = times(p["smoothed"])
         window = f"{p['window'][0]:.3g}-{p['window'][1]:.3g}" + (" (blow-up)" if p["blowup"] else "")
         out.append(f"| {labels.get(p['scene'], p['scene'])} | {p['source']} | {window} | {_num(1e3 * p['h'])} | "
                    f"{_num(1e3 * p['dt'])} x {p['substeps']} | {ref} | {SOLVER_NAMES.get(p['solver'], p['solver'])} | "
@@ -1086,18 +1090,14 @@ def plot_lead(points: list[dict], labels: dict[str, str], width: float = 7.0):
         for solver in LEAD_SOLVERS:
             color = SOLVER_COLORS.get(solver, INK)
             for source, marker in LEAD_SOURCES.items():
-                for ratio in reversed(LEAD_RATIOS):  # the decisive ratio on top where the two coincide
+                for ratio in LEAD_RATIOS:
                     series = sorted((p["h"], p[ratio]) for p in mine
                                     if p["solver"] == solver and p["source"] == source and p[ratio] is not None)
                     if not series:
                         continue
                     h, y = (np.array(v) for v in zip(*series))
                     values += list(y)
-                    decisive = ratio == "decisive"
-                    ax.plot(1e3 * h, y, color=color, linewidth=0.9 if decisive else 0.6,
-                            linestyle="-" if decisive else (0, (1, 1.2)), marker=marker, markersize=3.2,
-                            markerfacecolor=color if decisive else "white", markeredgecolor=color,
-                            markeredgewidth=0.6, alpha=1.0 if decisive else 0.85)
+                    ax.plot(1e3 * h, y, color=color, linewidth=0.9, marker=marker, markersize=3.2)
         for p in mine:  # compared only up to a blow-up
             if p["blowup"]:
                 y = [p[ratio] for ratio in LEAD_RATIOS if p[ratio] is not None]
@@ -1132,9 +1132,6 @@ def plot_lead(points: list[dict], labels: dict[str, str], width: float = 7.0):
             axes[rows[-1], c].set_xlabel("Time step $h$ (ms)", fontsize=FONT_SIZE)
     handles = [Line2D([], [], color=SOLVER_COLORS.get(s, INK), linewidth=0.9, label=SOLVER_NAMES.get(s, s))
                for s in LEAD_SOLVERS if any(p["solver"] == s for p in points)]
-    handles += [Line2D([], [], color=INK, linewidth=0.9, marker="o", markersize=3.2, label="Decisive"),
-                Line2D([], [], color=INK, linewidth=0.6, linestyle=(0, (1, 1.2)), marker="o", markersize=3.2,
-                       markerfacecolor="white", markeredgewidth=0.6, label="Smoothed")]
     sources = {p["source"] for p in points}
     handles += [Line2D([], [], color=INK, marker=LEAD_SOURCES[s], markersize=3.2, linestyle="none",
                        label={"full": "Full run", "window": "Window"}[s]) for s in LEAD_SOURCES if s in sources]
@@ -1464,11 +1461,12 @@ class TestPaperFigures(unittest.TestCase):
         self.assertEqual(window_median(run, "decisive", 0.08, 0.11), 4.0)  # solves ending in (0.08, 0.11]: 4, 4, 5
         self.assertIsNone(window_median(run, "smoothed", 0.0, 1.0))  # recorded without smoothing
         self.assertIsNone(window_median(run, "decisive", 0.2, 0.3))
-        # Two campaigns of one scene: 10 ms (steps 2-99, 0.02-1 s) and 20 ms (steps 10-39, 0.2-0.8 s)
+        # Two campaigns of one scene: 10 ms (steps 2-99, 0.02-1 s) and 20 ms (steps 10-39, 0.2-0.8 s); the decisive
+        # ratios (first function) don't count, only the smoothed ones (second)
         full = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0, lambda t: 0.5, steps=range(2, 100)),
-                self._lead_run("VBD", 0.01, lambda t: 6.0 if t > 20 else 1e3, lambda t: 1.0, steps=range(2, 100)),
+                self._lead_run("VBD", 0.01, lambda t: 1.0, lambda t: 3.0 if t > 20 else 1e3, steps=range(2, 100)),
                 self._lead_run("AAAVBD", 0.02, lambda t: 2.0, lambda t: 0.5, steps=range(10, 40)),
-                self._lead_run("VBD", 0.02, lambda t: 20.0, lambda t: 10.0, steps=range(10, 40)),
+                self._lead_run("VBD", 0.02, lambda t: 1.0, lambda t: 10.0, steps=range(10, 40)),
                 self._lead_run("Chebyshev", 0.02, lambda t: 1.0, lambda t: 0.0005, steps=range(10, 30))]
         points = lead_points(full)
         self.assertEqual([(p["solver"], p["h"]) for p in points], [("VBD", 0.01), ("VBD", 0.02), ("Chebyshev", 0.02)])
@@ -1476,33 +1474,39 @@ class TestPaperFigures(unittest.TestCase):
         # The common span: from the latest first step (0.2 s) to the shorter campaign's end (0.8 s), so the 10 ms
         # VBD run's early 1e3 ratios (steps up to 20, ending by 0.21 s) are left out but one
         self.assertEqual((p["source"], p["span"], p["window"], p["blowup"]), ("full", (0.2, 0.8), (0.2, 0.8), False))
-        self.assertEqual((p["decisive"], p["smoothed"], p["decisive_reference"]), (3.0, 2.0, 2.0))
-        self.assertEqual((points[1]["decisive"], points[1]["smoothed"]), (10.0, 20.0))
-        # Chebyshev stops at 0.6 s: compared up to its stop; its smoothed median 5e-4 is floored, never divided by 0
+        self.assertEqual((p["smoothed"], p["smoothed_reference"]), (6.0, 0.5))
+        self.assertNotIn("decisive", p)
+        self.assertEqual(points[1]["smoothed"], 20.0)
+        # Chebyshev stops at 0.6 s: compared up to its stop; its median 5e-4 is floored, never divided by 0
         np.testing.assert_allclose(points[2]["window"], (0.2, 0.6))
-        self.assertEqual((points[2]["decisive"], points[2]["smoothed"]), (0.5, RATIO_FLOOR / 0.5))
+        self.assertEqual(points[2]["smoothed"], RATIO_FLOOR / 0.5)
         # A blow-up (a node at 2 km/s from step 30) cuts the window before it; the ratios after it don't count
-        blown = self._lead_run("VBD", 0.02, lambda t: 20.0 if t < 30 else 1e9, steps=range(10, 40))
+        blown = self._lead_run("VBD", 0.02, lambda t: 1.0, lambda t: 5.0 if t < 30 else 1e9, steps=range(10, 40))
         for step in blown["steps"][20:]:
             step["peak_speed"] = 2 * BLOWUP_SPEED
         p = lead_points([full[2], blown])[0]
         np.testing.assert_allclose(p["window"], (0.2, 0.6))
-        self.assertEqual((p["blowup"], p["decisive"]), (True, 10.0))
+        self.assertEqual((p["blowup"], p["smoothed"]), (True, 10.0))
+        # Without smoothed ratios: no point
+        unsmoothed = self._lead_run("VBD", 0.02, lambda t: 9.0, steps=range(10, 40))
+        self.assertIsNone(lead_points([full[2], unsmoothed])[0]["smoothed"])
         # Windowed runs: over their scene's window, narrowed to what both recorded
-        windowed = [self._lead_run("AAAVBD", 0.01, lambda t: 2.0 if t < 50 else 4.0, steps=range(0, 100)),
-                    self._lead_run("AndersonSolver", 0.01, lambda t: 1.0, steps=range(42, 60))]
+        windowed = [self._lead_run("AAAVBD", 0.01, lambda t: 1.0, lambda t: 2.0 if t < 50 else 4.0,
+                                   steps=range(0, 100)),
+                    self._lead_run("AndersonSolver", 0.01, lambda t: 1.0, lambda t: 1.0, steps=range(42, 60))]
         with self.assertRaises(SystemExit):  # no window for the scene
             lead_points([], windowed)
         p = lead_points([], windowed, {"capsule_bowl": (0.3, 0.55)})[0]
         self.assertEqual((p["source"], p["span"]), ("window", (0.3, 0.55)))
         self.assertAlmostEqual(p["window"][0], 0.42)
-        self.assertEqual(p["decisive"], 0.5)  # AAAVBD's median over (0.42, 0.55]: 2.0 (8 solves) vs 4.0 (5)
+        self.assertEqual(p["smoothed"], 0.5)  # AAAVBD's median over (0.42, 0.55]: 2.0 (8 solves) vs 4.0 (5)
         text = lead_text(points, {"capsule_bowl": "Capsules"})
-        self.assertIn("| Capsules | full | 0.2-0.8 | 10 | 10 x 1 | 2 (0.5) | VBD | 3x (2x) |", text)
+        self.assertIn("| Capsules | full | 0.2-0.8 | 10 | 10 x 1 | 0.5 | VBD | 6x |", text)
         fig = plot_lead(points + lead_points([full[2], blown]) + [p], {})
         self.assertEqual([t.get_text() for t in fig.legends[0].get_texts()],
-                         ["VBD", "Chebyshev", "Anderson", "Decisive", "Smoothed", "Full run", "Window",
-                          "Until a blow-up", "AAAVBD"])
+                         ["VBD", "Chebyshev", "Anderson", "Full run", "Window", "Until a blow-up", "AAAVBD"])
+        # One solid line per solver and source (no dotted decisive/smoothed pairs), and the dashed line at 1
+        self.assertEqual({line.get_linestyle() for ax in fig.axes for line in ax.lines}, {"-", "None", "--"})
         plt.close(fig)
 
     def test_sweeps_budget_scenes(self):
