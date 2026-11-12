@@ -99,17 +99,19 @@
 #   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
 #   every solver's outer iterations and substeps stay FourBunnies.Trampoline250kgPerM3.60Hz's (60 sweeps per
 #   outer iteration). Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD
-#   x 1.128 = 67.7, rounded up to 80; Chebyshev x 1.381 = 82.9, rounded up to 100; AndersonSolver x 1.140 =
-#   68.4, rounded up to 80 (full runs, the larger: the fixed-budget window, 1.43-1.8 s, gives 1.039, 1.091 and
-#   1.059; Chebyshev's run costs 0.76-0.92x VBD's per sweep, a trajectory (contact) effect). Each budget is
-#   rounded up to a multiple of the convergence check interval (20 sweeps), so it ends on a check. Calibration
-#   (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a detected
-#   blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope
-#   busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%; then the
-#   larger, which favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
-#     Solver.AndersonSolver.n_subproblem_max_iters = 80 (source 20)
-#     Solver.Chebyshev.n_subproblem_max_iters = 100 (source 20)
-#     Solver.VBD.n_subproblem_max_iters = 80 (source 20)
+#   x 1.128 = 67.7, rounded up to 68; Chebyshev x 1.381 = 82.9, rounded up to 83; AndersonSolver x 1.140 = 68.4,
+#   rounded up to 69 (full runs, the larger: the fixed-budget window, 1.43-1.8 s, gives 1.039, 1.091 and 1.059;
+#   Chebyshev's run costs 0.76-0.92x VBD's per sweep, a trajectory (contact) effect). Each budget is the exact
+#   product rounded up to the next whole sweep, and never below the base budget (maintainer, 2026-11-12: equal
+#   time as closely as possible; each subproblem still ends with the outer convergence test, so a budget that
+#   isn't a multiple of the check interval only skips the inner check at its end). Calibration (7ce4082b): full
+#   production runs, mean step time over sweeps per step, over the steps before a detected blow-up that ran
+#   their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope busy time over
+#   sweeps. The full-run factor is used unless the two differ by more than about 10%; then the larger, which
+#   favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
+#     Solver.AndersonSolver.n_subproblem_max_iters = 69 (source 20)
+#     Solver.Chebyshev.n_subproblem_max_iters = 83 (source 20)
+#     Solver.VBD.n_subproblem_max_iters = 68 (source 20)
 #
 # Notes:
 # - FourBunnies.Trampoline250kgPerM3.60Hz at equal GPU time per step: only the sweeps per outer iteration of
@@ -202,7 +204,7 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 5
-n_subproblem_max_iters = 80
+n_subproblem_max_iters = 69
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -216,7 +218,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 5
-n_subproblem_max_iters = 100
+n_subproblem_max_iters = 83
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -265,7 +267,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 5
-n_subproblem_max_iters = 80
+n_subproblem_max_iters = 68
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

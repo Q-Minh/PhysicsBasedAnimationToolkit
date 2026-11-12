@@ -698,18 +698,17 @@ SCENES["Trampoline.StiffSphere.60Hz"].rules.append(STIFF_SPHERE_BDF2)
 
 
 # Equal GPU time per step: the real-time entries where AAAVBD's per-sweep overhead over VBD is above about 5%
-CHECK_INTERVAL = 20  # Solver.Convergence.check_interval, the same in every scene config
 EQUAL_TIME_CALIBRATION = "data/profiling/paper/equal-time-calibration.md"
 
 
 def _equal_time(base: str, factors: dict[str, float], source: str) -> Scene:
     """``base`` with each solver of ``factors`` given that many times AAAVBD's sweeps per outer iteration, rounded up to
-    a multiple of :data:`CHECK_INTERVAL`."""
+    the next whole sweep and never below ``base``'s budget."""
     scene = SCENES[base]
     key = "Solver.AAAVBD.n_subproblem_max_iters"
     sweeps = [r.values[key] for r in scene.rules if key in r.values][-1]
-    budgets = {s: max(sweeps, CHECK_INTERVAL * math.ceil(round(sweeps * f, 6) / CHECK_INTERVAL))
-               for s, f in factors.items()}
+    # round() first, so that an exact product (2000 x 1.100) isn't pushed to the next sweep by float error
+    budgets = {s: max(sweeps, math.ceil(round(sweeps * f, 6))) for s, f in factors.items()}
     scaled = "; ".join(f"{s} x {f:.3f} = {sweeps * f:.1f}, rounded up to {budgets[s]}" if f >= 1 else
                        f"{s} x {f:.3f}, below 1, so kept at {sweeps} (budgets are never lowered)"
                        for s, f in factors.items())
@@ -719,7 +718,9 @@ def _equal_time(base: str, factors: dict[str, float], source: str) -> Scene:
         "iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and every "
         f"solver's outer iterations and substeps stay {base}'s ({sweeps} sweeps per outer iteration). Only for scenes "
         f"where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: {scaled} ({source}). Each budget is "
-        f"rounded up to a multiple of the convergence check interval ({CHECK_INTERVAL} sweeps), so it ends on a check. "
+        "the exact product rounded up to the next whole sweep, and never below the base budget (maintainer, "
+        "2026-11-12: equal time as closely as possible; each subproblem still ends with the outer convergence test, "
+        "so a budget that isn't a multiple of the check interval only skips the inner check at its end). "
         "Calibration (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a "
         "detected blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window, "
         "solve-scope busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%; "

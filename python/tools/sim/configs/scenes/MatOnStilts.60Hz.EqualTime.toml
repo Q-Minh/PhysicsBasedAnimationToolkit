@@ -108,17 +108,19 @@
 #   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
 #   every solver's outer iterations and substeps stay MatOnStilts.60Hz's (160 sweeps per outer iteration). Only
 #   for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD x 1.128 = 180.5,
-#   rounded up to 200; Chebyshev x 1.074 = 171.8, rounded up to 180; AndersonSolver x 0.988, below 1, so kept at
+#   rounded up to 181; Chebyshev x 1.074 = 171.8, rounded up to 172; AndersonSolver x 0.988, below 1, so kept at
 #   160 (budgets are never lowered) (full runs, the larger: the fixed-budget window, 2.53-3.0 s, gives 0.993,
 #   0.994 and 0.915; the full runs' AAAVBD overhead over VBD is 1.27-1.29 until 2.6 s, then falls to 0.78). Each
-#   budget is rounded up to a multiple of the convergence check interval (20 sweeps), so it ends on a check.
-#   Calibration (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a
-#   detected blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window,
-#   solve-scope busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%;
-#   then the larger, which favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
+#   budget is the exact product rounded up to the next whole sweep, and never below the base budget (maintainer,
+#   2026-11-12: equal time as closely as possible; each subproblem still ends with the outer convergence test,
+#   so a budget that isn't a multiple of the check interval only skips the inner check at its end). Calibration
+#   (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a detected
+#   blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope
+#   busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%; then the
+#   larger, which favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
 #     Solver.AndersonSolver.n_subproblem_max_iters = 160 (source 5)
-#     Solver.Chebyshev.n_subproblem_max_iters = 180 (source 5)
-#     Solver.VBD.n_subproblem_max_iters = 200 (source 5)
+#     Solver.Chebyshev.n_subproblem_max_iters = 172 (source 5)
+#     Solver.VBD.n_subproblem_max_iters = 181 (source 5)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -230,7 +232,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 5
-n_subproblem_max_iters = 180
+n_subproblem_max_iters = 172
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -279,7 +281,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 5
-n_subproblem_max_iters = 200
+n_subproblem_max_iters = 181
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

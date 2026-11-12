@@ -62,16 +62,18 @@
 #   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
 #   every solver's outer iterations and substeps stay ArmadilloSpaghetti.DragonImpact.60Hz's (100 sweeps per
 #   outer iteration). Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD
-#   x 1.143 = 114.3, rounded up to 120; Chebyshev x 1.138 = 113.8, rounded up to 120; AndersonSolver x 1.089 =
-#   108.9, rounded up to 120 (full runs, 0-6 s; no fixed-budget window). Each budget is rounded up to a multiple
-#   of the convergence check interval (20 sweeps), so it ends on a check. Calibration (7ce4082b): full
+#   x 1.143 = 114.3, rounded up to 115; Chebyshev x 1.138 = 113.8, rounded up to 114; AndersonSolver x 1.089 =
+#   108.9, rounded up to 109 (full runs, 0-6 s; no fixed-budget window). Each budget is the exact product
+#   rounded up to the next whole sweep, and never below the base budget (maintainer, 2026-11-12: equal time as
+#   closely as possible; each subproblem still ends with the outer convergence test, so a budget that isn't a
+#   multiple of the check interval only skips the inner check at its end). Calibration (7ce4082b): full
 #   production runs, mean step time over sweeps per step, over the steps before a detected blow-up that ran
 #   their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope busy time over
 #   sweeps. The full-run factor is used unless the two differ by more than about 10%; then the larger, which
 #   favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
-#     Solver.AndersonSolver.n_subproblem_max_iters = 120 (source 100)
-#     Solver.Chebyshev.n_subproblem_max_iters = 120 (source 100)
-#     Solver.VBD.n_subproblem_max_iters = 120 (source 100)
+#     Solver.AndersonSolver.n_subproblem_max_iters = 109 (source 100)
+#     Solver.Chebyshev.n_subproblem_max_iters = 114 (source 100)
+#     Solver.VBD.n_subproblem_max_iters = 115 (source 100)
 #
 # Notes:
 # - ArmadilloSpaghetti.DragonImpact.60Hz at equal GPU time per step: only the sweeps per outer iteration of VBD,
@@ -164,7 +166,7 @@ kp = 0
 linear_solver = 0
 m = 5
 n_max_iters = 1
-n_subproblem_max_iters = 120
+n_subproblem_max_iters = 109
 vbd_iters_per_anderson_iter = 1
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -178,7 +180,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 120
+n_subproblem_max_iters = 114
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -227,7 +229,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 120
+n_subproblem_max_iters = 115
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25

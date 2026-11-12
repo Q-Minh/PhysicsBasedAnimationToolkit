@@ -70,17 +70,19 @@
 #   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
 #   every solver's outer iterations and substeps stay BirthdayBanner.60Hz's (2000 sweeps per outer iteration).
 #   Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD x 1.261 = 2522.0,
-#   rounded up to 2540; Chebyshev x 1.244 = 2488.0, rounded up to 2500; AndersonSolver x 1.100 = 2200.0, rounded
+#   rounded up to 2522; Chebyshev x 1.244 = 2488.0, rounded up to 2488; AndersonSolver x 1.100 = 2200.0, rounded
 #   up to 2200 (full runs; the fixed-budget window agrees within 1% (1.253, 1.238, 1.096); Anderson's run until
-#   its blow-up at 1.83 s). Each budget is rounded up to a multiple of the convergence check interval (20
-#   sweeps), so it ends on a check. Calibration (7ce4082b): full production runs, mean step time over sweeps per
-#   step, over the steps before a detected blow-up that ran their full budget; fixed-budget kernels runs over
-#   the scene's busiest window, solve-scope busy time over sweeps. The full-run factor is used unless the two
-#   differ by more than about 10%; then the larger, which favours the competitors. Table:
+#   its blow-up at 1.83 s). Each budget is the exact product rounded up to the next whole sweep, and never below
+#   the base budget (maintainer, 2026-11-12: equal time as closely as possible; each subproblem still ends with
+#   the outer convergence test, so a budget that isn't a multiple of the check interval only skips the inner
+#   check at its end). Calibration (7ce4082b): full production runs, mean step time over sweeps per step, over
+#   the steps before a detected blow-up that ran their full budget; fixed-budget kernels runs over the scene's
+#   busiest window, solve-scope busy time over sweeps. The full-run factor is used unless the two differ by more
+#   than about 10%; then the larger, which favours the competitors. Table:
 #   data/profiling/paper/equal-time-calibration.md.
 #     Solver.AndersonSolver.n_subproblem_max_iters = 2200 (source 2000)
-#     Solver.Chebyshev.n_subproblem_max_iters = 2500 (source 2000)
-#     Solver.VBD.n_subproblem_max_iters = 2540 (source 2000)
+#     Solver.Chebyshev.n_subproblem_max_iters = 2488 (source 2000)
+#     Solver.VBD.n_subproblem_max_iters = 2522 (source 2000)
 #
 # Not in the source, code defaults (configs/defaults.toml):
 #   Contact.CDType.VertexSdf.freeze_within_solve
@@ -195,7 +197,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 2500
+n_subproblem_max_iters = 2488
 rho = 0.8999999761581421
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
@@ -244,7 +246,7 @@ hess_zero = 1.1920928955078125e-07
 k = 0
 kp = 0
 n_max_iters = 1
-n_subproblem_max_iters = 2540
+n_subproblem_max_iters = 2522
 vlinsolve = 0
 vls_eps = 1.1920928955078125e-07
 vls_max_iters = 25
