@@ -1,0 +1,250 @@
+# Scene config: BirthdayBanner.60Hz.EqualTime, every serialized parameter written out (diff it against configs/paper).
+# For: the birthday banner (scene file not in final_scenes; tetrahedra/banner_regions.mesh).
+# Source: configs/paper/BirthdayBanner.toml. Keys not listed below have the source's values.
+# Generated 2026-11-12 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
+#     Solver.AAAVBD.vlinsolve = 0 (source 3)
+#     Solver.AndersonSolver.vlinsolve = 0 (source 3)
+#     Solver.Chebyshev.vlinsolve = 0 (source 3)
+#     Solver.VBD.vlinsolve = 0 (source 3)
+# - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
+#   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
+#     Solver.AAAVBD.gammaup = 0.5 (source 0.8999999761581421)
+#     Solver.AAAVBD.gammaupS = 0.3 (source 0.8500000238418579)
+# - Positive AL contact margin dmin = 1 mm (the paper's -1e-4 dates from penetration-only VertexSdf detection):
+#   resting vertices stay outside their partner, where the SDF sign is reliable, detection (below dmin + band)
+#   starts before contact, and the feasibility tolerance (ftol * dmin) is meaningful.
+#     Contact.ContactDynamics.dmin = 0.001 (source -9.999999747378752e-05)
+# - Stationarity tolerances rstol = 2e-2 and astol = 0.1, the code defaults since 2026-11-06 (maintainer; the
+#   paper files' rstol 1e-2 and astol 0.5 had former meanings): the mass-weighted RMS of each node's residual
+#   acceleration over the largest of rstol times its largest force per mass, astol times its own external
+#   acceleration and its float32 floor must be at most 1. rstol: Trampoline.SoftSoft and CapsulesIntoBowl traces
+#   gave the same pass points for 1e-2 to 1e-1. astol 0.1 (about 1 m/s^2): 2-4x closer to an early-exit-off
+#   reference than 0.5 at h = 10 ms for 35-48% more sweeps, and no effect at h = 1 ms (gpu/vbd/convergence.py,
+#   ConvergenceParams). The norm over nodes is the mass-weighted RMS (node_norm 0, the code default); the max
+#   (1) is stricter, as single nodes at their float32 floor can hold a step (Trampoline.SoftSoft passed 0 of 421
+#   steps under a max test). Residual smoothing in the test, smoothing_passes = 4 with smoothing_in_test = 1,
+#   the code default for every scene since 2026-11-08 (maintainer): the test must also pass with the residual
+#   and its float32 floor smoothed by 4 passes of 1-ring averaging. It rejects unconverged states that the
+#   unsmoothed test passes through its floor clause (RMS_M(q0) > 1 but RMS_M(r) <= kg RMS_M(phi)), and it can
+#   only remove passes. Screen (2026-11-08, one step per solver from a shared AAAVBD checkpoint at the scene
+#   budget, early exit off; decisive ratio at k = 0 / k = 4 and mass-weighted RMS distance to the reference;
+#   data/profiling/investigations/smoothing-screen): BendingBeam.100MPa Chebyshev 0.82 / 6.72, 0.43 mm from
+#   Newton; BendingBeam.Heterogeneous VBD, Chebyshev and Anderson 0.46-0.83 / 1.96-3.55, 0.11-0.19 mm vs
+#   AAAVBD's 0.058 mm; BirthdayBanner VBD and Anderson 0.86 / 10.9 and 1.00 / 11.6, 3.5 mm from AAAVBD at 100x
+#   the budget, which fails k = 4 too (1.51), so the banner runs its full budget (accepted); BasketOfFruit
+#   AAAVBD at 10x the budget 0.92 / 15.1, 1.8 mm from 100x. Celebration (2026-11-07, 5 x 80;
+#   data/profiling/investigations/residual-smoothing): Chebyshev and Anderson pass unsmoothed (0.84 / 0.78)
+#   while their letters sag, 17 / 41 mm from Newton vs AAAVBD's 3.3 mm, and fail smoothed (12.5 / 10.7);
+#   BendingBeam.100MPa VBD (2026-11-07) passed steps 0-2 with a gravity-sized smooth error at k = 0, none at k =
+#   4 (data/profiling/investigations/floor-clause-false-positive). Where the unsmoothed ratio only misranks the
+#   solvers (BendingBeam.10MPa, the trampolines, MatOnStilts, BasketOfFruit: AAAVBD the closest with the largest
+#   unsmoothed ratio), the smoothed ratio ranks them; every status row records both (unsmoothed_ratio,
+#   smoothed_ratio). Cost about +1.3% per step at a 20-sweep check interval (Celebration, 0.22 sweep per test).
+#     Solver.Convergence.astol = 0.1 (source 0.5)
+#     Solver.Convergence.rstol = 0.02 (source 0.01)
+# - Real-time frame steps instead of 10 ms (maintainer, 2026-11-10): a 1/30 s frame first, then 1/60 s, and
+#   never a frame below 1/60 s. Substeps only as a last resort: when the sweeps needed at the full step would be
+#   prohibitive (caps of about 200 sweeps per solve for soft scenes and about 500 for heavy ones), or when the
+#   scene explodes because contact detection can't cope at that step. Each substep keeps the full per-solve
+#   budget, the same for every VBD-family solver; Newton keeps its 10 ms entry's outer x Newton iterations and
+#   CG cap per solve (untested at these steps). Screen (AAAVBD, early exit on): at the 10 ms budgets the
+#   dominant failure at larger steps is under-convergence (soft bodies sag and stretch, then contact scenes
+#   explode), not missed contacts; no scene keeps its 10 ms behaviour at 1/30 s without substeps,
+#   CapsulesIntoBowl comes closest (outcome kept, 23 mm overlaps). A 1/30 s frame with 2N substeps is bit for
+#   bit a 1/60 s frame with N. At 1/60 s, AAAVBD was the only VBD-family solver that kept the 10 ms outcome in
+#   every scene (phase 2). Data: data/profiling/investigations/RealtimeTimeSteps-screen (phases 1, 1b, 2 and 3,
+#   and FourBunnies without substeps).
+#     Integration.dt = 0.01666666753590107 (source 0.009999999776482582)
+# - Real-time budget (maintainer, 2026-11-10): 2 substeps per frame step, 1 outer iteration x 2000 sweeps = 2000
+#   sweeps per solve (4000 per frame step) for every VBD-family solver. Substeps: with 1 substep the banner goes
+#   NaN at 1/30 s (1.0 s, stretched to 3.7 m) and is far too soft at 1/60 s (centroid -0.79 m at 0.5 s vs -0.57
+#   m). With 2 (h = 1/120 s) it sags and swings as at 10 ms (centroid -0.51 m at 0.5 s, 5 cm from 10 ms at 8 s),
+#   stationarity ratio median 8.7 (10 ms 12.6), 71.6 GPU s per simulated s (10 ms 58.9). 1 substep of 1 x 4000,
+#   at equal cost, followed 10 ms about as closely but was less converged (ratio 17.2 vs 8.0 over 0-2 s).
+#     Integration.substeps = 2 (source 1)
+# - Equal GPU time per step (maintainer, 2026-11-12): at equal sweeps AAAVBD gets more GPU time per step, since
+#   its vertex solve kernel costs more per sweep, so VBD, Chebyshev and Anderson get more sweeps per outer
+#   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
+#   every solver's outer iterations and substeps stay BirthdayBanner.60Hz's (2000 sweeps per outer iteration).
+#   Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD x 1.261 = 2522.0,
+#   rounded up to 2540; Chebyshev x 1.244 = 2488.0, rounded up to 2500; AndersonSolver x 1.100 = 2200.0, rounded
+#   up to 2200 (full runs; the fixed-budget window agrees within 1% (1.253, 1.238, 1.096); Anderson's run until
+#   its blow-up at 1.83 s). Each budget is rounded up to a multiple of the convergence check interval (20
+#   sweeps), so it ends on a check. Calibration (7ce4082b): full production runs, mean step time over sweeps per
+#   step, over the steps before a detected blow-up that ran their full budget; fixed-budget kernels runs over
+#   the scene's busiest window, solve-scope busy time over sweeps. The full-run factor is used unless the two
+#   differ by more than about 10%; then the larger, which favours the competitors. Table:
+#   data/profiling/paper/equal-time-calibration.md.
+#     Solver.AndersonSolver.n_subproblem_max_iters = 2200 (source 2000)
+#     Solver.Chebyshev.n_subproblem_max_iters = 2500 (source 2000)
+#     Solver.VBD.n_subproblem_max_iters = 2540 (source 2000)
+#
+# Not in the source, code defaults (configs/defaults.toml):
+#   Contact.CDType.VertexSdf.freeze_within_solve
+#   Contact.ContactDynamics.vbd_slack_at_evaluation
+#   Solver.Convergence.early_exit
+#   Solver.Convergence.floor_kappa
+#   Solver.Convergence.floor_local_kappa
+#   Solver.Convergence.node_norm
+#   Solver.Convergence.smoothing_in_test
+#   Solver.Convergence.smoothing_passes
+#   Solver.Newton.early_exit
+#   Solver.Newton.one_sided_contact
+#
+# Notes:
+# - BirthdayBanner.60Hz at equal GPU time per step: only the sweeps per outer iteration of VBD, Chebyshev and
+#   Anderson differ.
+# - Every other setting is BirthdayBanner's (10 ms); its rules above keep their 10 ms wording, and their
+#   per-solve settings apply per substep.
+# - 10 ms entry: Contact detection is off in the source (VertexSdf.deactivate = 1), so its contact parameters
+#   are kept.
+# - 10 ms entry: The positive margin (DMIN) is set for consistency with the other scenes; it has no effect while
+#   VertexSdf detection is off.
+# - 10 ms entry: Budgets kept: 1 x 2000 sweeps per step.
+
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
+
+[Contact.CDType.VertexSdf]
+band = 0.001
+deactivate = 1
+freeze_within_solve = 1
+max_dist = 0.05000000074505806
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.001
+gammaf = 10000.0
+gammaf_adaptive = 0.01
+gamman = 20000.0
+gamman_adaptive = 1.0
+min_sigma_n = 1.0
+mu_f = 0.30000001192092896
+multiplier_step = 1.0
+penalty_adaptivity = 0
+penalty_stiffness = 0
+vbd_slack_at_evaluation = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.20000000298023224
+n_ve_contact_capacity = 0.05000000074505806
+n_vf_contact_capacity = 0.20000000298023224
+n_vv_contact_capacity = 0.05000000074505806
+
+[Integration]
+bdf_scheme = 1
+dt = 0.01666666753590107
+init_strategy = 2
+substeps = 2
+
+[Solver.AAAVBD]
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.9900000095367432
+gammadownS = 0.949999988079071
+gammaup = 0.5
+gammaupS = 0.3
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
+n_max_iters = 1
+n_subproblem_max_iters = 2000
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
+
+[Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 1
+n_subproblem_max_iters = 2200
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 2500
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.1
+check_interval = 20
+early_exit = 1
+floor_kappa = 0.2
+floor_local_kappa = 1.5
+ftol = 0.5
+node_norm = 0
+rstol = 0.02
+smoothing_in_test = 1
+smoothing_passes = 4
+
+[Solver.Newton]
+early_exit = -1
+init_strategy = 0
+linear_solver = 1
+n_max_iters = 70
+one_sided_contact = 0
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 2000
+rtol = 1e-06
+
+[Solver.Newton.newton]
+gtol2 = 9.999999974752427e-07
+n_max_iters = 1
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 2540
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25

@@ -19,6 +19,7 @@ parameters ``make`` would write, and every key of ``configs/defaults.toml``; it 
 
 import argparse
 import datetime
+import math
 import pathlib
 import sys
 import textwrap
@@ -694,6 +695,56 @@ STIFF_SPHERE_BDF2 = Rule(
     {"Integration.bdf_scheme": 2},
 )
 SCENES["Trampoline.StiffSphere.60Hz"].rules.append(STIFF_SPHERE_BDF2)
+
+
+# Equal GPU time per step: the real-time entries where AAAVBD's per-sweep overhead over VBD is above about 5%
+CHECK_INTERVAL = 20  # Solver.Convergence.check_interval, the same in every scene config
+EQUAL_TIME_CALIBRATION = "data/profiling/paper/equal-time-calibration.md"
+
+
+def _equal_time(base: str, factors: dict[str, float], source: str) -> Scene:
+    """``base`` with each solver of ``factors`` given that many times AAAVBD's sweeps per outer iteration, rounded up to
+    a multiple of :data:`CHECK_INTERVAL`."""
+    scene = SCENES[base]
+    key = "Solver.AAAVBD.n_subproblem_max_iters"
+    sweeps = [r.values[key] for r in scene.rules if key in r.values][-1]
+    budgets = {s: CHECK_INTERVAL * math.ceil(round(sweeps * f, 6) / CHECK_INTERVAL) for s, f in factors.items()}
+    scaled = "; ".join(f"{s} x {f:.3f} = {sweeps * f:.1f}, rounded up to {budgets[s]}" for s, f in factors.items())
+    rule = Rule(
+        "Equal GPU time per step (maintainer, 2026-11-12): at equal sweeps AAAVBD gets more GPU time per step, since "
+        "its vertex solve kernel costs more per sweep, so VBD, Chebyshev and Anderson get more sweeps per outer "
+        "iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and every "
+        f"solver's outer iterations and substeps stay {base}'s ({sweeps} sweeps per outer iteration). Only for scenes "
+        f"where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: {scaled} ({source}). Each budget is "
+        f"rounded up to a multiple of the convergence check interval ({CHECK_INTERVAL} sweeps), so it ends on a check. "
+        "Calibration (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a "
+        "detected blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window, "
+        "solve-scope busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%; "
+        f"then the larger, which favours the competitors. Table: {EQUAL_TIME_CALIBRATION}.",
+        {f"Solver.{s}.n_subproblem_max_iters": b for s, b in budgets.items()},
+    )
+    return Scene(scene.source, scene.scene_files, [*scene.rules, rule],
+                 [f"{base} at equal GPU time per step: only the sweeps per outer iteration of VBD, Chebyshev and "
+                  "Anderson differ.", *scene.notes])
+
+
+_AGREES = "full runs; the fixed-budget window agrees within {}"
+SCENES.update({
+    "Trampoline.SoftStiff.60Hz.EqualTime": _equal_time(
+        "Trampoline.SoftStiff.60Hz", {"VBD": 1.456, "Chebyshev": 1.261, "AndersonSolver": 1.124},
+        "the fixed-budget window, 2.53-3.0 s: the full runs give 1.003, 1.065 and 0.878, more than 10% lower, since "
+        "the per-sweep cost depends on the state: over the full runs' 1.8-3.4 s AAAVBD's is 1.18x VBD's, over 3.4-5.1 s "
+        "0.90x"),
+    "ArmadilloPull.60Hz.EqualTime": _equal_time(
+        "ArmadilloPull.60Hz", {"VBD": 1.251, "Chebyshev": 1.232, "AndersonSolver": 1.092},
+        _AGREES.format("1% (1.244, 1.225, 1.089)")),
+    "Celebration.60Hz.EqualTime": _equal_time(
+        "Celebration.60Hz", {"VBD": 1.171, "Chebyshev": 1.194, "AndersonSolver": 1.094},
+        _AGREES.format("1% (1.174, 1.182, 1.087)")),
+    "BirthdayBanner.60Hz.EqualTime": _equal_time(
+        "BirthdayBanner.60Hz", {"VBD": 1.261, "Chebyshev": 1.244, "AndersonSolver": 1.100},
+        _AGREES.format("1% (1.253, 1.238, 1.096); Anderson's run until its blow-up at 1.83 s")),
+})
 
 
 def _flatten(d: dict, prefix: str = "") -> dict:

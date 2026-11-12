@@ -1,0 +1,203 @@
+# Scene config: ArmadilloPull.60Hz.EqualTime, every serialized parameter written out (diff it against configs/paper).
+# For: sessions/armadillo-pull_4.h5 (no contact: the armadillo pulled, then released).
+# Source: configs/defaults.toml. Keys not listed below have the source's values.
+# Generated 2026-11-12 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - AAAVBD's acceleration more conservative than the shared set for the armadillo (maintainer, 2026-10-21; a
+#   documented per-scene exception): pulled hard, then suddenly released, its energy changes abruptly, where
+#   AAAVBD needs gammadown/gammadownS 0.75 and gammaup/gammaupS 0.5 to stay stable, the most aggressive values
+#   that do. It shows AAAVBD's limitation and its controllability.
+#     Solver.AAAVBD.gammadown = 0.75 (source 0.9900000095367432)
+#     Solver.AAAVBD.gammadownS = 0.75 (source 0.949999988079071)
+# - The maintainer's budget for the armadillo (2026-10-21; no contact): 1 outer iteration x 1000 sweeps for
+#   every VBD-family solver, and Newton 1 x 30 Newton steps (usually ending early; after the release it
+#   sometimes runs all 30 with a small residual, line search keeping it stable; CG mostly ends under 1000
+#   iterations, so the CG defaults are kept).
+#     Solver.Newton.newton.n_max_iters = 30 (source 10)
+# - Real-time frame steps instead of 10 ms (maintainer, 2026-11-10): a 1/30 s frame first, then 1/60 s, and
+#   never a frame below 1/60 s. Substeps only as a last resort: when the sweeps needed at the full step would be
+#   prohibitive (caps of about 200 sweeps per solve for soft scenes and about 500 for heavy ones), or when the
+#   scene explodes because contact detection can't cope at that step. Each substep keeps the full per-solve
+#   budget, the same for every VBD-family solver; Newton keeps its 10 ms entry's outer x Newton iterations and
+#   CG cap per solve (untested at these steps). Screen (AAAVBD, early exit on): at the 10 ms budgets the
+#   dominant failure at larger steps is under-convergence (soft bodies sag and stretch, then contact scenes
+#   explode), not missed contacts; no scene keeps its 10 ms behaviour at 1/30 s without substeps,
+#   CapsulesIntoBowl comes closest (outcome kept, 23 mm overlaps). A 1/30 s frame with 2N substeps is bit for
+#   bit a 1/60 s frame with N. At 1/60 s, AAAVBD was the only VBD-family solver that kept the 10 ms outcome in
+#   every scene (phase 2). Data: data/profiling/investigations/RealtimeTimeSteps-screen (phases 1, 1b, 2 and 3,
+#   and FourBunnies without substeps).
+#     Integration.dt = 0.01666666753590107 (source 0.01)
+# - Real-time budget (maintainer, 2026-11-10): 2 substeps per frame step, 1 outer iteration x 1000 sweeps = 1000
+#   sweeps per solve (2000 per frame step) for every VBD-family solver. Substeps: with 1 substep the armadillo
+#   goes NaN at 1/60 s right after the release (1.05-1.08 s), even with 10x the sweeps, and is far too soft at
+#   1/30 s (stationarity ratio 31 vs 1.4). With 2 (h = 1/120 s) it stays finite through the release with the
+#   same swing and final pose (centroid 0.15 m from 10 ms at 8 s), stationarity ratio median 0.98 (smoothed
+#   0.26), 77% early exits (10 ms 28%), 26.6 GPU s per simulated s (10 ms 25.0).
+#     Integration.substeps = 2 (source 1)
+#     Solver.AAAVBD.n_subproblem_max_iters = 1000 (source 100)
+# - Equal GPU time per step (maintainer, 2026-11-12): at equal sweeps AAAVBD gets more GPU time per step, since
+#   its vertex solve kernel costs more per sweep, so VBD, Chebyshev and Anderson get more sweeps per outer
+#   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
+#   every solver's outer iterations and substeps stay ArmadilloPull.60Hz's (1000 sweeps per outer iteration).
+#   Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD x 1.251 = 1251.0,
+#   rounded up to 1260; Chebyshev x 1.232 = 1232.0, rounded up to 1240; AndersonSolver x 1.092 = 1092.0, rounded
+#   up to 1100 (full runs; the fixed-budget window agrees within 1% (1.244, 1.225, 1.089)). Each budget is
+#   rounded up to a multiple of the convergence check interval (20 sweeps), so it ends on a check. Calibration
+#   (7ce4082b): full production runs, mean step time over sweeps per step, over the steps before a detected
+#   blow-up that ran their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope
+#   busy time over sweeps. The full-run factor is used unless the two differ by more than about 10%; then the
+#   larger, which favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
+#     Solver.AndersonSolver.n_subproblem_max_iters = 1100 (source 100)
+#     Solver.Chebyshev.n_subproblem_max_iters = 1240 (source 100)
+#     Solver.VBD.n_subproblem_max_iters = 1260 (source 100)
+#
+# Notes:
+# - ArmadilloPull.60Hz at equal GPU time per step: only the sweeps per outer iteration of VBD, Chebyshev and
+#   Anderson differ.
+# - Every other setting is ArmadilloPull's (10 ms); its rules above keep their 10 ms wording, and their
+#   per-solve settings apply per substep.
+
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
+
+[Contact.CDType.VertexSdf]
+band = 0.001
+deactivate = 0
+freeze_within_solve = 1
+max_dist = 0.05
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.002
+gammaf = 1000.0
+gammaf_adaptive = 0.01
+gamman = 10000.0
+gamman_adaptive = 1.0
+min_sigma_n = 10000.0
+mu_f = 0.2
+multiplier_step = 1.0
+penalty_adaptivity = 1
+penalty_stiffness = 1
+vbd_slack_at_evaluation = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.2
+n_ve_contact_capacity = 0.05
+n_vf_contact_capacity = 0.5
+n_vv_contact_capacity = 0.05
+
+[Integration]
+bdf_scheme = 1
+dt = 0.01666666753590107
+init_strategy = 2
+substeps = 2
+
+[Solver.AAAVBD]
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.75
+gammadownS = 0.75
+gammaup = 0.5
+gammaupS = 0.5
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
+n_max_iters = 1
+n_subproblem_max_iters = 1000
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
+
+[Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 1
+n_subproblem_max_iters = 1100
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 1240
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.1
+check_interval = 20
+early_exit = 1
+floor_kappa = 0.2
+floor_local_kappa = 1.5
+ftol = 0.5
+node_norm = 0
+rstol = 0.02
+smoothing_in_test = 1
+smoothing_passes = 4
+
+[Solver.Newton]
+early_exit = -1
+init_strategy = 0
+linear_solver = 0
+n_max_iters = 1
+one_sided_contact = 0
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 2000
+rtol = 1e-06
+
+[Solver.Newton.newton]
+gtol2 = 9.99999905104687e-09
+n_max_iters = 30
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 1260
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
