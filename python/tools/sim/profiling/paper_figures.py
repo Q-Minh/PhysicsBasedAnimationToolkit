@@ -39,9 +39,12 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 - ``sweeps``: the ``solvers`` figure's first column for several scenes, one panel per scene.
 - ``budget``: the ``solvers`` figure's other columns for several scenes, one block of rows per scene.
 - ``scenes``: the paper's LaTeX ``table*`` of production runs (graph replay for the VBD family, eager for
-  Newton): two lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
+  Newton): three lines per scene (its nodes, tetrahedra and time step h), a column per solver (VBD, AAAVBD,
   Chebyshev, Anderson, Newton; -- without a run): the mean step time in ms with the P90 in parentheses, then
-  the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits.
+  the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits, then contact: the
+  largest penetration (feasibility) ratio over the run's solves (substeps), from the same solve statuses, with the
+  number of solves above 1 (contact constraints unmet at the end of the solve) in parentheses. A run stopped early
+  (e.g. by a blow-up watchdog) counts its solves up to the stop.
 
 Usage (from the repo root):
 
@@ -653,9 +656,33 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
 SCENE_SOLVERS = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver", "Newton")  # the table's columns
 
 
+def solve_rows(result: dict) -> list[dict]:
+    """Every solve status row of a result (one per substep: the VBD family's ``vbd`` rows or GPU Newton's ``newton``
+    rows), in step order, each with its step's ``t`` added."""
+    rows = []
+    for step in result["steps"]:
+        status = step.get("status") or {}
+        for row in status.get("vbd", status.get("newton", [])):
+            rows.append({**row, "t": step["t"]})
+    return rows
+
+
+def contact_summary(result: dict) -> dict | None:
+    """The run's contact: the largest feasibility (penetration) ratio to its tolerance over its solves, ``max``, and
+    the number of solves above 1, ``unmet`` (contact constraints unmet at the end of the solve); None without
+    recorded feasibility ratios. Non-finite ratios (after a blow-up) are left out of the maximum."""
+    values = np.array([r["feasibility_ratio"] for r in solve_rows(result) if r.get("feasibility_ratio") is not None],
+                      dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return None
+    return {"max": float(values.max()), "unmet": int((values > 1.0).sum())}
+
+
 def scene_cell(production: dict) -> dict:
     """One solver's cell of the ``scenes`` table, from its production run: the step time's mean and P90 (ms),
-    the median iterations per step (VBD sweeps, Newton steps) and the fraction of early exits."""
+    the median iterations per step (VBD sweeps, Newton steps), the fraction of early exits and the contact
+    (:func:`contact_summary`, None without feasibility ratios)."""
     table = step_stats.per_step(production)
     time = step_stats.describe(table["time_ms"])
     iterations = step_stats.describe(table["iterations"])
@@ -665,6 +692,7 @@ def scene_cell(production: dict) -> dict:
         "P90": time["P90"] if time else None,
         "iterations": iterations["median"] if iterations else None,
         "early_exit": summary["early_exit"],
+        "contact": contact_summary(production),
     }
 
 
@@ -678,20 +706,25 @@ def _compact(count: float) -> str:
 
 
 def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
-    """The ``scenes`` table (booktabs): two lines per scene, a column per solver of :data:`SCENE_SOLVERS`.
+    """The ``scenes`` table (booktabs): three lines per scene, a column per solver of :data:`SCENE_SOLVERS`.
     The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver, the first line is
-    the mean step time (P90) in ms, the second the median iterations per step and the early exits."""
+    the mean step time (P90) in ms, the second the median iterations per step and the early exits, the third the
+    largest penetration ratio over the solves and the number of solves above 1 (:func:`contact_summary`)."""
     out = [r"\begin{table*}", r"\centering", r"\small",
            r"\caption{\textbf{GPU time per time step.} Mean time per time step of each solver on the scenes of the "
            r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
            r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
-           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget. Newton "
+           r"Newton steps) and the fraction of time steps that pass their convergence test within the budget; third, "
+           r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
+           r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
+           r"the number of solves above 1 in parentheses. Newton "
            r"and the VBD-family solvers handle contact differently, so their trajectories are not expected to match: "
            r"the Newton column reports its cost on the same scene, not the same outcome.}",
            r"\label{tab:scenes}",
            r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{lrrr ccccc}", r"\toprule",
-           r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits} \\",
+           r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; "
+           r"max.\ penetration ratio (solves $>1$)} \\",
            r"\cmidrule(lr){5-9}",
            r"Scene & Nodes & Tets & $h$ (ms) & " + " & ".join(SOLVER_NAMES.get(v, v) for v in SCENE_SOLVERS) + r" \\",
            r"\midrule"]
@@ -703,17 +736,21 @@ def latex_scenes(runs: list[dict], labels: dict[str, str]) -> str:
                  _compact(meta["n_nodes"]) if "n_nodes" in meta else "--",
                  _compact(meta["n_elements"]) if "n_elements" in meta else "--", _num(h)]
         second = ["", "", "", ""]
+        third = ["", "", "", ""]
         for solver in SCENE_SOLVERS:
             if solver not in by_solver:
                 first.append("--")
                 second.append("--")
+                third.append("--")
                 continue
             c = scene_cell(by_solver[solver])
             first.append(f"{_num(c['mean'])} ({_num(c['P90'])})")
             iterations = "--" if c["iterations"] is None else f"{c['iterations']:.0f}"
             early = "--" if c["early_exit"] is None else f"{100 * c['early_exit']:.0f}\\%"
             second.append(f"{iterations}, {early}")
-        out += [" & ".join(first) + r" \\", " & ".join(second) + r" \\"]
+            contact = c["contact"]
+            third.append("--" if contact is None else f"{_num(contact['max'], 2)} ({contact['unmet']})")
+        out += [" & ".join(line) + r" \\" for line in (first, second, third)]
     out += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
@@ -883,8 +920,25 @@ class TestPaperFigures(unittest.TestCase):
         text = latex_scenes([self._production(k), newton, capsules], {"basket_of_fruit": "Basket of fruit"})
         self.assertIn(r"Basket of fruit & 54.5k & 231k & 10 & -- & 13.4 (15.6) & -- & -- & 13.4 (15.6) \\", text)
         self.assertIn(r" &  &  &  & -- & 100, 25\% & -- & -- & 6, 50\% \\", text)
+        self.assertIn(r" &  &  &  & -- & 0.1 (0) & -- & -- & 0 (0) \\", text)  # max penetration ratio (solves > 1)
         self.assertIn(r"capsule\_bowl & 54.5k & 231k & 10 & 13.4 (15.6) & -- & -- & -- & -- \\", text)
         self.assertEqual((_compact(3269), _compact(1809486)), ("3269", "1.81M"))
+
+    def test_contact_summary(self):
+        run = self._production(self._kernels())
+        rows = run["steps"][3]["status"]["vbd"]
+        rows.append({**rows[0], "substep": 1, "feasibility_ratio": 2.5})  # a second substep, unmet
+        run["steps"][7]["status"]["vbd"][0]["feasibility_ratio"] = 1.0  # met: at most 1
+        run["steps"][8]["status"]["vbd"][0]["feasibility_ratio"] = 1.5
+        run["steps"][9]["status"]["vbd"][0]["feasibility_ratio"] = None  # unknown (after a blow-up)
+        self.assertEqual(len(solve_rows(run)), 41)
+        self.assertEqual(solve_rows(run)[4]["t"], 13)
+        self.assertEqual(contact_summary(run), {"max": 2.5, "unmet": 2})
+        stopped = {**run, "steps": run["steps"][:8]}  # stopped by a watchdog: its solves up to the stop
+        self.assertEqual(contact_summary(stopped), {"max": 2.5, "unmet": 1})
+        for step in run["steps"]:
+            del step["status"]
+        self.assertIsNone(contact_summary(run))
 
     def test_sweeps_budget_scenes(self):
         import tempfile
