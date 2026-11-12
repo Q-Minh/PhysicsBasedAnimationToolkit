@@ -1,0 +1,235 @@
+# Scene config: ArmadilloSpaghetti.DragonImpact.60Hz.EqualTime, every serialized parameter written out (diff it against configs/paper).
+# For: data/scenarios/ArmadilloSpaghetti.DragonImpact.h5: four round pillars, cylinders 0.1 m in diameter (fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m from the twist axis (0.735 m apart), their top and bottom ends turned at -180 and 180 deg/s from 0 s, between a floor and a ceiling plane 2 cm beyond the pillars' ends, around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, Young's modulus 1e6; tet quality at least 0.23, triangle angles at least 11 deg) whose waist (the slice at 50-55% of its height, where only the torso is) is near the twist axis: lowered 15 cm along it (z from -0.75 to 0.45 m; floor 1.07 m below), then turned -10 deg about it and moved (+10.0, -2.5) cm in xy (pose A, maintainer, 2026-10-23), with rest gaps of 4.8, 7.2, 7.7 and 2.6 cm to the four pillars, so that all four pillars engage it. Thin pillars close to the armadillo wrap it rather than push it out (after the JGS2-GQ paper's scene). Gravity (-9.81 m/s^2 in z) acts on every body. The armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed transform until 1.5 s, so that the twisting pillars tangle around it rather than push it up or down, and then released (maintainer, 2026-10-22). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against prescribed armadillo nodes in contact, with no feasible position, and the simulation froze. The twist stops at 4.0 s (720 deg per end; maintainer, 2026-10-24), and a Fixed transform on the pillars' turned end nodes over [0, 1000) s keeps the ends where the rotation stopped. Two Stanford dragons (data/stanford-dragon_ftetwild.msh scaled to 1.5 m long, 51k nodes and 204k tets each, Young's modulus 1e7, Poisson's ratio 0.45, 1000 kg/m^3) parked left (-x) and right (+x) of the twist axis, both leading with the mesh's higher, narrower +x end (the right one turned 180 deg about z): the left one's at the armadillo's feet (z -0.60 m), the right one's at its shoulders (z +0.25 m), both at y 1.45 m and 1.1 and 1.3 m from the axis. Each is held by a Fixed transform over [0, 4.49) s and launched by a Translate over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); released, it keeps that velocity. 1.40M tets in all.
+# Source: configs/defaults.toml. Keys not listed below have the source's values.
+# Generated 2026-11-12 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+#
+# Differs from the source:
+# - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
+#   0.5/0.3): the Lipschitz normalization is meant to make them problem-invariant.
+#     Solver.AAAVBD.gammaupS = 0.3 (source 0.5)
+# - Contact for the armadillo spaghetti scene: VertexSdf band 5 mm and a 1 cm AL margin dmin (maintainer,
+#   2026-10-21), with the source's 5 cm VertexSdf max_dist. The scene file's floor and ceiling planes sit 2 cm
+#   from the pillars' ends, beyond the detection distance dmin + band = 1.5 cm, so they report no contacts.
+#   max_dist was 20 cm until 2026-10-26 (maintainer, 2026-10-26): 5 cm still covers any vertex inside a pillar
+#   (10 cm wide), is over 3x the deepest penetration in any DragonImpact run (1.49 cm), and saves about 21% of
+#   DragonImpact's step at 7.0 s with identical pairs.
+#     Contact.CDType.VertexSdf.band = 0.005 (source 0.001)
+#     Contact.ContactDynamics.dmin = 0.01 (source 0.002)
+# - 10 substeps per 10 ms step for the dragons' impact on the armadillo spaghetti (maintainer, 2026-10-23), each
+#   of 1 outer iteration x 100 sweeps for every VBD-family solver: at 5 substeps of 1 x 80, the pillars jittered
+#   after the impact (mid-span RMS speed 0.8-2.2 m/s, velocity reversal 0.7-1.0, rejected by the maintainer,
+#   against 0.35-0.55 m/s and 0.4-0.5 at 10 substeps, AAAVBD with the twist stopped at 5.0 s), and a thin
+#   feature at the left dragon's trailing end (375 nodes) settled into a flapping limit cycle (about 8 Hz, 20 cm
+#   range, 4-5 m/s, with the twist stopped at 4.0 or 5.0 s) that decays at 10 substeps (2.4 to 0.14 m/s over 7
+#   s, no 8 Hz component). Newton gets 20 outer iterations per step, 2 per substep with 2 Newton steps and CG
+#   rtol 1e-8, at most 4000 iterations; untested on this scene.
+#     Solver.Newton.n_max_iters = 2 (source 1)
+#     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
+#     Solver.Newton.LinearSolver.rtol = 1e-08 (source 1e-06)
+#     Solver.Newton.newton.n_max_iters = 2 (source 10)
+# - Contact pair capacities sized for every surface vertex in contact at once, each with one partner (VertexSdf
+#   gives a vertex at most one pair per other component): VF pairs for all of them, VE for half and VV for a
+#   sixth, a closed triangle mesh's feature shares (V : E : F = 1 : 3 : 2, by Euler's formula with E = 3V and F
+#   = 2V; the measured peaks were at most 39% VE and 7% VV pairs), and no EE pairs, which VertexSdf doesn't
+#   detect (the storage keeps 1 slot) (maintainer, 2026-10-22: conservatively rather than minimally; dropped
+#   pairs now warn).
+#     Contact.ContactStorage.n_ee_contact_capacity = 0.0 (source 0.2)
+#     Contact.ContactStorage.n_ve_contact_capacity = 0.5 (source 0.05)
+#     Contact.ContactStorage.n_vf_contact_capacity = 1.0 (source 0.5)
+#     Contact.ContactStorage.n_vv_contact_capacity = 0.17 (source 0.05)
+# - Real-time frame steps instead of 10 ms (maintainer, 2026-11-10): a 1/30 s frame first, then 1/60 s, and
+#   never a frame below 1/60 s. Substeps only as a last resort: when the sweeps needed at the full step would be
+#   prohibitive (caps of about 200 sweeps per solve for soft scenes and about 500 for heavy ones), or when the
+#   scene explodes because contact detection can't cope at that step. Each substep keeps the full per-solve
+#   budget, the same for every VBD-family solver; Newton keeps its 10 ms entry's outer x Newton iterations and
+#   CG cap per solve (untested at these steps). Screen (AAAVBD, early exit on): at the 10 ms budgets the
+#   dominant failure at larger steps is under-convergence (soft bodies sag and stretch, then contact scenes
+#   explode), not missed contacts; no scene keeps its 10 ms behaviour at 1/30 s without substeps,
+#   CapsulesIntoBowl comes closest (outcome kept, 23 mm overlaps). A 1/30 s frame with 2N substeps is bit for
+#   bit a 1/60 s frame with N. At 1/60 s, AAAVBD was the only VBD-family solver that kept the 10 ms outcome in
+#   every scene (phase 2). Data: data/profiling/investigations/RealtimeTimeSteps-screen (phases 1, 1b, 2 and 3,
+#   and FourBunnies without substeps).
+#     Integration.dt = 0.01666666753590107 (source 0.01)
+# - Real-time budget (maintainer, 2026-11-10): 10 substeps per frame step, 1 outer iteration x 100 sweeps = 100
+#   sweeps per solve (1000 per frame step) for every VBD-family solver. Substeps: 1-3 substeps explode at the
+#   impact (at 1 x 500: 1 substep at 4.65 s, 2 at 4.15 s as the pillars spring back when their twist stops, 3 at
+#   4.25 s); 4-9 at 1 x 500 would cost 2-4.5x the 10 substeps of 1 x 100. With 10 (h = 1/600 s): the same
+#   outcome as 10 ms, no interpenetration, feasibility > 1 on 8 solves (10 ms 612), 242 GPU s per simulated s
+#   (10 ms 394); the dragons' rebound is 1.1 m from 10 ms at 6 s.
+#     Integration.substeps = 10 (source 1)
+# - Equal GPU time per step (maintainer, 2026-11-12): at equal sweeps AAAVBD gets more GPU time per step, since
+#   its vertex solve kernel costs more per sweep, so VBD, Chebyshev and Anderson get more sweeps per outer
+#   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
+#   every solver's outer iterations and substeps stay ArmadilloSpaghetti.DragonImpact.60Hz's (100 sweeps per
+#   outer iteration). Only for scenes where AAAVBD's per-sweep overhead over VBD is above about 5%. Factors: VBD
+#   x 1.143 = 114.3, rounded up to 115; Chebyshev x 1.138 = 113.8, rounded up to 114; AndersonSolver x 1.089 =
+#   108.9, rounded up to 109 (full runs, 0-6 s; no fixed-budget window). Each budget is the exact product
+#   rounded up to the next whole sweep, and never below the base budget (maintainer, 2026-11-12: equal time as
+#   closely as possible; each subproblem still ends with the outer convergence test, so a budget that isn't a
+#   multiple of the check interval only skips the inner check at its end). Calibration (7ce4082b): full
+#   production runs, mean step time over sweeps per step, over the steps before a detected blow-up that ran
+#   their full budget; fixed-budget kernels runs over the scene's busiest window, solve-scope busy time over
+#   sweeps. The full-run factor is used unless the two differ by more than about 10%; then the larger, which
+#   favours the competitors. Table: data/profiling/paper/equal-time-calibration.md.
+#     Solver.AndersonSolver.n_subproblem_max_iters = 109 (source 100)
+#     Solver.Chebyshev.n_subproblem_max_iters = 114 (source 100)
+#     Solver.VBD.n_subproblem_max_iters = 115 (source 100)
+#
+# Notes:
+# - ArmadilloSpaghetti.DragonImpact.60Hz at equal GPU time per step: only the sweeps per outer iteration of VBD,
+#   Chebyshev and Anderson differ.
+# - Every other setting is ArmadilloSpaghetti.DragonImpact's (10 ms); its rules above keep their 10 ms wording,
+#   and their per-solve settings apply per substep.
+# - 10 ms entry: Built from ArmadilloSpaghetti.Fall.h5 (left unchanged); the twist stop, the launch time and the
+#   aim are the scene file's transform windows and velocities. Its variant with the twist stopped at 5.0 s and
+#   the launch at 5.49 s is data/scenarios/ArmadilloSpaghetti.DragonImpact.TwistStop5s.h5.
+# - 10 ms entry: Why 4.0 s (AAAVBD, 2026-10-24): with the twist stopped at 5.0 s (10 substeps of 1 x 100), the
+#   armadillo kept swinging (about 0.8 m/s RMS at 1.3 Hz, no decay from 8 to 20 s), and a cluster of inverted
+#   elements (about 19 within 20 cm of element 846743, which first inverts at about 3.8 s in the twist) released
+#   at about 18.9 s (the armadillo dropped 9 cm, penetration ratio 4.1, nodes at 28 m/s). With the twist stopped
+#   at 4.0 s (5 substeps of 1 x 80, launch to 4 s after it), the cluster stayed at 1-2 inverted elements and the
+#   pillars moved less (mid-span RMS 0.28-0.40 m/s, reversal 0.18-0.37).
+
+[Contact.CDType.OGC]
+arq = 1.0
+deactivate = 0
+gammap = 0.45
+r = 0.003
+truncation_strategy = 0
+
+[Contact.CDType.VertexSdf]
+band = 0.005
+deactivate = 0
+freeze_within_solve = 1
+max_dist = 0.05
+use_step_filter = 0
+
+[Contact.ContactDynamics]
+decay = 0.5
+dmin = 0.01
+gammaf = 1000.0
+gammaf_adaptive = 0.01
+gamman = 10000.0
+gamman_adaptive = 1.0
+min_sigma_n = 10000.0
+mu_f = 0.2
+multiplier_step = 1.0
+penalty_adaptivity = 1
+penalty_stiffness = 1
+vbd_slack_at_evaluation = 1
+
+[Contact.ContactStorage]
+n_ee_contact_capacity = 0.0
+n_ve_contact_capacity = 0.5
+n_vf_contact_capacity = 1.0
+n_vv_contact_capacity = 0.17
+
+[Integration]
+bdf_scheme = 1
+dt = 0.01666666753590107
+init_strategy = 2
+substeps = 10
+
+[Solver.AAAVBD]
+betaG0 = 0.5
+betaR = 0.0
+betaup = 1.0
+e_penalty_stiffness = 0
+gammadown = 0.9900000095367432
+gammadownS = 0.949999988079071
+gammaup = 0.5
+gammaupS = 0.3
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+lipschitz_normalization = 1
+n_max_iters = 1
+n_subproblem_max_iters = 100
+rhohat = 0.004999999888241291
+rhohatS = 0.004999999888241291
+surface_stencil_surface_neighbours_only = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+warm_start_beta = 2
+
+[Solver.AndersonSolver]
+beta = 1.0
+betaR = 0.0
+cod_numerical_zero = 1.000000013351432e-10
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+linear_solver = 0
+m = 5
+n_max_iters = 1
+n_subproblem_max_iters = 109
+vbd_iters_per_anderson_iter = 1
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Chebyshev]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 114
+rho = 0.8999999761581421
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
+
+[Solver.Convergence]
+astol = 0.1
+check_interval = 20
+early_exit = 1
+floor_kappa = 0.2
+floor_local_kappa = 1.5
+ftol = 0.5
+node_norm = 0
+rstol = 0.02
+smoothing_in_test = 1
+smoothing_passes = 4
+
+[Solver.Newton]
+early_exit = -1
+init_strategy = 0
+linear_solver = 0
+n_max_iters = 2
+one_sided_contact = 0
+spd_correction = 2
+
+[Solver.Newton.LinearSolver]
+atol = 1e-10
+n_max_iters = 4000
+rtol = 1e-08
+
+[Solver.Newton.newton]
+gtol2 = 9.99999905104687e-09
+n_max_iters = 2
+
+[Solver.Newton.newton.line_search]
+alpha = 1.0
+c = 9.999999747378752e-05
+n_max_iters = 20
+tau = 0.5
+
+[Solver.VBD]
+betaR = 0.0
+e_penalty_stiffness = 0
+gtol = 0.0010000000474974513
+hess_zero = 1.1920928955078125e-07
+k = 0
+kp = 0
+n_max_iters = 1
+n_subproblem_max_iters = 115
+vlinsolve = 0
+vls_eps = 1.1920928955078125e-07
+vls_max_iters = 25
