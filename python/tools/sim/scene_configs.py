@@ -744,6 +744,13 @@ SCENES.update({
     "BirthdayBanner.60Hz.EqualTime": _equal_time(
         "BirthdayBanner.60Hz", {"VBD": 1.261, "Chebyshev": 1.244, "AndersonSolver": 1.100},
         _AGREES.format("1% (1.253, 1.238, 1.096); Anderson's run until its blow-up at 1.83 s")),
+    "BasketOfFruit.60Hz.EqualTime": _equal_time(
+        "BasketOfFruit.60Hz", {"VBD": 1.079, "Chebyshev": 1.117, "AndersonSolver": 1.043},
+        "full runs, 0-5 s; the only fixed-budget window is older (81c82add, 10 ms steps): 1.161, 1.156, 1.094, within "
+        "10%"),
+    "ArmadilloSpaghetti.DragonImpact.60Hz.EqualTime": _equal_time(
+        "ArmadilloSpaghetti.DragonImpact.60Hz", {"VBD": 1.143, "Chebyshev": 1.138, "AndersonSolver": 1.089},
+        "full runs, 0-6 s; no fixed-budget window"),
 })
 
 
