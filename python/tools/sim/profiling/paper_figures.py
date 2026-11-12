@@ -15,10 +15,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
   the production runs' final stationarity test ratio per step (:data:`TEST_RATIO`; log axis, its rolling median
   over ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
-  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill (else the
-  kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend entry
-  (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
-  adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
+  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
+  (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
+  entry (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only.
+  ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
   numbers marked at their times on the plots (first row only). Steps a result lacks, the warm-up steps at the
   seams of a run merged from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that
   hold them), not interpolated.
