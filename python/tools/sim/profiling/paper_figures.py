@@ -13,7 +13,7 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
   a legend entry only if it reaches 3% itself), with the step time of the paired production run and of the
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
-  the production runs' final stationarity test ratio per step (:data:`TEST_RATIO`; log axis, its rolling median
+  the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median
   over ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
   (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
@@ -27,12 +27,20 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
   solver and negligible (:data:`SOLVERS_OMITTED`) are left out without renormalizing, so the bars end short of
   100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
-  the distribution per step of the final stationarity test ratio (:data:`TEST_RATIO`) and of the penetration
+  the distribution per step of the smoothed stationarity ratio (:func:`ratio_table`) and of the penetration
   (feasibility) ratio to its tolerance (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below
-  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with ``--step-times``, the step time.
+  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with
+  ``--step-times``, the step time.
   Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
   sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
   exits aren't shown: their fraction doesn't say how soon a solver exits.
+- The residual ratio of the ``timeline`` strips and the ``solvers`` and ``budget`` boxes is each step's smoothed
+  stationarity ratio, the smoothed test's own (``status_ratio.smoothed_test_ratio``, the worst over the step's
+  substeps; the ratio the maintainer trusts, as in the ``scenes`` table): the decisive ratio follows the plain test,
+  whose float32 noise misranks solvers (FourBunnies.Trampoline250kgPerM3.60Hz, medians AAAVBD 4.18 / Anderson 3.24
+  decisive, 0.24 / 2.23 smoothed). Runs without smoothed ratios (recorded before them, or without smoothing) fall
+  back to the decisive ratio (``status_ratio.stationarity_test_ratio``), marked "(decisive)" in the legend or row
+  label. Steps from a detected blow-up on (:func:`blowup_time`) are left out.
 - ``slices``: Markdown, per kernels result: the steps grouped by percentiles of their GPU time
   (``--slices``, default the fastest 10%, P10-P90 and the slowest 10%) with each group's median step time,
   median iterations and early exits, for the paper's text.
@@ -211,7 +219,39 @@ SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step resi
 # on a step that failed the test's floor clause (CapsulesIntoBowl VBD, 58fd2f99: median 0.23, while 389 of 591
 # steps failed).
 TEST_RATIO = "test_ratio"
-TEST_RATIO_LABEL = "Stationarity test ratio"
+# The ratio the timeline strips and the solvers and budget boxes plot (ratio_table): the smoothed test's own, else
+# TEST_RATIO for runs without smoothed ratios
+STRIP_RATIO = "strip_ratio"
+STRIP_RATIO_LABEL = "Smoothed stationarity ratio"
+DECISIVE_MARK = " (decisive)"  # legend or row label suffix of runs plotted with the decisive ratio instead
+
+
+def ratio_table(result: dict) -> dict:
+    """:func:`step_stats.per_step` with :data:`STRIP_RATIO`, each step's smoothed stationarity ratio (the worst over
+    its substeps, ``status_ratio.smoothed_test_ratio``), else, for runs without any, :data:`TEST_RATIO`; NaN from a
+    detected blow-up on (:func:`blowup_time`). ``smoothed`` says which; ``decisive_fallback`` is true for a run
+    plotted with the decisive ratio (it has some, and no smoothed ones)."""
+    table = step_stats.per_step(result)
+    smoothed = []
+    for step in result["steps"]:
+        status = step.get("status") or {}
+        values = np.array([status_ratio.smoothed_test_ratio(r) for r in status.get("vbd", status.get("newton", []))],
+                          dtype=float)
+        values = values[np.isfinite(values)]
+        smoothed.append(values.max() if values.size else np.nan)
+    smoothed = np.array(smoothed, dtype=float)
+    has_smoothed = bool(np.isfinite(smoothed).any())
+    ratio = smoothed if has_smoothed else np.array(table[TEST_RATIO], dtype=float)
+    blowup = blowup_time(result)
+    if blowup is not None:
+        dt = float(result["metadata"].get("dt", 1.0))
+        ratio = np.where((table["t"] + 1) * dt >= blowup - 0.5 * dt, np.nan, ratio)
+    return {**table, STRIP_RATIO: ratio, "smoothed": has_smoothed,
+            "decisive_fallback": not has_smoothed and bool(np.isfinite(ratio).any())}
+
+
+def _ratio_label(name: str, table: dict) -> str:
+    return name + (DECISIVE_MARK if table["decisive_fallback"] else "")
 # timeline: phase groups under this share of a row's GPU time fold into Other, which gets a legend entry only if
 # it reaches it too (thinner bands are under ~1 pt at print size)
 TIMELINE_MIN_SHARE = 0.03
@@ -290,8 +330,8 @@ RMS_SPEED_MODES = ("paired", "all")  # timeline: whose RMS speed the strip draws
 
 def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
                     smooth: int, rms_speed: str = "paired") -> list:
-    """The timeline's lower strip: each production run's final stationarity test ratio per step
-    (:data:`TEST_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
+    """The timeline's lower strip: each production run's smoothed stationarity ratio per step
+    (:data:`STRIP_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
     docstring): the paired run's (``runs[0]``), and with ``rms_speed`` ``"all"`` the other runs' too; ``x`` and
     ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the paired run has none. Returns
     the speeds' legend handles."""
@@ -305,7 +345,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
     for i, run in enumerate(runs):
-        table = step_stats.on_step_grid(step_stats.per_step(run))
+        table = step_stats.on_step_grid(ratio_table(run))
         xr = step_seconds(run, table["t"])
         if i == 0 and np.isfinite(table[SPEED]).any():
             speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
@@ -314,7 +354,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
             speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
             handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
                                   label=f"{solver_name(run)} {SPEED_NAME}"))
-        ratio = np.maximum(table[TEST_RATIO], RATIO_FLOOR)
+        ratio = np.maximum(table[STRIP_RATIO], RATIO_FLOOR)
         medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
         strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
     if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
@@ -326,7 +366,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
-    strip.set_ylabel("Stationarity\ntest ratio", fontsize=FONT_SIZE)
+    strip.set_ylabel("Smoothed\nstationarity ratio", fontsize=FONT_SIZE)
     speed.set_ylim(bottom=0)
     speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
     # The ratios over the speed fill: the left axes in front, without their background
@@ -351,8 +391,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     rows = len(kernels)
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
-    has_ratio = [any(np.isfinite(step_stats.per_step(run)[TEST_RATIO]).any() for run in runs)
-                 for runs in runs_per_row]
+    has_ratio = [any(np.isfinite(ratio_table(run)[STRIP_RATIO]).any() for run in runs) for runs in runs_per_row]
     has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
@@ -386,7 +425,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             ptable = step_stats.on_step_grid(step_stats.per_step(run))
             area.plot(bin_steps(step_seconds(run, ptable["t"]), bin_n), bin_steps(ptable["time_ms"], bin_n),
                       color=solver_color(run), linewidth=0.6, path_effects=HALO)
-            solvers.setdefault(solver_name(run), solver_color(run))
+            solvers.setdefault(_ratio_label(solver_name(run), ratio_table(run)), solver_color(run))
         area.set_xlim(x[0], x[-1])
         area.set_ylim(bottom=0)
         area.set_ylabel("GPU time (ms)", fontsize=FONT_SIZE)
@@ -493,7 +532,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         if table is None:
             continue
         if column == "gradient":
-            _box(ax, yi, table[TEST_RATIO], RATIO_FLOOR)
+            _box(ax, yi, table[STRIP_RATIO], RATIO_FLOOR)
         elif column == "feasibility":
             _box(ax, yi, table["feasibility_ratio"], RATIO_FLOOR)
         elif column == "early":
@@ -510,7 +549,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         # The tolerance line first, so the ticks are chosen for the final limits
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
         _log_axis(ax, dense=NARROW_LOG_RANGE)
-        ax.set_xlabel(TEST_RATIO_LABEL if column == "gradient" else "Penetration ratio",
+        ax.set_xlabel(STRIP_RATIO_LABEL if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
         ax.set_xlim(0, 100)
@@ -560,10 +599,11 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     ratios = [2.4] + [1.5] * len(columns)
     fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
                              gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
-    names = [solver_name(k or p) for k, p in rows]
+    tables = [ratio_table(p) if p is not None else None for _, p in rows]
+    names = [solver_name(k or p) if t is None else _ratio_label(solver_name(k or p), t)
+             for (k, p), t in zip(rows, tables)]
     present = _sweeps_panel(axes[0], [k for k, _ in rows], y, SOLVERS_OMITTED)
     _row_axes(axes[0], y, names)
-    tables = [step_stats.per_step(p) if p is not None else None for _, p in rows]
     for ax, column in zip(axes[1:], columns):
         _budget_panel(ax, column, tables, y)
         _row_axes(ax, y, None)
@@ -665,11 +705,12 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
                             width_ratios=[{"early": 1.0}.get(c, 1.6) for c in columns])
     for s, (scene, rows) in enumerate(scenes.items()):
         y = np.arange(len(rows))[::-1]
-        tables = [step_stats.per_step(r) for r in rows]
+        tables = [ratio_table(r) for r in rows]
         axes = [fig.add_subplot(grid[s, c]) for c in range(len(columns))]
         for ax, column in zip(axes, columns):
             _budget_panel(ax, column, tables, y)
-            _row_axes(ax, y, [solver_name(r) for r in rows] if ax is axes[0] else None)
+            _row_axes(ax, y, [_ratio_label(solver_name(r), t) for r, t in zip(rows, tables)] if ax is axes[0]
+                      else None)
         axes[0].text(0, 1.06, labels.get(scene, scene), transform=axes[0].transAxes, ha="left", va="bottom",
                      fontsize=8, fontweight="bold", color=INK)
     _legend(fig, _box_handles())
@@ -1225,6 +1266,7 @@ class TestPaperFigures(unittest.TestCase):
                 "status": {"vbd": [{"substep": 0, "outer": 1 if t % 4 == 0 else 5, "sweeps": 20 if t % 4 == 0 else 100,
                                     "reason": "CONVERGED" if t % 4 == 0 else "GRADIENT_UNMET",
                                     "gradient_ratio": 0.5 if t % 4 == 0 else 3.0, "feasibility_ratio": 0.1,
+                                    "smoothed_ratio": 0.2 if t % 4 == 0 else 1.5,
                                     "max_outer": 5, "max_sweeps": 100}]},
                 "rms_speed": 0.1 * t,
             })
@@ -1502,7 +1544,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             [TEST_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
+                             [STRIP_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
@@ -1515,6 +1557,41 @@ class TestPaperFigures(unittest.TestCase):
         text = slices_text(k[:1], {"basket_of_fruit": "Basket"})
         self.assertIn("## Basket, AAAVBD", text)
         self.assertIn("| Fastest 10% | 15 | 8.95 ms | 100 sweeps | 27% |", text)  # ties: every no-contact step
+
+    def test_strip_ratio(self):
+        run = self._production(self._kernels())
+        # The worst smoothed ratio over a step's substeps, not the decisive ratio (0.5 or 3.0)
+        run["steps"][0] = {**run["steps"][0], "status": {"vbd": [
+            {**run["steps"][0]["status"]["vbd"][0], "smoothed_ratio": 0.4},
+            {**run["steps"][0]["status"]["vbd"][0], "substep": 1, "smoothed_ratio": 0.9}]}}
+        table = ratio_table(run)
+        self.assertTrue(table["smoothed"])
+        self.assertFalse(table["decisive_fallback"])
+        self.assertEqual(table[STRIP_RATIO][:3].tolist(), [0.9, 1.5, 0.2])
+        self.assertEqual(table[TEST_RATIO][1], 3.0)
+        # From a detected blow-up on (a node at 2 km/s at step 40), the steps are left out
+        for step in run["steps"]:
+            step["peak_speed"] = 2 * BLOWUP_SPEED if step["t"] >= 40 else 5.0
+        ratio = ratio_table(run)[STRIP_RATIO]
+        self.assertTrue(np.isfinite(ratio[:30]).all())
+        self.assertTrue(np.isnan(ratio[30:]).all())
+        # Without smoothed ratios: the decisive ratio, marked in the legend and row labels
+        vbd = self._production(self._kernels("VBD"))
+        vbd["steps"] = [{**s, "status": {"vbd": [{k: v for k, v in s["status"]["vbd"][0].items()
+                                                   if k != "smoothed_ratio"}]}} for s in vbd["steps"]]
+        table = ratio_table(vbd)
+        self.assertEqual((table["smoothed"], table["decisive_fallback"]), (False, True))
+        np.testing.assert_array_equal(table[STRIP_RATIO], table[TEST_RATIO])
+        k = self._kernels()
+        fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
+        self.assertIn(f"VBD{DECISIVE_MARK}", [t.get_text() for t in fig.legends[0].get_texts()])
+        self.assertIn("AAAVBD", [t.get_text() for t in fig.legends[0].get_texts()])
+        self.assertEqual(fig.axes[1].get_ylabel(), "Smoothed\nstationarity ratio")
+        plt.close(fig)
+        fig = plot_budget([self._production(k), vbd], {})
+        self.assertEqual([t.get_text() for t in fig.axes[0].get_yticklabels()], [f"VBD{DECISIVE_MARK}", "AAAVBD"])
+        self.assertEqual(fig.axes[0].get_xlabel(), STRIP_RATIO_LABEL)
+        plt.close(fig)
 
     def test_timeline_rms_speed(self):
         k = self._kernels()
