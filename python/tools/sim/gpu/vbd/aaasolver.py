@@ -122,6 +122,13 @@ def compute_thread_local_stencil_gradient_augmentation(
     return ai
 
 
+# TODO: this kernel costs up to 1.5x VBD's `_vertex_solve_kernel` per launch, at equal launches. On
+#  Trampoline.SoftStiff.60Hz (fixed budget over 2.5-3.0 s, 7ce4082b) it took 23 us per launch against 15 us; on
+#  MatOnStilts.60Hz the two cost the same, and on the contact-free banner and ArmadilloPull it is ~1.26x. All
+#  the extra time is inside this kernel; clocks were identical. Probably the stencil gradient sum and the extra
+#  state per vertex lengthen the slowest block of small color partitions (latency-bound launches). Worth an
+#  Nsight Compute look (registers, occupancy, the serial part of the stencil loop) before the paper's cost
+#  claims. Data: data/profiling/runs/Trampoline.SoftStiff/Scratch/TimingCheck/, production-7ce4082b.plan.md.
 @wp.kernel
 def _accelerated_vertex_solve_kernel(
     pbegin: wp.int32,
