@@ -15,8 +15,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   scene's other production runs (e.g. VBD) as lines in their solvers' colors. Below it, on the same time axis,
   the production runs' final stationarity test ratio per step (:data:`TEST_RATIO`; log axis, its rolling median
   over ``--smooth`` steps, a dashed line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
-  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill (else the kernels run's), the other runs' as dotted lines, each with
-  its own legend entry. Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
+  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill (else the
+  kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend entry
+  (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only. ``--snapshots TIME=IMAGE ...``
   adds a row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the
   numbers marked at their times on the plots (first row only). Steps a result lacks, the warm-up steps at the
   seams of a run merged from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that
@@ -46,7 +47,7 @@ Usage (from the repo root):
 
     python -m python.tools.sim.profiling.paper_figures timeline k_capsules.json --production p_capsules.json \
         p_capsules_vbd.json -o data/figures/profiling/timeline [--labels capsule_bowl="Capsules into bowl"] \
-        [--width 7] [--bin 5] [--smooth 9] [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
+        [--width 7] [--bin 5] [--smooth 9] [--rms-speed paired|all] [--snapshots 0.9=snap_1.png 1.4=snap_2.png ...]
     python -m python.tools.sim.profiling.paper_figures solvers k_fixed_*.json --production p_*.json \
         -o data/figures/profiling/solvers [--step-times]
     python -m python.tools.sim.profiling.paper_figures slices k_*.json -o data/tables/slices.md [--slices 10,90]
@@ -257,15 +258,17 @@ def _marker(ax, x: float, number: int, y: float = 1.0):
             bbox={"boxstyle": "circle,pad=0.18", "facecolor": "white", "edgecolor": INK, "linewidth": 0.5})
 
 
-SPEED_DOTS = (0, (1, 1.5))  # timeline: the other production runs' speeds
+SPEED_DOTS = (0, (1, 1.5))  # timeline: the other production runs' speeds (``--rms-speed all``)
+RMS_SPEED_MODES = ("paired", "all")  # timeline: whose RMS speed the strip draws (the paired run's, or every run's)
 
 
 def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
-                    smooth: int) -> list:
+                    smooth: int, rms_speed: str = "paired") -> list:
     """The timeline's lower strip: each production run's final stationarity test ratio per step
     (:data:`TEST_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
-    docstring); ``x`` and ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the runs
-    have none. Returns the speeds' legend handles."""
+    docstring): the paired run's (``runs[0]``), and with ``rms_speed`` ``"all"`` the other runs' too; ``x`` and
+    ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the paired run has none. Returns
+    the speeds' legend handles."""
     # TODO: show every convergence metric over time, the feasibility (penetration) ratio beside the stationarity
     #  ratio (and the unsmoothed beside the smoothed one, both recorded since fd5eaa56). A per-step residual can't
     #  carry a trajectory's past error: on BasketOfFruit, Chebyshev's smoothed ratio is 2x AAAVBD's while its net
@@ -281,7 +284,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
         if i == 0 and np.isfinite(table[SPEED]).any():
             speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
             handles.append(Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(run)} {SPEED_NAME}"))
-        elif i > 0 and np.isfinite(table[SPEED]).any():
+        elif i > 0 and rms_speed == "all" and np.isfinite(table[SPEED]).any():
             speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
             handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
                                   label=f"{solver_name(run)} {SPEED_NAME}"))
@@ -313,10 +316,11 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
 
 def plot_timeline(kernels: list[dict], production: list[dict | None], labels: list[str], width: float = 7.0,
                   bin_n: int = 1, snapshots: list[tuple[float, str]] | None = None,
-                  others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS):
+                  others: list[list[dict]] | None = None, smooth: int = SMOOTH_STEPS, rms_speed: str = "paired"):
     """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
     ``snapshots`` (simulated time, image path), numbered at their times on the plots. ``others`` are each row's
-    production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run."""
+    production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run;
+    ``rms_speed`` (:data:`RMS_SPEED_MODES`) says whose RMS speed the lower strip draws."""
     tables = [step_stats.on_step_grid(step_stats.per_step(k)) for k in kernels]
     rows = len(kernels)
     others = others or [[] for _ in kernels]
@@ -370,7 +374,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             strip = fig.add_subplot(grid[2 * r + 1], sharex=area)
             if has_ratio[r]:
                 for h in _residual_strip(strip, step_seconds(result, table["t"]), result, table[SPEED], runs,
-                                         smooth):
+                                         smooth, rms_speed):
                     speeds.setdefault(h.get_label(), h)
             else:
                 strip.plot(x, bin_steps(table[SPEED], bin_n), color=INK, linewidth=0.6)
@@ -744,6 +748,9 @@ def main():
                         help="timeline: average the time series over blocks of this many steps.")
     parser.add_argument("--smooth", type=int, default=SMOOTH_STEPS,
                         help="timeline: steps in the rolling median over the residual ratios.")
+    parser.add_argument("--rms-speed", choices=RMS_SPEED_MODES, default="paired", dest="rms_speed",
+                        help="timeline: draw the RMS speed of the paired production run only (default), or of every "
+                        "production run (the others' as dotted lines).")
     parser.add_argument("--snapshots", nargs="*", default=[], metavar="TIME=IMAGE",
                         help="timeline: snapshot images and their simulated times (s), e.g. 0.9=snap_1.png.")
     parser.add_argument("--slices", default="10,90",
@@ -778,7 +785,7 @@ def main():
             snapshots.append((float(time), path))
         fig = plot_timeline(kernels, production, [labels.get(scene_key(k), scene_key(k)) for k in kernels],
                             args.width, args.bin_n, snapshots, other_production(kernels, production_runs),
-                            args.smooth)
+                            args.smooth, args.rms_speed)
     elif args.kind == "solvers":
         fig = plot_solvers(kernels, production_runs, args.width, args.step_times)
     elif args.kind == "sweeps":
@@ -931,6 +938,22 @@ class TestPaperFigures(unittest.TestCase):
         text = slices_text(k[:1], {"basket_of_fruit": "Basket"})
         self.assertIn("## Basket, AAAVBD", text)
         self.assertIn("| Fastest 10% | 15 | 8.95 ms | 100 sweeps | 27% |", text)  # ties: every no-contact step
+
+    def test_timeline_rms_speed(self):
+        k = self._kernels()
+        p = self._production(k)
+        vbd = self._production(self._kernels("VBD"))
+        for run in (p, vbd):
+            for step in run["steps"]:
+                step["rms_speed"] = 0.05 * step["t"]
+        legends = {}
+        for mode in RMS_SPEED_MODES:
+            fig = plot_timeline([k], [p], ["A"], others=[[vbd]], rms_speed=mode)
+            legends[mode] = [t.get_text() for t in fig.legends[0].get_texts()]
+            plt.close(fig)
+        # The paired run's speed (a fill) either way; the other run's dotted line and its entry only with "all"
+        self.assertEqual([t for t in legends["paired"] if t.endswith(SPEED_NAME)], ["AAAVBD RMS speed"])
+        self.assertEqual([t for t in legends["all"] if t.endswith(SPEED_NAME)], ["AAAVBD RMS speed", "VBD RMS speed"])
 
 
 if __name__ == "__main__":
