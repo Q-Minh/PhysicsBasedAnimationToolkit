@@ -6,6 +6,13 @@ files, which store the FEM at the root (``FemElastoDynamics/{X,E,m}``) and each 
 
 - **Same scene.** Every file (and the reference) must have the first one's node count and rest positions, else
   it is rejected with an error naming it. Frames are read from the files when shown, a few kept in memory.
+- **Runs made in legs** (``simulate.py --resume``, one output per leg, keeping the uninterrupted run's frame
+  numbers): ``a.h5+b.h5+c.h5`` (any order) is one trajectory over the union of the legs' frames in time order
+  (:func:`join_legs`). The scene, the parameters and the solver are the first leg's (in time); every leg must have
+  its node count and rest positions, and legs starting at the same time are refused. Each leg takes over from the
+  next one's first frame: a frame at the same time in both (the resumed leg's first, without solve statuses) is the
+  earlier leg's, and an earlier leg's frames after it are left out. Speeds, distances and statuses run across the
+  seams; a frame's tooltip names its leg. A file whose name holds a ``+`` and exists is read as one file.
 - **Sync by simulated time.** A frame's time is its time step count (the attribute ``sim/<frame>.attrs["t"]``,
   or for older outputs the frame schedule of ``params.attrs["fps"]``) times ``params/Integration.attrs["dt"]``, so
   trajectories with other frame rates, time steps or start times (``--resume``) align. The frame slider steps
@@ -29,6 +36,7 @@ files, which store the FEM at the root (``FemElastoDynamics/{X,E,m}``) and each 
 Usage (from the repo root):
 
     python -m python.tools.sim.trajectory_viewer a.h5 b.h5 ... [--labels A B ...] [--reference ref.h5]
+    python -m python.tools.sim.trajectory_viewer run.h5+run.From2s.h5 other.h5   # a run made in two legs
 
 Labels default to each file's solver (``params.attrs["solver"]``) when they differ, else the file names. Needs
 h5py, numpy, scipy and polyscope (and ``benchmark_plot``'s solver colors, with matplotlib), not Warp.
@@ -56,6 +64,7 @@ from .status_ratio import stationarity_test_ratio
 CACHED_FRAMES = 3  # per trajectory: the shown frame, the one before it (speeds) and one more
 REST_TOLERANCE = 1e-6  # rest positions match within this fraction of the scene's size
 RMS_BUDGET = 0.015  # seconds per GUI tick spent filling in the RMS curves
+LEG_SEPARATOR = "+"  # joins the legs of a run made with simulate.py --resume into one trajectory argument
 _WARNING_COLOR = (1.0, 0.75, 0.2, 1.0)  # as the CPU editor's trajectory viewer
 _COLLIDER_COLOR = (0.55, 0.55, 0.6)
 # Colors of trajectories that aren't told apart by their solver (the same solver twice, or none recorded)
@@ -68,20 +77,43 @@ def _time_tolerance(t: float) -> float:
 
 @dataclass
 class Trajectory:
-    """One output file's frames, read when needed."""
+    """One output file's frames, or the joined frames of a run's legs (see :func:`open_trajectory`), read when
+    needed."""
 
-    path: str
+    path: str  # as given: one file, or the legs joined with LEG_SEPARATOR
     label: str
-    solver: str  # params.attrs["solver"], or ""
-    file: h5py.File
+    solver: str  # params.attrs["solver"] (the first leg's), or ""
+    files: list[h5py.File]  # the legs, in time order (one for a single file)
     frames: list[str]  # frame group names, in order
     times: np.ndarray  # (F,) simulated time (s) of each frame
+    leg: np.ndarray = None  # (F,) the leg (index into files) holding each frame; zeros for a single file
+    legs: list[str] = None  # the legs' paths, in time order
+    dropped: int = 0  # overlapping frames left out when joining the legs
     _cache: OrderedDict = field(default_factory=OrderedDict)
     _status: dict = field(default_factory=dict)
 
+    def __post_init__(self):
+        if self.leg is None:
+            self.leg = np.zeros(len(self.frames), dtype=np.int64)
+        if self.legs is None:
+            self.legs = [self.path]
+
+    @property
+    def file(self) -> h5py.File:
+        """The first leg's file, which holds the scene and the parameters."""
+        return self.files[0]
+
+    def group(self, k: int) -> h5py.Group:
+        """Frame k's group ``sim/<frame>``, in its leg's file."""
+        return self.files[self.leg[k]]["sim"][self.frames[k]]
+
+    def leg_path(self, k: int) -> str:
+        """The file holding frame k."""
+        return self.legs[self.leg[k]]
+
     def read(self, k: int) -> np.ndarray:
         """Frame k's positions (N, 3), uncached."""
-        return np.asarray(self.file["sim"][self.frames[k]]["x"], dtype=np.float64)
+        return np.asarray(self.group(k)["x"], dtype=np.float64)
 
     def positions(self, k: int) -> np.ndarray:
         """Frame k's positions (N, 3), keeping the last :data:`CACHED_FRAMES` read."""
@@ -109,16 +141,25 @@ class Trajectory:
     def status(self, k: int) -> list[str]:
         """Frame k's solve statuses as text lines (see :func:`status_lines`)."""
         if k not in self._status:
-            g = self.file["sim"][self.frames[k]]
+            g = self.group(k)
             self._status[k] = status_lines(g["solve_status"]) if "solve_status" in g else []
         return self._status[k]
 
     def close(self):
-        self.file.close()
+        for f in self.files:
+            f.close()
 
 
-def open_trajectory(path: str, label: str | None = None) -> Trajectory:
-    """Opens a ``simulate.py`` output (read-only, kept open)."""
+def leg_paths(path: str) -> list[str]:
+    """A trajectory argument's files: the file itself if it exists (its name may hold the separator), else its
+    :data:`LEG_SEPARATOR`-joined legs."""
+    if LEG_SEPARATOR not in path or os.path.exists(path):
+        return [path]
+    return path.split(LEG_SEPARATOR)
+
+
+def _open_leg(path: str, label: str | None = None) -> Trajectory:
+    """Opens one ``simulate.py`` output (read-only, kept open)."""
     f = h5py.File(path, "r")
     try:
         if "FemElastoDynamics/X" not in f or "sim" not in f:
@@ -132,7 +173,59 @@ def open_trajectory(path: str, label: str | None = None) -> Trajectory:
     except (KeyError, ValueError):
         f.close()
         raise
-    return Trajectory(path, label or "", solver, f, frames, times)
+    return Trajectory(path, label or "", solver, [f], frames, times)
+
+
+def join_legs(path: str, legs: list[Trajectory], label: str | None = None) -> Trajectory:
+    """One trajectory from the legs of a run (``simulate.py --resume``, any order), over the union of their frames
+    in time order. The scene, the parameters and the solver are the first leg's (in time); every leg must have its
+    node count and rest positions.
+
+    Overlaps: each leg takes over from the next one's first frame. A leg's frames after that are left out, and a
+    frame at the same time in both (the resumed leg's first frame, which has no solve statuses) is the earlier
+    leg's, which holds the statuses of the steps leading to it. Legs that start at the same time are refused.
+
+    Raises:
+        ValueError: If the legs aren't of one scene or start at the same time.
+    """
+    legs = sorted(legs, key=lambda leg: leg.times[0])
+    first = legs[0]
+    X = np.asarray(first.file["FemElastoDynamics/X"], dtype=np.float64)
+    for prev, leg in zip(legs, legs[1:]):
+        check_rest_positions(X, np.asarray(leg.file["FemElastoDynamics/X"], dtype=np.float64), leg.path, first.path)
+        if leg.times[0] <= prev.times[0] + _time_tolerance(prev.times[0]):
+            raise ValueError(f"{prev.path} and {leg.path} both start at t = {leg.times[0]:.6g} s: not legs of one run")
+    frames, times, leg_of = [], [], []
+    for i, leg in enumerate(legs):
+        keep = np.ones(len(leg.times), dtype=bool)
+        if times:  # after the frames kept so far
+            keep &= leg.times > times[-1] + _time_tolerance(times[-1])
+        if i + 1 < len(legs):  # until the next leg takes over
+            start = legs[i + 1].times[0]
+            keep &= leg.times <= start + _time_tolerance(start)
+        frames += [name for name, kept in zip(leg.frames, keep) if kept]
+        times += leg.times[keep].tolist()
+        leg_of += [i] * int(keep.sum())
+    return Trajectory(path, label or "", first.solver, [leg.file for leg in legs], frames, np.array(times),
+                      np.array(leg_of, dtype=np.int64), [leg.path for leg in legs],
+                      sum(len(leg.frames) for leg in legs) - len(frames))
+
+
+def open_trajectory(path: str, label: str | None = None) -> Trajectory:
+    """Opens a ``simulate.py`` output (read-only, kept open), or a run's legs joined with :data:`LEG_SEPARATOR`
+    (``a.h5+b.h5``, :func:`join_legs`)."""
+    paths = leg_paths(path)
+    if len(paths) == 1:
+        return _open_leg(path, label)
+    legs = []
+    try:
+        for p in paths:
+            legs.append(_open_leg(p))
+        return join_legs(path, legs, label)
+    except Exception:
+        for leg in legs:
+            leg.close()
+        raise
 
 
 def default_labels(trajectories: list[Trajectory]) -> list[str]:
@@ -140,7 +233,7 @@ def default_labels(trajectories: list[Trajectory]) -> list[str]:
     solvers = [tr.solver for tr in trajectories]
     if all(solvers) and len(set(solvers)) == len(solvers):
         return [display_name(s) for s in solvers]
-    names = [os.path.splitext(os.path.basename(tr.path))[0] for tr in trajectories]
+    names = [os.path.splitext(os.path.basename(tr.legs[0]))[0] for tr in trajectories]
     if len(set(names)) == len(names):
         return names
     return [f"{i}: {n}" for i, n in enumerate(names)]
@@ -226,15 +319,20 @@ def load_scene(f: h5py.File) -> Scene:
                  body_ids(len(X), E)[vertices], max(width, 1e-6))
 
 
+def check_rest_positions(X0: np.ndarray, X: np.ndarray, path: str, first: str):
+    """Raises a ValueError naming ``path`` unless its rest positions X have the node count and positions of
+    ``first``'s, X0."""
+    if X.shape != X0.shape:
+        raise ValueError(f"{path} has {len(X)} nodes, {first} {len(X0)}: not the same scene")
+    size = max(float(np.ptp(X0, axis=0).max()), 1e-6)
+    gap = float(np.abs(X - X0).max(initial=0.0))
+    if gap > REST_TOLERANCE * size:
+        raise ValueError(f"{path}'s rest positions differ from {first}'s by up to {gap:.3g} m: not the same scene")
+
+
 def check_same_scene(scene: Scene, tr: Trajectory, first: str):
     """Raises a ValueError naming ``tr``'s file unless its node count and rest positions are the scene's."""
-    X = np.asarray(tr.file["FemElastoDynamics/X"], dtype=np.float64)
-    if X.shape != scene.X.shape:
-        raise ValueError(f"{tr.path} has {len(X)} nodes, {first} {len(scene.X)}: not the same scene")
-    size = max(float(np.ptp(scene.X, axis=0).max()), 1e-6)
-    gap = float(np.abs(X - scene.X).max(initial=0.0))
-    if gap > REST_TOLERANCE * size:
-        raise ValueError(f"{tr.path}'s rest positions differ from {first}'s by up to {gap:.3g} m: not the same scene")
+    check_rest_positions(scene.X, np.asarray(tr.file["FemElastoDynamics/X"], dtype=np.float64), tr.path, first)
 
 
 def load(paths: list[str], labels: list[str] | None = None, reference: str | None = None):
@@ -510,7 +608,7 @@ class Viewer:
                 " (ended)" if self.t > tr.times[-1] + _time_tolerance(tr.times[-1]) else "")
             imgui.Text(f"frame {k} / {len(tr.times) - 1}, t = {tr.times[k]:.4f} s{note}")
             if imgui.IsItemHovered():
-                imgui.SetTooltip(tr.path)
+                imgui.SetTooltip(tr.leg_path(k))
             if self.reference is not None:
                 j, _ = self.reference_positions(tr.times[k])
                 gap = abs(self.reference.times[j] - tr.times[k])
@@ -565,7 +663,7 @@ class Viewer:
 
         imgui.PushID("TrajectoryViewer")
         if self.reference is not None:
-            imgui.TextDisabled(f"Reference: {os.path.basename(self.reference.path)}")
+            imgui.TextDisabled(f"Reference: {LEG_SEPARATOR.join(map(os.path.basename, self.reference.legs))}")
         self.draw_frames()
         imgui.Separator()
         self.draw_display()
@@ -581,16 +679,25 @@ class Viewer:
 def main():
     parser = argparse.ArgumentParser(
         prog="Trajectory viewer", description="Polyscope viewer of several simulate.py outputs of one scene, in sync.")
-    parser.add_argument("trajectories", nargs="+", help="simulate.py outputs (.h5) of the same scene.")
+    parser.add_argument("trajectories", nargs="+", help="simulate.py outputs (.h5) of the same scene. A run made in "
+                        f"legs (simulate.py --resume) is one argument, its legs joined with '{LEG_SEPARATOR}' "
+                        f"(a.h5{LEG_SEPARATOR}b.h5{LEG_SEPARATOR}c.h5, any order): played as one trajectory over the "
+                        "union of their frames, each leg taking over from the next one's first frame (a frame in "
+                        "both is the earlier leg's). The scene, parameters and solver are the first leg's.")
     parser.add_argument("--labels", nargs="+", default=None, help="One label per trajectory (default: the solvers, "
                         "else the file names).")
-    parser.add_argument("--reference", default=None, help="A trajectory (.h5) of the same scene to measure the "
-                        "distance to, e.g. a converged Newton run.")
+    parser.add_argument("--reference", default=None, help="A trajectory (.h5, or legs joined with "
+                        f"'{LEG_SEPARATOR}') of the same scene to measure the distance to, e.g. a converged Newton "
+                        "run.")
     args = parser.parse_args()
     try:
         scene, trajectories, reference = load(args.trajectories, args.labels, args.reference)
     except (OSError, KeyError, ValueError) as e:
         parser.error(str(e))
+    for tr in [*trajectories, *([reference] if reference else [])]:
+        if len(tr.legs) > 1:
+            print(f"{tr.label}: {len(tr.legs)} legs, {len(tr.frames)} frames, t = {tr.times[0]:.4g} to "
+                  f"{tr.times[-1]:.4g} s ({tr.dropped} overlapping frame(s) left out)")
 
     import polyscope as ps
 
@@ -740,6 +847,66 @@ class TestTrajectoryViewer(unittest.TestCase):
             self.assertEqual([tr.label for tr in trs], ["0: a", "1: a"])
             for tr in trs:
                 tr.close()
+
+    def test_legs(self):
+        """A run in two legs (resumed at step 6, its first frame repeating the first leg's last) plays as one."""
+        import tempfile
+
+        X, E = self.scene()
+        moved = lambda k: X + np.outer(np.arange(len(X)) < 8, [0.1 * k, 0.0, 0.0])  # noqa: E731
+        with tempfile.TemporaryDirectory() as root:
+            a, b, c, ref = (os.path.join(root, f"{n}.h5") for n in ("a", "b", "c", "ref"))
+            # Frame k at step 2k: a holds frames 0-3, b (resumed) frames 3-5, its frame 3 without statuses
+            self.write(a, X, E, [(2 * k, moved(k)) for k in range(4)], statuses={3: self.vbd_status})
+            self.write(b, X, E, [(2 * k, moved(k)) for k in range(3, 6)], solver="Newton",
+                       statuses={0: lambda g: g.attrs.update(lost=0), 1: self.vbd_status})
+            with h5py.File(b, "a") as f:  # the resumed output keeps the uninterrupted run's frame numbers
+                for k in (2, 1, 0):
+                    f.move(f"sim/{k:08d}", f"sim/{k + 3:08d}")
+            self.write(ref, X, E, [(2 * k, X) for k in range(6)])
+            for spec in (f"{a}+{b}", f"{b}+{a}"):  # any order
+                scene, (tr,), reference = load([spec], reference=ref)
+                try:
+                    self.assertEqual((tr.legs, tr.solver, tr.label, tr.dropped), ([a, b], "VBD", "VBD", 1))
+                    np.testing.assert_allclose(tr.times, 0.02 * np.arange(6))
+                    self.assertEqual(tr.leg.tolist(), [0, 0, 0, 0, 1, 1])
+                    self.assertEqual([tr.leg_path(k) for k in (3, 4)], [a, b])
+                    for k in range(6):
+                        np.testing.assert_allclose(tr.positions(k), moved(k))
+                    np.testing.assert_allclose(tr.speeds(4)[:8], 0.1 / 0.02)  # across the seam
+                    self.assertEqual(tr.status(3)[0], "2 solves: converged 1, both unmet 1")  # a's, not b's empty
+                    self.assertEqual(tr.status(4)[0], "2 solves: converged 1, both unmet 1")
+                    self.assertEqual(tr.status(5), [])
+                    viewer = Viewer(scene, [tr], reference)
+                    while not viewer.fill_rms(budget=1.0):
+                        pass
+                    np.testing.assert_allclose(viewer.rms[0], 0.1 * np.arange(6))
+                    viewer.set_time(0.09)
+                    self.assertEqual((viewer.frame, tr.frame_at(viewer.t)), (4, 4))
+                finally:
+                    tr.close()
+                    reference.close()
+            # A longer overlap: a runs on to step 8 with other positions; b takes over from its first frame (step 6)
+            self.write(a, X, E, [(2 * k, moved(k) + (k > 3)) for k in range(5)])
+            scene, (tr,), _ = load([f"{a}+{b}"])
+            try:
+                self.assertEqual((tr.leg.tolist(), tr.dropped), ([0, 0, 0, 0, 1, 1], 2))
+                np.testing.assert_allclose(tr.positions(4), moved(4))
+            finally:
+                tr.close()
+            # Mismatched legs fail, naming the file
+            self.write(c, X[:8], E, [(20, X[:8])])
+            with self.assertRaisesRegex(ValueError, "c.h5 has 8 nodes"):
+                load([f"{a}+{c}"])
+            self.write(c, X, E, [(0, X)])
+            with self.assertRaisesRegex(ValueError, "both start at t = 0"):
+                load([f"{a}+{c}"])
+            # An existing file whose name holds the separator is one file
+            plus = os.path.join(root, "x+y.h5")
+            self.write(plus, X, E, [(0, X)])
+            _, (tr,), _ = load([plus])
+            self.assertEqual((tr.legs, len(tr.frames)), ([plus], 1))
+            tr.close()
 
     def test_gui_stubbed(self):
         """Every panel and color mode with polyscope stubbed: balanced IDs, unique widget labels per ID scope."""
