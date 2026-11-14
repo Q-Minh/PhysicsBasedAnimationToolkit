@@ -696,6 +696,21 @@ STIFF_SPHERE_BDF2 = Rule(
 )
 SCENES["Trampoline.StiffSphere.60Hz"].rules.append(STIFF_SPHERE_BDF2)
 
+DRAGON_IMPACT_GAMMADOWN = Rule(
+    "AAAVBD gammadown 0.95 instead of the shared 0.99 (maintainer, 2026-11-14): at 0.99 the pillars vibrate after "
+    "the dragons' impact, AAAVBD only, and it never decays (velocity above 10 Hz over every pillar node, RMS 0.08 m/s "
+    "before the launch, 1.27 at 6-7 s, 2.4 by 9-12 s; Chebyshev 0.02-0.05). From the vibrating 6 s state it keeps "
+    "growing with 10x the sweeps, decays at 0.95 and is damped within a few steps by Chebyshev, so AAAVBD's "
+    "warm-started acceleration at 0.99 pumps it. Resumed at 4.0 s (before the launch): 0.95 gives 0.021 m/s at 6-7 "
+    "s and 0.012 at 8-9 s, 0.90 (gammadownS 0.95) 0.015 at 6-7 s; the same time per step; the armadillo within 2 cm "
+    "of 0.99's at 7 s, the dragons sliding less far; median smoothed stationarity ratio over 4-7 s 12.6 at 0.99, "
+    "16.3 at 0.95, 17.6 at 0.90 (Chebyshev 25.2). The per-solve ratio doesn't see a vibration that builds up across "
+    "steps. The first rung of the 0.99 -> 0.95 -> 0.90 ladder, the other AAAVBD values stay shared. Data: "
+    "data/profiling/investigations/DragonImpact-gammadown.",
+    {"Solver.AAAVBD.gammadown": 0.95},
+)
+SCENES["ArmadilloSpaghetti.DragonImpact.60Hz"].rules.append(DRAGON_IMPACT_GAMMADOWN)
+
 
 # Equal GPU time per step: the real-time entries where AAAVBD's per-sweep overhead over VBD is above about 5%
 EQUAL_TIME_CALIBRATION = "data/profiling/paper/equal-time-calibration.md"

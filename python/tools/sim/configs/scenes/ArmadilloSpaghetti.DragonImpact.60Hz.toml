@@ -1,7 +1,7 @@
 # Scene config: ArmadilloSpaghetti.DragonImpact.60Hz, every serialized parameter written out (diff it against configs/paper).
 # For: data/scenarios/ArmadilloSpaghetti.DragonImpact.h5: four round pillars, cylinders 0.1 m in diameter (fTetWild, ideal edge 1.2 cm, mean 1.1 cm; 207k tets each, quality at least 0.10; Young's modulus 1e7) 0.52 m from the twist axis (0.735 m apart), their top and bottom ends turned at -180 and 180 deg/s from 0 s, between a floor and a ceiling plane 2 cm beyond the pillars' ends, around one soft armadillo (data/armadillo.mesh, 162k tets, 1.2 m tall, Young's modulus 1e6; tet quality at least 0.23, triangle angles at least 11 deg) whose waist (the slice at 50-55% of its height, where only the torso is) is near the twist axis: lowered 15 cm along it (z from -0.75 to 0.45 m; floor 1.07 m below), then turned -10 deg about it and moved (+10.0, -2.5) cm in xy (pose A, maintainer, 2026-10-23), with rest gaps of 4.8, 7.2, 7.7 and 2.6 cm to the four pillars, so that all four pillars engage it. Thin pillars close to the armadillo wrap it rather than push it out (after the JGS2-GQ paper's scene). Gravity (-9.81 m/s^2 in z) acts on every body. The armadillo's interior core (its 1031 nodes within 25 cm of its centroid and at least 2 cm under its surface) is held by a Fixed transform until 1.5 s, so that the twisting pillars tangle around it rather than push it up or down, and then released (maintainer, 2026-10-22). The held nodes stay off the surface: holding surface nodes pits the pillars' prescribed twist against prescribed armadillo nodes in contact, with no feasible position, and the simulation froze. The twist stops at 4.0 s (720 deg per end; maintainer, 2026-10-24), and a Fixed transform on the pillars' turned end nodes over [0, 1000) s keeps the ends where the rotation stopped. Two Stanford dragons (data/stanford-dragon_ftetwild.msh scaled to 1.5 m long, 51k nodes and 204k tets each, Young's modulus 1e7, Poisson's ratio 0.45, 1000 kg/m^3) parked left (-x) and right (+x) of the twist axis, both leading with the mesh's higher, narrower +x end (the right one turned 180 deg about z): the left one's at the armadillo's feet (z -0.60 m), the right one's at its shoulders (z +0.25 m), both at y 1.45 m and 1.1 and 1.3 m from the axis. Each is held by a Fixed transform over [0, 4.49) s and launched by a Translate over [4.49, 4.50) s at 5 m/s toward the axis plus the upward speed (0.62 and 0.89 m/s) that brings its leading end back to its launch height over the flight to the bodies' near side (0.13 and 0.18 s, aimed at the bodies' positions at 4.49 s in a run of ArmadilloSpaghetti.Fall.h5, the twist without its stop); released, it keeps that velocity. 1.40M tets in all.
 # Source: configs/defaults.toml. Keys not listed below have the source's values.
-# Generated 2026-11-10 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-14 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - AAAVBD's shared parameter set, the same in every scene (gammadown/gammadownS 0.99/0.95, gammaup/gammaupS
@@ -57,6 +57,17 @@
 #   outcome as 10 ms, no interpenetration, feasibility > 1 on 8 solves (10 ms 612), 242 GPU s per simulated s
 #   (10 ms 394); the dragons' rebound is 1.1 m from 10 ms at 6 s.
 #     Integration.substeps = 10 (source 1)
+# - AAAVBD gammadown 0.95 instead of the shared 0.99 (maintainer, 2026-11-14): at 0.99 the pillars vibrate after
+#   the dragons' impact, AAAVBD only, and it never decays (velocity above 10 Hz over every pillar node, RMS 0.08
+#   m/s before the launch, 1.27 at 6-7 s, 2.4 by 9-12 s; Chebyshev 0.02-0.05). From the vibrating 6 s state it
+#   keeps growing with 10x the sweeps, decays at 0.95 and is damped within a few steps by Chebyshev, so AAAVBD's
+#   warm-started acceleration at 0.99 pumps it. Resumed at 4.0 s (before the launch): 0.95 gives 0.021 m/s at
+#   6-7 s and 0.012 at 8-9 s, 0.90 (gammadownS 0.95) 0.015 at 6-7 s; the same time per step; the armadillo
+#   within 2 cm of 0.99's at 7 s, the dragons sliding less far; median smoothed stationarity ratio over 4-7 s
+#   12.6 at 0.99, 16.3 at 0.95, 17.6 at 0.90 (Chebyshev 25.2). The per-solve ratio doesn't see a vibration that
+#   builds up across steps. The first rung of the 0.99 -> 0.95 -> 0.90 ladder, the other AAAVBD values stay
+#   shared. Data: data/profiling/investigations/DragonImpact-gammadown.
+#     Solver.AAAVBD.gammadown = 0.95 (source 0.9900000095367432)
 #
 # Notes:
 # - Every other setting is ArmadilloSpaghetti.DragonImpact's (10 ms); its rules above keep their 10 ms wording,
@@ -116,7 +127,7 @@ betaG0 = 0.5
 betaR = 0.0
 betaup = 1.0
 e_penalty_stiffness = 0
-gammadown = 0.9900000095367432
+gammadown = 0.95
 gammadownS = 0.949999988079071
 gammaup = 0.5
 gammaupS = 0.3
