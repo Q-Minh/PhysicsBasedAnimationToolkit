@@ -1,7 +1,7 @@
 # Scene config: BasketOfFruit.60Hz.EqualTime, every serialized parameter written out (diff it against configs/paper).
 # For: final_scenes/basket_of_fruit.h5 (Young's modulus 1e5 to 1e8).
 # Source: configs/paper/BasketOfFruit.toml. Keys not listed below have the source's values.
-# Generated 2026-11-12 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
+# Generated 2026-11-15 by python/tools/sim/scene_configs.py; edit SCENES there, not this file.
 #
 # Differs from the source:
 # - Inverse vertex solve for the VBD family (maintainer: EVD only when singular vertex Hessians cause problems).
@@ -19,7 +19,6 @@
 #   with strict CG (rtol 1e-9, at most 4000 iterations) (maintainer, 2026-10-20): with 5 x 2 and the default CG,
 #   the sphere's contact with the stiff trampoline center was unstable; 30 x 1 with strict CG is stable, if
 #   slow.
-#     Solver.Newton.n_max_iters = 30 (source 100)
 #     Solver.Newton.LinearSolver.n_max_iters = 4000 (source 2000)
 #     Solver.Newton.LinearSolver.rtol = 1e-09 (source 1e-06)
 # - AL contact margin dmin = 2 mm for the woven basket (maintainer, 2026-11-05; band unchanged at 2 mm): its
@@ -104,6 +103,15 @@
 #     Solver.AndersonSolver.n_max_iters = 3 (source 10)
 #     Solver.Chebyshev.n_max_iters = 3 (source 10)
 #     Solver.VBD.n_max_iters = 3 (source 10)
+# - Newton 5 outer iterations x 1 Newton step per substep instead of 30 x 1, strict CG unchanged (maintainer,
+#   2026-11-15), for run time: at 30 x 1 and 5 substeps the 0-8 s production run took 1150-1320 s per frame step
+#   over its first 24 steps, projected to about 175 h. None of its 120 solves exited early (all 30 outer
+#   iterations, every Newton step taken, CG at its 4000 cap in 1.6%), so 5 x 1 costs about 1/6. Median smoothed
+#   ratio after outer iteration k: 19 (k = 1), 5.9 (5), 3.0 (10), 2.56 from 15 to 30, so 5 x 1 ends about 2.3x
+#   above the plateau. The 30 x 1 comes from the trampoline sphere's contact at 10 ms; here each substep is
+#   1/300 s. Data: the stopped 30 x 1 run, BasketOfFruit.60Hz.Newton.7ce4082b.Production.Outer30.Interrupted.*
+#   in data/profiling/runs/BasketOfFruit/Production.
+#     Solver.Newton.n_max_iters = 5 (source 100)
 # - Equal GPU time per step (maintainer, 2026-11-12): at equal sweeps AAAVBD gets more GPU time per step, since
 #   its vertex solve kernel costs more per sweep, so VBD, Chebyshev and Anderson get more sweeps per outer
 #   iteration, each scaled by its factor, AAAVBD's GPU time per sweep over the solver's. AAAVBD's budget and
@@ -253,7 +261,7 @@ smoothing_passes = 4
 early_exit = -1
 init_strategy = 0
 linear_solver = 1
-n_max_iters = 30
+n_max_iters = 5
 one_sided_contact = 0
 spd_correction = 2
 

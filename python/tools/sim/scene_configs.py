@@ -711,6 +711,20 @@ DRAGON_IMPACT_GAMMADOWN = Rule(
 )
 SCENES["ArmadilloSpaghetti.DragonImpact.60Hz"].rules.append(DRAGON_IMPACT_GAMMADOWN)
 
+BASKET_NEWTON_OUTER = Rule(
+    "Newton 5 outer iterations x 1 Newton step per substep instead of 30 x 1, strict CG unchanged (maintainer, "
+    "2026-11-15), for run time: at 30 x 1 and 5 substeps the 0-8 s production run took 1150-1320 s per frame step "
+    "over its first 24 steps, projected to about 175 h. None of its 120 solves exited early (all 30 outer iterations, "
+    "every Newton step taken, CG at its 4000 cap in 1.6%), so 5 x 1 costs about 1/6. Median smoothed ratio after "
+    "outer iteration k: 19 (k = 1), 5.9 (5), 3.0 (10), 2.56 from 15 to 30, so 5 x 1 ends about 2.3x above the "
+    "plateau. The 30 x 1 comes from the trampoline sphere's contact at 10 ms; here each substep is 1/300 s. Data: "
+    "the stopped 30 x 1 run, "
+    "BasketOfFruit.60Hz.Newton.7ce4082b.Production.Outer30.Interrupted.* in data/profiling/runs/BasketOfFruit/"
+    "Production.",
+    {"Solver.Newton.n_max_iters": 5},
+)
+SCENES["BasketOfFruit.60Hz"].rules.append(BASKET_NEWTON_OUTER)
+
 
 # Equal GPU time per step: the real-time entries where AAAVBD's per-sweep overhead over VBD is above about 5%
 EQUAL_TIME_CALIBRATION = "data/profiling/paper/equal-time-calibration.md"
