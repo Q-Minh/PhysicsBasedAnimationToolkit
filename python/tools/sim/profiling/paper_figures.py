@@ -143,14 +143,14 @@ from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
 from .. import status_ratio  # noqa: E402
-from ..benchmark_plot import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noqa: E402
+from ..figure_style import SOLVER_COLORS, SOLVER_NAMES, use_paper_fonts  # noqa: E402
 
 # The paper's phase groups, in drawing order (bottom of the stack first): name -> (scope names, color). Scope
 # names are innermost scopes (results.leaf); a scope in no group is drawn as OTHER. AAAVBD's acceleration runs
 # inside its vertex-solve kernel (aaavbd.sweep), so it has no group: its cost shows in its time per sweep
 # against VBD's. Anderson's history updates run directly in its subproblem scope (anderson.subproblem's self
 # time), so they count as Mixing. Colors: muted olive, khaki, slate and brown tones, none sharing a hue with a solver's color
-# (benchmark_plot.SOLVER_COLORS), so phase fills never read as the solver lines drawn over them. Sweeps, detection
+# (figure_style.SOLVER_COLORS), so phase fills never read as the solver lines drawn over them. Sweeps, detection
 # and Other are at least 14 apart in OKLab (x100) under normal vision and simulated color vision deficiencies
 # (Machado et al. 2009), every pair at least 4.9.
 PHASE_GROUPS = {
