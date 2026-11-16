@@ -89,7 +89,8 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   Newton's included, plus ``--equal-time`` runs): the frame and solve time steps, Young's modulus and density (a range
   over the tetrahedra of the scene file the runs name, :func:`scene_material`), the budgets as substeps x outer
   iterations x iterations per subproblem (VBD sweeps for the VBD family at equal sweeps, the equal-time runs' sweeps
-  per subproblem, Newton steps with Newton's CG cap from its output, :func:`newton_cg_cap`; ``--newton-config`` reads
+  per subproblem, Newton steps with Newton's CG cap and relative tolerance from its output, :func:`newton_cg_params`;
+  ``--newton-config`` reads
   a scene config's for a Newton run that hasn't finished, marked) and the convergence tolerances, all from the runs'
   own metadata (:func:`setup_rows`, which refuses a scene whose runs disagree). ``--notes`` (:func:`load_setup_notes`)
   adds footnotes per cell, explained in the caption; BDF2 scenes are marked.
@@ -1309,28 +1310,34 @@ def scene_material(path: str) -> dict | None:
     return {"E": (float(young.min()), float(young.max())), "rho": (float(rho.min()), float(rho.max()))}
 
 
-def newton_cg_cap(path: str) -> int | None:
-    """GPU Newton's cap on CG iterations per Newton step, from a Newton run's output (.h5, the profile's sibling):
-    ``params/Solver/Newton/LinearSolver``'s ``n_max_iters``; None without one."""
+def newton_cg_params(path: str) -> dict | None:
+    """GPU Newton's CG settings per Newton step, from a Newton run's output (.h5, the profile's sibling):
+    ``params/Solver/Newton/LinearSolver``'s cap ``n_max_iters`` as ``cg`` and tolerances ``rtol``, ``atol`` as
+    ``cg_rtol``, ``cg_atol`` (Warp's CG stops at a residual norm of max(atol, rtol |g|), g the step's right-hand side,
+    the gradient); None without one."""
     import h5py
 
     try:
         with h5py.File(path, "r") as f:
-            return int(f["params/Solver/Newton/LinearSolver"].attrs["n_max_iters"])
+            attrs = f["params/Solver/Newton/LinearSolver"].attrs
+            return {"cg": int(attrs["n_max_iters"]), "cg_rtol": float(attrs["rtol"]), "cg_atol": float(attrs["atol"])}
     except (OSError, KeyError):
         return None
 
 
 def config_newton_budget(path: str) -> dict:
     """A scene config's (TOML, every parameter written out: ``configs/scenes``) Newton budget, for a scene whose
-    Newton run hasn't finished: substeps, outer iterations, Newton steps per subproblem and the CG cap."""
+    Newton run hasn't finished: substeps, outer iterations, Newton steps per subproblem, the CG cap and tolerances
+    (:func:`newton_cg_params`)."""
     import tomllib
 
     with open(path, "rb") as f:
         config = tomllib.load(f)
     newton = config["Solver"]["Newton"]
+    cg = newton["LinearSolver"]
     return {"substeps": int(config["Integration"]["substeps"]), "outer": int(newton["n_max_iters"]),
-            "inner": int(newton["newton"]["n_max_iters"]), "cg": int(newton["LinearSolver"]["n_max_iters"])}
+            "inner": int(newton["newton"]["n_max_iters"]), "cg": int(cg["n_max_iters"]), "cg_rtol": float(cg["rtol"]),
+            "cg_atol": float(cg["atol"])}
 
 
 def load_setup_notes(path: str) -> dict[str, dict[str, str]]:
@@ -1361,16 +1368,17 @@ def _one(values: dict, what: str, scene: str):
 
 
 def setup_rows(runs: list[dict], equal_time: list[dict] | None = None, materials: dict | None = None,
-               cg_caps: dict | None = None, newton_configs: dict | None = None) -> list[dict]:
+               cg_params: dict | None = None, newton_configs: dict | None = None) -> list[dict]:
     """The ``setup`` table's data, one dict per scene (:func:`by_scene` order of ``runs``): frame step ``dt``,
     ``substeps``, ``bdf``, ``material`` (``materials[scene]``, :func:`scene_material`), the VBD family's equal-sweep
     ``budget`` (substeps, outer iterations, sweeps per subproblem), the ``equal_time`` runs' sweeps per subproblem by
-    solver, ``newton`` (substeps, outer iterations, Newton steps, CG cap from ``cg_caps[scene]``, ``from_config``
+    solver, ``newton`` (substeps, outer iterations, Newton steps, CG cap and tolerances from ``cg_params[scene]``,
+    :func:`newton_cg_params`, ``from_config``
     when it comes from ``newton_configs[scene]``, :func:`config_newton_budget`, for a scene without a Newton run) and
     the convergence ``tolerances`` (rstol, astol, ftol, smoothing passes, check interval). Every value is what the
     runs ran with (their metadata). Raises ValueError where a scene's runs differ in the time step, substeps, BDF
     order or tolerances, or its VBD-family runs (or equal-time runs) in anything but their sweeps."""
-    materials, cg_caps, newton_configs = materials or {}, cg_caps or {}, newton_configs or {}
+    materials, cg_params, newton_configs = materials or {}, cg_params or {}, newton_configs or {}
     extra = by_scene(equal_time or [])
     rows = []
     for scene, scene_runs in by_scene(runs).items():
@@ -1400,8 +1408,8 @@ def setup_rows(runs: list[dict], equal_time: list[dict] | None = None, materials
             if r["metadata"].get("solver") == "Newton":
                 params = r["metadata"].get("solver_params") or {}
                 newton = {"substeps": substeps, "outer": int(params["n_max_iters"]),
-                          "inner": int(params["newton"]["n_max_iters"]), "cg": cg_caps.get(scene),
-                          "from_config": False}
+                          "inner": int(params["newton"]["n_max_iters"]), "cg": None, "cg_rtol": None,
+                          "cg_atol": None, **(cg_params.get(scene) or {}), "from_config": False}
         if newton is None and scene in newton_configs:
             newton = {**newton_configs[scene], "from_config": True}
         rows.append({"scene": scene, "dt": dt, "substeps": substeps, "bdf": bdf, "material": materials.get(scene),
@@ -1425,6 +1433,12 @@ def _si(lo: float, hi: float, unit: str) -> str:
     return f"{a} {prefix}{unit}" if a == b else f"{a}--{b} {prefix}{unit}"
 
 
+def _power(v: float) -> str:
+    """A tolerance: a power of ten as $10^{e}$, else three significant digits."""
+    e = np.log10(v) if v > 0 else np.nan
+    return f"$10^{{{int(round(e))}}}$" if np.isfinite(e) and abs(e - round(e)) < 1e-6 else _num(v)
+
+
 def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None) -> str:
     """The ``setup`` table (booktabs) of :func:`setup_rows`: a line per scene with its time steps, material, budgets
     and tolerances; ``notes`` (:func:`load_setup_notes`) become footnote marks explained in the caption, plus
@@ -1441,6 +1455,8 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
                 letters.append(marks[text])
         return value + (rf"$^{{\mathrm{{{','.join(letters)}}}}}$" if letters else "")
 
+    atols = {r["newton"]["cg_atol"] for r in rows if r["newton"] and r["newton"].get("cg_atol") is not None}
+    one_atol = len(atols) <= 1
     smoothing = {r["tolerances"]["smoothing"] for r in rows}
     intervals = {r["tolerances"]["check_interval"] for r in rows}
     with_k = len(smoothing) > 1
@@ -1466,6 +1482,8 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
             newton = cell(newton, s, "newton", "from its scene config: the run hadn't finished" if n["from_config"]
                           else None)
         cg = "--" if n is None or n.get("cg") is None else str(n["cg"])
+        if n is not None and n.get("cg_rtol") is not None:
+            cg += ", " + _power(n["cg_rtol"]) + ("" if one_atol else ", " + _power(n["cg_atol"]))
         t = r["tolerances"]
         tol = [_num(t["rstol"]), _num(t["astol"]), _num(t["ftol"])]
         tol[0] = cell(tol[0], s, "tolerances")
@@ -1482,13 +1500,16 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
                r"$\times$ iterations per subproblem: VBD sweeps for the VBD-family solvers at equal sweeps (VBD, "
                r"AAAVBD, Chebyshev, Anderson), the sweeps per subproblem of VBD, Chebyshev and Anderson at equal time "
                r"(AAAVBD's time per step, the other factors unchanged), Newton steps for Newton, with the cap on its "
-               r"conjugate-gradient iterations per Newton step; and the tolerances of the stationarity test (relative "
+               r"conjugate-gradient (CG) iterations per Newton step and its relative tolerance $r$ (CG stops at a "
+               r"residual norm of $\max(a, r \lVert g \rVert)$, $g$ the gradient, the Newton step's right-hand side"
+               + (rf", and $a = {_power(next(iter(atols)))[1:-1]}$ in every scene" if one_atol and atols else
+                  r", with the absolute tolerance $a$ after $r$") + r"); and the tolerances of the stationarity test (relative "
                r"$r_\mathrm{tol}$, absolute $a_\mathrm{tol}$) and of the feasibility test ($f_\mathrm{tol}$), the same "
                r"for every solver of a scene" + (" (" + ", ".join(common) + " in every scene)" if common else "") + "."
                + "".join(rf" $^{{\mathrm{{{m}}}}}${_latex_text(text)}." for text, m in marks.items()) + "}")
     header = (r"Scene & \multicolumn{2}{c}{$h$ (s)} & $E$ & $\rho$ (kg/m$^3$) & VBD family & Equal time & Newton & CG & "
               r"$r_\mathrm{tol}$ & $a_\mathrm{tol}$ & $f_\mathrm{tol}$" + (" & $k$" if with_k else "") + r" \\")
-    sub = (r" & frame & solve & & & sweeps & sweeps (VBD / Cheb. / And.) & Newton steps & cap & & &"
+    sub = (r" & frame & solve & & & sweeps & sweeps (VBD / Cheb. / And.) & Newton steps & cap, $r$ & & &"
            + (" &" if with_k else "") + r" \\")
     out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:setup}", r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{l cc cc ccc r ccc" + (" c" if with_k else "") + "}", r"\toprule", header, sub,
@@ -1737,16 +1758,16 @@ def main():
     labels = _parse_labels(args.labels)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     if args.kind == "setup":
-        materials, cg_caps = {}, {}
+        materials, cg_params = {}, {}
         for path, run in zip(args.kernels, kernels):
             key = scene_key(run)
             scene = str(run["metadata"].get("scene") or "")
             if key not in materials and scene.endswith(".h5"):  # a scene file, not a Dump's "path:group"
                 materials[key] = scene_material(scene)
             if run["metadata"].get("solver") == "Newton":
-                cg_caps[key] = newton_cg_cap(os.path.splitext(path)[0] + ".h5")
+                cg_params[key] = newton_cg_params(os.path.splitext(path)[0] + ".h5")
         configs = {k: config_newton_budget(v) for k, v in _parse_labels(args.newton_config).items()}
-        rows = setup_rows(kernels, [results.load(p) for p in args.equal_time], materials, cg_caps, configs)
+        rows = setup_rows(kernels, [results.load(p) for p in args.equal_time], materials, cg_params, configs)
         notes = load_setup_notes(args.notes) if args.notes else None
         with open(args.output, "w", encoding="utf-8") as f:
             f.write("% Needs \\usepackage{booktabs}\n\n" + latex_setup(rows, labels, notes))
@@ -2101,32 +2122,46 @@ class TestPaperFigures(unittest.TestCase):
             self.assertIsNone(scene_material(os.path.join(d, "missing.h5")))
             newton_h5 = os.path.join(d, "newton.h5")
             with h5py.File(newton_h5, "w") as f:
-                f.create_group("params/Solver/Newton/LinearSolver").attrs["n_max_iters"] = 3000
-            self.assertEqual(newton_cg_cap(newton_h5), 3000)
+                f.create_group("params/Solver/Newton/LinearSolver").attrs.update(n_max_iters=3000, rtol=1e-6,
+                                                                                  atol=1e-10)
+            self.assertEqual(newton_cg_params(newton_h5), {"cg": 3000, "cg_rtol": 1e-6, "cg_atol": 1e-10})
+            self.assertIsNone(newton_cg_params(os.path.join(d, "missing.h5")))
             config = os.path.join(d, "Mat.60Hz.toml")  # a scene config whose Newton run hasn't finished
             with open(config, "w") as f:
                 f.write("[Integration]\nsubsteps = 1\n[Solver.Newton]\nn_max_iters = 5\n"
-                        "[Solver.Newton.newton]\nn_max_iters = 1\n[Solver.Newton.LinearSolver]\nn_max_iters = 4000\n")
+                        "[Solver.Newton.newton]\nn_max_iters = 1\n[Solver.Newton.LinearSolver]\nn_max_iters = 4000\n"
+                        "rtol = 1e-9\natol = 1e-10\n")
             configs = {"mat": config_newton_budget(config)}
-            self.assertEqual(configs["mat"], {"substeps": 1, "outer": 5, "inner": 1, "cg": 4000})
+            self.assertEqual(configs["mat"], {"substeps": 1, "outer": 5, "inner": 1, "cg": 4000, "cg_rtol": 1e-9,
+                                              "cg_atol": 1e-10})
             banner, mat = "path/to/banner.h5", "path/to/mat.h5"
             runs = [run(v, banner) for v in VBD_FAMILY] + [run("Newton", banner, newton=(10, 2))]
             runs += [run(v, mat, sweeps=80, outer=5, substeps=1, rstol=0.08) for v in VBD_FAMILY]
             equal_time = [run(v, banner, sweeps=n) for v, n in zip(EQUAL_TIME_SOLVERS, (120, 110, 105))]
-            rows = setup_rows(runs, equal_time, {"banner": scene_material(scene)}, {"banner": 3000}, configs)
+            rows = setup_rows(runs, equal_time, {"banner": scene_material(scene)},
+                              {"banner": newton_cg_params(newton_h5)}, configs)
         self.assertEqual([r["scene"] for r in rows], ["banner", "mat"])
         self.assertEqual(rows[0]["budget"], (2, 1, 100))
         self.assertEqual(rows[0]["equal_time"], {"VBD": 120, "Chebyshev": 110, "AndersonSolver": 105})
-        self.assertEqual(rows[0]["newton"], {"substeps": 2, "outer": 10, "inner": 2, "cg": 3000, "from_config": False})
+        self.assertEqual(rows[0]["newton"], {"substeps": 2, "outer": 10, "inner": 2, "cg": 3000, "cg_rtol": 1e-6,
+                                             "cg_atol": 1e-10, "from_config": False})
         self.assertTrue(rows[1]["newton"]["from_config"])
         text = latex_setup(rows, {"banner": "Birthday banner"}, {"mat": {"tolerances": "4x the shared ones"}})
+        # The CG cap with its relative tolerance; the absolute one, the same in every scene, in the caption
         self.assertIn(r"Birthday banner & 1/60 & 1/120 & 1--100 MPa & 1000 & 2 $\times$ 1 $\times$ 100 & "
-                      r"120 / 110 / 105 & 2 $\times$ 10 $\times$ 2 & 3000 & 0.02 & 0.1 & 0.5 \\", text)
+                      r"120 / 110 / 105 & 2 $\times$ 10 $\times$ 2 & 3000, $10^{-6}$ & 0.02 & 0.1 & 0.5 \\", text)
         self.assertIn(r"mat & 1/60 & 1/60 & -- & -- & 1 $\times$ 5 $\times$ 80 & -- & 1 $\times$ 5 $\times$ "
-                      r"1$^{\mathrm{a}}$ & 4000 & 0.08$^{\mathrm{b}}$ & 0.4 & 0.5 \\", text)
+                      r"1$^{\mathrm{a}}$ & 4000, $10^{-9}$ & 0.08$^{\mathrm{b}}$ & 0.4 & 0.5 \\", text)
+        self.assertIn(r"$\max(a, r \lVert g \rVert)$", text)
+        self.assertIn(r"and $a = 10^{-10}$ in every scene", text)
         self.assertIn(r"$^{\mathrm{a}}$from its scene config: the run hadn't finished.", text)
         self.assertIn(r"$^{\mathrm{b}}$4x the shared ones.", text)
         self.assertIn("4 smoothing passes, a convergence check every 20 sweeps in every scene", text)
+        # Different absolute tolerances go into the cells, after the relative one
+        rows[1]["newton"]["cg_atol"] = 1e-8
+        text = latex_setup(rows, {})
+        self.assertIn(r"4000, $10^{-9}$, $10^{-8}$", text)
+        self.assertIn(r"with the absolute tolerance $a$ after $r$", text)
         # Runs of the VBD family with different budgets aren't one equal-sweep budget
         with self.assertRaisesRegex(ValueError, "equal-sweep budgets"):
             setup_rows(runs[:3] + [run("AndersonSolver", banner, sweeps=90)])
