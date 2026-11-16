@@ -1612,20 +1612,25 @@ def latex_scene_setup(rows: list[dict], labels: dict[str, str],
 
 def _simulation_caption(t: dict, style: str) -> str:
     """The ``simulation`` table's caption without its footnotes, its quantities written as :data:`SIMULATION_SYMBOLS`
-    (LaTeX: their macros; Markdown: plain; Matplotlib: plain, mathtext for powers of ten)."""
+    (LaTeX: their macros; Markdown: plain; Matplotlib: mathtext, without spaces inside so that wrapping can't split
+    one)."""
     if style == "latex":
         sym = lambda *keys: "$" + r" \times ".join("\\" + SIMULATION_SYMBOLS[k][0] for k in keys) + "$"  # noqa: E731
         step = r"$\SimStep/\SimSubsteps$"
         norm = r"$\max(\SimCGAtol, \SimCGRtol \lVert g \rVert)$"
+    elif style == "mpl":
+        sym = lambda *keys: " × ".join(SIMULATION_SYMBOLS[k][3] for k in keys)  # noqa: E731
+        step = "$h/s$"
+        norm = r"$\max(a_\mathrm{CG},r_\mathrm{CG}|g|)$"
     else:
         sym = lambda *keys: " × ".join(SIMULATION_SYMBOLS[k][2] for k in keys)  # noqa: E731
         step = "h/s"
-        norm = "max(a_CG, r_CG‖g‖)" if style == "markdown" else "max(a_CG, r_CG|g|)"
-    g = "$g$" if style == "latex" else "g"
+        norm = "max(a_CG, r_CG‖g‖)"
+    g = "g" if style == "markdown" else "$g$"
     if t["atol"] is not None:
         value = _power(t["atol"], style)
         atol = (rf", and $\SimCGAtol = {value[1:-1]}$ in every scene" if style == "latex"
-                else f", and a_CG = {value} in every scene")
+                else f", and {sym('cg_a')} = {value} in every scene")
     else:
         atol = f", with the absolute tolerance {sym('cg_a')} after {sym('cg_r')}"
     return (f"Per scene: the frame time step {sym('h')}, split into {sym('s')} substeps, so that each solve's time "
@@ -1803,8 +1808,9 @@ def _plot_table(title: str, headers: list[str], body: list[list[str]], widths: l
             c.PAD = 0.03
     fig.canvas.draw()
     bottom = table.get_window_extent(fig.canvas.get_renderer()).transformed(fig.transFigure.inverted()).y0
-    notes_text = "\n".join(textwrap.fill(SETUP_STYLES["mpl"]["mark"](m) + " " + text, 180) for m, text in notes)
-    fig.text(0.04, bottom - 0.03, textwrap.fill(caption, 180) + ("\n\n" + notes_text if notes else ""),
+    chars = int(180 * size[0] / 11.69)  # the caption's line length: 180 characters across a landscape A4 page
+    notes_text = "\n".join(textwrap.fill(SETUP_STYLES["mpl"]["mark"](m) + " " + text, chars) for m, text in notes)
+    fig.text(0.04, bottom - 0.03, textwrap.fill(caption, chars) + ("\n\n" + notes_text if notes else ""),
              fontsize=9, va="top", color=INK, linespacing=1.4)
     return fig
 
@@ -2570,7 +2576,14 @@ class TestPaperFigures(unittest.TestCase):
                       markdown_scene_setup(rows, labels, notes))
         setup = plot_scene_setup(rows, labels, notes).axes[0].tables[0]
         self.assertEqual([setup[0, c].get_text().get_text() for c in (3, 4)], ["$E$", r"$\nu$"])
+        caption = setup.figure.texts[-1].get_text()  # wrapped to the small page: 180 characters across landscape A4
+        self.assertLessEqual(max(len(line) for line in caption.split("\n")), int(180 * 8.27 / 11.69))
         plt.close("all")
+        # The PDF's caption writes the symbols in mathtext, with no space inside one, so wrapping can't split it
+        caption = _simulation_caption(_simulation_table(rows, labels, notes, "mpl"), "mpl")
+        for symbol in (r"$n_\mathrm{CG}$", r"$\epsilon_r$", r"$\max(a_\mathrm{CG},r_\mathrm{CG}|g|)$",
+                       r"$a_\mathrm{CG}$ = $10^{-10}$", "$s$ × $m$ × $n$"):
+            self.assertIn(symbol, caption)
         fig = plot_simulation(rows, labels, notes)
         table = fig.axes[0].tables[0]
         self.assertEqual(table[0, 14].get_text().get_text(), "Convergence\ntolerances")  # spanning, wrapped to the group
