@@ -85,11 +85,11 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   very far (a non-finite residual or speed, or a node faster than :data:`BLOWUP_SPEED`), else ``stopped at t = X s``
   for a run whose output ends before the scene's longest run. Scene labels wrap over the scene's lines
   (``multirow``) and outcome notes within their cell, so the table fits a two-column paper's ``table*``.
-- ``materials`` and ``simulation``: the paper's two LaTeX ``table*`` of the scenes' setup (maintainer, 2026-11-16:
+- ``scene_setup`` and ``simulation``: the paper's two LaTeX ``table*`` of the scenes' setup (maintainer, 2026-11-16:
   one table was too wide), a line per scene, from production runs at equal sweeps (Newton's included) plus
   ``--equal-time`` runs, every value from the runs' own metadata (:func:`setup_rows`, which refuses a scene whose
-  runs disagree). ``materials``: Young's modulus and density, ranges over the tetrahedra of the scene file the runs
-  name (:func:`scene_material`). ``simulation``: the frame step h (each solve's is h / substeps), the budgets as
+  runs disagree). ``scene_setup``: the mesh's nodes and tetrahedra (as the ``scenes`` table), Young's modulus and
+  density, ranges over the tetrahedra of the scene file the runs name (:func:`scene_material`). ``simulation``: the frame step h (each solve's is h / substeps), the budgets as
   substeps x outer iterations x iterations per subproblem (VBD sweeps for the VBD family at equal sweeps, the
   equal-time runs' sweeps per subproblem, Newton steps with Newton's CG cap and relative tolerance from its output,
   :func:`newton_cg_params`; ``--newton-config`` reads a scene config's for a Newton run that hasn't finished,
@@ -97,7 +97,7 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   column separation keep it within the text width. ``--notes`` (:func:`load_setup_notes`) adds footnotes per cell,
   explained in the caption; BDF2 scenes are marked. Readable copies go next to each .tex, for reading without
   LaTeX: ``.md`` and a ``.pdf`` drawn by Matplotlib (:func:`markdown_simulation`, :func:`plot_simulation`, and the
-  materials' counterparts), with the same cells, caption and footnotes.
+  scene setup's counterparts), with the same cells, caption and footnotes.
 - ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
   solver's median smoothed stationarity ratio over its solves (``status_ratio.smoothed_test_ratio`` only, as the
   other figures; runs without smoothed ratios give no point), one line per solver, divided by AAAVBD's at the same
@@ -1289,7 +1289,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
 
 VBD_FAMILY = ("VBD", "AAAVBD", "Chebyshev", "AndersonSolver")
 EQUAL_TIME_SOLVERS = ("VBD", "Chebyshev", "AndersonSolver")  # simulation: the equal-time column's order
-# materials, simulation: the footnote columns of --notes (see load_setup_notes)
+# scene_setup, simulation: the footnote columns of --notes (see load_setup_notes)
 SETUP_NOTE_COLUMNS = ("scene", "time_step", "material", "budget", "equal_time", "newton", "tolerances")
 
 
@@ -1377,14 +1377,15 @@ def _one(values: dict, what: str, scene: str):
 def setup_rows(runs: list[dict], equal_time: list[dict] | None = None, materials: dict | None = None,
                cg_params: dict | None = None, newton_configs: dict | None = None) -> list[dict]:
     """The ``setup`` table's data, one dict per scene (:func:`by_scene` order of ``runs``): frame step ``dt``,
-    ``substeps``, ``bdf``, ``material`` (``materials[scene]``, :func:`scene_material`), the VBD family's equal-sweep
+    ``substeps``, ``bdf``, the mesh's ``nodes`` and ``tets`` (``n_nodes``, ``n_elements``), ``material``
+    (``materials[scene]``, :func:`scene_material`), the VBD family's equal-sweep
     ``budget`` (substeps, outer iterations, sweeps per subproblem), the ``equal_time`` runs' sweeps per subproblem by
     solver, ``newton`` (substeps, outer iterations, Newton steps, CG cap and tolerances from ``cg_params[scene]``,
     :func:`newton_cg_params`, ``from_config``
     when it comes from ``newton_configs[scene]``, :func:`config_newton_budget`, for a scene without a Newton run) and
     the convergence ``tolerances`` (rstol, astol, ftol, smoothing passes, check interval). Every value is what the
     runs ran with (their metadata). Raises ValueError where a scene's runs differ in the time step, substeps, BDF
-    order or tolerances, or its VBD-family runs (or equal-time runs) in anything but their sweeps."""
+    order, tolerances or mesh size, or its VBD-family runs (or equal-time runs) in anything but their sweeps."""
     materials, cg_params, newton_configs = materials or {}, cg_params or {}, newton_configs or {}
     extra = by_scene(equal_time or [])
     rows = []
@@ -1396,6 +1397,7 @@ def setup_rows(runs: list[dict], equal_time: list[dict] | None = None, materials
                          for r in of}, what, scene)
 
         dt = shared(lambda r: round(float(r["metadata"]["dt"]), 9), "dt")
+        mesh = shared(lambda r: (r["metadata"].get("n_nodes"), r["metadata"].get("n_elements")), "mesh size")
         substeps = shared(lambda r: int(r["metadata"].get("substeps", 1)), "substeps")
         bdf = shared(lambda r: int(r["metadata"].get("bdf_order", 1)), "BDF order")
         tolerances = shared(lambda r: tuple((r["metadata"].get("convergence_params") or {}).get(k) for k in
@@ -1419,7 +1421,8 @@ def setup_rows(runs: list[dict], equal_time: list[dict] | None = None, materials
                           "cg_atol": None, **(cg_params.get(scene) or {}), "from_config": False}
         if newton is None and scene in newton_configs:
             newton = {**newton_configs[scene], "from_config": True}
-        rows.append({"scene": scene, "dt": dt, "substeps": substeps, "bdf": bdf, "material": materials.get(scene),
+        rows.append({"scene": scene, "dt": dt, "substeps": substeps, "bdf": bdf, "nodes": mesh[0], "tets": mesh[1],
+                     "material": materials.get(scene),
                      "budget": budget, "equal_time": sweeps, "newton": newton,
                      "tolerances": dict(zip(("rstol", "astol", "ftol", "smoothing", "check_interval"), tolerances))})
     return rows
@@ -1433,7 +1436,7 @@ def _step_fraction(h: float) -> str:
 
 _SUPERSCRIPT = dict(zip("0123456789-,abcdefghijklmnoprstuvwxyz",
                         "⁰¹²³⁴⁵⁶⁷⁸⁹⁻,ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ"))
-# materials, simulation: how the tables' three renderings (LaTeX, Markdown, the PDF drawn by Matplotlib) write a product, a range,
+# scene_setup, simulation: how the tables' three renderings (LaTeX, Markdown, the PDF drawn by Matplotlib) write a product, a range,
 # a power of ten, a footnote mark, a note's text and a scene label
 SETUP_STYLES = {
     "latex": {"times": r" $\times$ ", "dash": "--", "power": lambda e: f"$10^{{{e}}}$",
@@ -1479,10 +1482,11 @@ def _note_marker(style: str, notes: dict[str, dict[str, str]] | None):
     return cell, marks
 
 
-def _materials_table(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None,
-                     style: str) -> dict:
-    """The ``materials`` table's cells in one of :data:`SETUP_STYLES`: ``body`` (scene, E, rho per scene) and the
-    footnotes of its ``material`` notes as (mark, text)."""
+def _scene_setup_table(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None,
+                       style: str) -> dict:
+    """The ``scene_setup`` table's cells in one of :data:`SETUP_STYLES`: ``body`` (per scene: its label, the mesh's
+    nodes and tetrahedra in the ``scenes`` table's format, E and rho) and the footnotes of its ``material`` notes as
+    (mark, text)."""
     st = SETUP_STYLES[style]
     cell, marks = _note_marker(style, notes)
     body = []
@@ -1492,7 +1496,8 @@ def _materials_table(rows: list[dict], labels: dict[str, str], notes: dict[str, 
         rho = st["none"] if material is None else (
             _num(material["rho"][0]) if material["rho"][0] == material["rho"][1]
             else f"{_num(material['rho'][0])}{st['dash']}{_num(material['rho'][1])}")
-        body.append([st["label"](labels.get(s, s)), cell(young, s, "material"), rho])
+        size = [st["none"] if v is None else _compact(v) for v in (r["nodes"], r["tets"])]
+        body.append([st["label"](labels.get(s, s)), *size, cell(young, s, "material"), rho])
     return {"body": body, "notes": [(m, text) for text, m in marks.items()]}
 
 
@@ -1542,17 +1547,20 @@ def _simulation_table(rows: list[dict], labels: dict[str, str], notes: dict[str,
             "atol": next(iter(atols)) if one_atol and atols else None}
 
 
-SCENE_LABEL_WIDTH_SETUP = "2.4cm"  # materials, simulation: the scene column, its label wrapped
+SCENE_LABEL_WIDTH_SETUP = "2.4cm"  # scene_setup, simulation: the scene column, its label wrapped
 
 
-def latex_materials(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None) -> str:
-    """The ``materials`` table (booktabs) of :func:`setup_rows`: Young's modulus and density per scene."""
-    t = _materials_table(rows, labels, notes, "latex")
-    caption = (r"\caption{\textbf{Scene materials.} Young's modulus $E$ and density $\rho$ of each scene's bodies, a "
-               r"range where bodies or regions differ."
+def latex_scene_setup(rows: list[dict], labels: dict[str, str],
+                      notes: dict[str, dict[str, str]] | None = None) -> str:
+    """The ``scene_setup`` table (booktabs) of :func:`setup_rows`: per scene the mesh's size and its bodies' Young's
+    modulus and density."""
+    t = _scene_setup_table(rows, labels, notes, "latex")
+    caption = (r"\caption{\textbf{Scene setup.} Per scene: its mesh's nodes and tetrahedra, and the Young's modulus "
+               r"$E$ and density $\rho$ of its bodies, a range where bodies or regions differ."
                + "".join(rf" $^{{\mathrm{{{m}}}}}${_latex_text(text)}." for m, text in t["notes"]) + "}")
-    out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:materials}", r"\setlength{\tabcolsep}{4pt}",
-           r"\begin{tabular}{lcc}", r"\toprule", r"Scene & $E$ & $\rho$ (kg/m$^3$) \\", r"\midrule",
+    out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:scene_setup}",
+           r"\setlength{\tabcolsep}{4pt}", r"\begin{tabular}{lrrcc}", r"\toprule",
+           r"Scene & Nodes & Tets & $E$ & $\rho$ (kg/m$^3$) \\", r"\midrule",
            *[" & ".join(cells) + r" \\" for cells in t["body"]], r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
@@ -1611,7 +1619,7 @@ def latex_simulation(rows: list[dict], labels: dict[str, str], notes: dict[str, 
     return "\n".join(out) + "\n"
 
 
-MATERIALS_HEADERS = ["Scene", "E", "ρ (kg/m³)"]
+SCENE_SETUP_HEADERS = ["Scene", "Nodes", "Tets", "E", "ρ (kg/m³)"]
 
 
 def _simulation_headers(with_k: bool) -> list[str]:
@@ -1629,13 +1637,15 @@ def _markdown_table(title: str, headers: list[str], body: list[list[str]], capti
     return "\n".join(lines) + "\n"
 
 
-def markdown_materials(rows: list[dict], labels: dict[str, str],
-                       notes: dict[str, dict[str, str]] | None = None) -> str:
-    """The ``materials`` table as Markdown, for reading without LaTeX."""
-    t = _materials_table(rows, labels, notes, "markdown")
-    return _markdown_table("Scene materials", MATERIALS_HEADERS, t["body"],
-                           "Young's modulus E and density ρ of each scene's bodies, a range where bodies or regions "
-                           "differ.", t["notes"])
+SCENE_SETUP_CAPTION = ("Per scene: its mesh's nodes and tetrahedra (tets), and the Young's modulus E and density ρ "
+                       "of its bodies, a range where bodies or regions differ.")
+
+
+def markdown_scene_setup(rows: list[dict], labels: dict[str, str],
+                         notes: dict[str, dict[str, str]] | None = None) -> str:
+    """The ``scene_setup`` table as Markdown, for reading without LaTeX."""
+    t = _scene_setup_table(rows, labels, notes, "markdown")
+    return _markdown_table("Scene setup", SCENE_SETUP_HEADERS, t["body"], SCENE_SETUP_CAPTION, t["notes"])
 
 
 def markdown_simulation(rows: list[dict], labels: dict[str, str],
@@ -1705,11 +1715,10 @@ def _plot_table(title: str, headers: list[str], body: list[list[str]], widths: l
     return fig
 
 
-def plot_materials(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None):
-    """The ``materials`` table drawn by Matplotlib (a portrait-friendly page: three columns)."""
-    t = _materials_table(rows, labels, notes, "mpl")
-    return _plot_table("Scene materials", MATERIALS_HEADERS, t["body"], [24, 14, 12],
-                       "Young's modulus E and density ρ of each scene's bodies, a range where bodies or regions differ.",
+def plot_scene_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None):
+    """The ``scene_setup`` table drawn by Matplotlib (a small page: five columns)."""
+    t = _scene_setup_table(rows, labels, notes, "mpl")
+    return _plot_table("Scene setup", SCENE_SETUP_HEADERS, t["body"], [24, 8, 8, 14, 12], SCENE_SETUP_CAPTION,
                        t["notes"], size=(8.27, 6.0))
 
 
@@ -1911,12 +1920,12 @@ def _parse_labels(items: list[str]) -> dict[str, str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Paper figures and tables of profiling results.")
-    parser.add_argument("kind", choices=["timeline", "solvers", "slices", "sweeps", "budget", "scenes", "lead", "materials",
+    parser.add_argument("kind", choices=["timeline", "solvers", "slices", "sweeps", "budget", "scenes", "lead", "scene_setup",
                                              "simulation"],
                         help="What to write (see the docstring).")
     parser.add_argument("kernels", nargs="+",
                         help="Results (.json), one per row: kernels-backend runs (timeline, solvers, slices, sweeps) "
-                        "or production runs (budget, scenes; materials, simulation: at equal sweeps, Newton's "
+                        "or production runs (budget, scenes; scene_setup, simulation: at equal sweeps, Newton's "
                         "included; lead: the runs compared over their full common span).")
     parser.add_argument("--production", nargs="*", default=[],
                         help="Production results (.json), paired with the kernels results by scene and solver.")
@@ -1948,11 +1957,11 @@ def main():
     parser.add_argument("--window", nargs="*", default=[], metavar="SCENE=T0:T1",
                         help="lead: the time window (s) of a scene's --windowed runs, e.g. armadillo-pull=0:3.")
     parser.add_argument("--equal-time", nargs="*", default=[], dest="equal_time",
-                        help="materials, simulation: the equal-time production runs (their sweeps per subproblem get a column).")
+                        help="scene_setup, simulation: the equal-time production runs (their sweeps per subproblem get a column).")
     parser.add_argument("--notes", default=None, metavar="FILE.toml",
-                        help="materials, simulation: per scene, footnotes on its cells (see load_setup_notes).")
+                        help="scene_setup, simulation: per scene, footnotes on its cells (see load_setup_notes).")
     parser.add_argument("--newton-config", nargs="*", default=[], dest="newton_config", metavar="SCENE=FILE.toml",
-                        help="materials, simulation: a scene config whose Newton budget stands in for a Newton run that hasn't "
+                        help="scene_setup, simulation: a scene config whose Newton budget stands in for a Newton run that hasn't "
                         "finished (marked in the table).")
     parser.add_argument("--step-times", action="store_true", dest="step_times",
                         help="solvers, budget: add a column with the step time distribution.")
@@ -1965,7 +1974,7 @@ def main():
     production = pair_production(kernels, production_runs)
     labels = _parse_labels(args.labels)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
-    if args.kind in ("materials", "simulation"):
+    if args.kind in ("scene_setup", "simulation"):
         materials, cg_params = {}, {}
         for path, run in zip(args.kernels, kernels):
             key = scene_key(run)
@@ -1977,7 +1986,8 @@ def main():
         configs = {k: config_newton_budget(v) for k, v in _parse_labels(args.newton_config).items()}
         rows = setup_rows(kernels, [results.load(p) for p in args.equal_time], materials, cg_params, configs)
         notes = load_setup_notes(args.notes) if args.notes else None
-        latex, markdown, plot = ((latex_materials, markdown_materials, plot_materials) if args.kind == "materials"
+        latex, markdown, plot = ((latex_scene_setup, markdown_scene_setup, plot_scene_setup)
+                                 if args.kind == "scene_setup"
                                  else (latex_simulation, markdown_simulation, plot_simulation))
         with open(args.output, "w", encoding="utf-8") as f:
             f.write("% Needs \\usepackage{booktabs}\n\n" + latex(rows, labels, notes))
@@ -2387,11 +2397,12 @@ class TestPaperFigures(unittest.TestCase):
         self.assertTrue(rows[1]["newton"]["from_config"])
         labels = {"banner": "Birthday banner"}
         notes = {"mat": {"tolerances": "4x the shared ones"}, "banner": {"material": "two materials"}}
-        # Materials: E and rho per scene, its own footnotes
-        text = latex_materials(rows, labels, notes)
-        self.assertIn(r"Scene & $E$ & $\rho$ (kg/m$^3$) \\", text)
-        self.assertIn(r"Birthday banner & 1--100 MPa$^{\mathrm{a}}$ & 1000 \\", text)
-        self.assertIn(r"mat & -- & -- \\", text)
+        # Scene setup: the mesh's size (the scenes table's format), E and rho per scene, its own footnotes
+        self.assertEqual((rows[0]["nodes"], rows[0]["tets"]), (54502, 231338))
+        text = latex_scene_setup(rows, labels, notes)
+        self.assertIn(r"Scene & Nodes & Tets & $E$ & $\rho$ (kg/m$^3$) \\", text)
+        self.assertIn(r"Birthday banner & 54.5k & 231k & 1--100 MPa$^{\mathrm{a}}$ & 1000 \\", text)
+        self.assertIn(r"mat & 54.5k & 231k & -- & -- \\", text)
         self.assertIn(r"$^{\mathrm{a}}$two materials.", text)
         self.assertNotIn("4x the shared ones", text)
         # Simulation: h alone, the budgets, the CG cap with its relative tolerance (the absolute one, the same in every
@@ -2420,7 +2431,7 @@ class TestPaperFigures(unittest.TestCase):
         self.assertIn("a = 10⁻¹⁰ in every scene", md)
         self.assertIn("- ᵃ from its scene config: the run hadn't finished", md)
         self.assertIn("- ᵇ 4x the shared ones", md)
-        self.assertIn("| Birthday banner | 1–100 MPaᵃ | 1000 |", markdown_materials(rows, labels, notes))
+        self.assertIn("| Birthday banner | 54.5k | 231k | 1–100 MPaᵃ | 1000 |", markdown_scene_setup(rows, labels, notes))
         fig = plot_simulation(rows, labels, notes)
         table = fig.axes[0].tables[0]
         self.assertEqual(table[0, 7].get_text().get_text(), "Convergence\ntolerances")  # spanning, wrapped to the group
@@ -2434,7 +2445,7 @@ class TestPaperFigures(unittest.TestCase):
         heights = {(r, round(c.get_height(), 6)) for (r, _), c in table.get_celld().items()}
         self.assertEqual(len(heights), len({r for r, _ in heights}))  # one height per row: the cells line up
         with tempfile.TemporaryDirectory() as d:
-            for name, f in (("simulation", fig), ("materials", plot_materials(rows, labels, notes))):
+            for name, f in (("simulation", fig), ("scene_setup", plot_scene_setup(rows, labels, notes))):
                 f.savefig(os.path.join(d, f"{name}.pdf"))
                 self.assertGreater(os.path.getsize(os.path.join(d, f"{name}.pdf")), 1000)
                 plt.close(f)
