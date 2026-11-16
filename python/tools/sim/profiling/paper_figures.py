@@ -35,8 +35,8 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   run that blew up began to diverge, with a cross there). It has its own strip rather than sharing the residual's: penetration ratios span other decades
   (0 without contact, up to ~100 at impacts), so a shared log axis would flatten the residual curves, and eight
   curves in one strip don't read. Each strip adds its own height to the row. ``--snapshots TIME=IMAGE ...`` adds a
-  row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at
-  their times on the plots (first row only). Steps a result lacks, the warm-up steps at the seams of a run merged
+  row of simulation snapshots above (``profiling/snapshots.py`` renders them; any size and aspect, all at one height,
+  each as wide as its aspect needs), numbered, with the numbers marked at their times on the plots (first row only). Steps a result lacks, the warm-up steps at the seams of a run merged
   from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that hold them), not
   interpolated.
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
@@ -235,6 +235,7 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
 
 
 SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step residual ratios
+SNAPSHOT_GAP = 0.03  # timeline: the gap between snapshots, a fraction of their mean width
 # timeline: a step whose stationarity ratio is more than this factor times its run's rolling median at that step,
 # and at least SPIKE_MIN_RATIO, gets a marker on the residual strip (a one-solve spike the median hides:
 # ArmadilloPull.60Hz AAAVBD's 2.6e4 at its release, step 61)
@@ -588,7 +589,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     has_feasibility = [any(has_contact(run) for run in runs) for runs in runs_per_row]
     snapshots = sorted(snapshots or [])
     images = [plt.imread(path) for _, path in snapshots]
-    image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
+    # Any size and aspect: one row height, each image as wide as its aspect needs (the gaps between them included)
+    aspects = [image.shape[1] / image.shape[0] for image in images]
+    image_height = width / (sum(aspects) + SNAPSHOT_GAP * (len(images) - 1) * np.mean(aspects)) if images else 0.0
     heights = []
     for ratio, baseline, feasibility in zip(has_ratio, baselines, has_feasibility):
         strips = [0.45 if baseline is not None else 1e-4, 0.65 if ratio else 1e-4,
@@ -597,7 +600,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
     outer = fig.add_gridspec(2, 1, height_ratios=[max(image_height, 1e-3), sum(heights) + 0.45 * rows], hspace=0.12)
     if images:
-        strip_of_images = outer[0].subgridspec(1, len(images), wspace=0.03)
+        strip_of_images = outer[0].subgridspec(1, len(images), wspace=SNAPSHOT_GAP, width_ratios=aspects)
         for i, image in enumerate(images):
             ax = fig.add_subplot(strip_of_images[i])
             ax.imshow(image, interpolation="none")  # embedded in the PDF at its own resolution, not resampled
@@ -2220,6 +2223,26 @@ class TestPaperFigures(unittest.TestCase):
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
                 self.assertGreater(os.path.getsize(path), 1000)
+
+    def test_snapshot_row_aspects(self):
+        import tempfile
+
+        k = self._kernels()
+        with tempfile.TemporaryDirectory() as d:
+            paths = []
+            for name, shape in (("wide", (60, 240)), ("tall", (240, 120)), ("square", (90, 90))):
+                paths.append(os.path.join(d, f"{name}.png"))
+                plt.imsave(paths[-1], np.random.default_rng(0).random(shape))
+            fig = plot_timeline([k], [self._production(k)], ["A"],
+                                snapshots=[(0.15, paths[0]), (0.25, paths[1]), (0.35, paths[2])])
+            fig.canvas.draw()
+            extents = [ax.images[0].get_window_extent() for ax in fig.axes if ax.images]
+            self.assertEqual(len(extents), 3)
+            heights = [e.height for e in extents]
+            self.assertLess(max(heights) - min(heights), 1.0)  # one height for the row, in pixels
+            widths = np.array([e.width for e in extents])
+            np.testing.assert_allclose(widths / widths[2], [4.0, 0.5, 1.0], rtol=0.02)  # each image's own aspect
+            plt.close(fig)
 
     def test_setup_table(self):
         import tempfile
