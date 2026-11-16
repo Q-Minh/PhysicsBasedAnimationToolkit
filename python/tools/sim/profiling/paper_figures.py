@@ -9,16 +9,16 @@ backend: graph replay for the VBD family) give the true step times. Production r
 runs by scene and solver. They are separate runs whose trajectories differ slightly (contact is chaotic and
 GPU arithmetic order isn't deterministic), so they are compared as distributions, never step by step.
 
-- ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): GPU time per step over the simulated
-  time, stacked by phase group (groups under 3% of the row's GPU time fold into a top "Other" band, which has
-  a legend entry only if it reaches 3% itself), with the step time of every production run as a line in its
-  solver's color (the paired one and the scene's others, e.g. VBD). With ``--vbd-ratio`` (off by default: the
+- ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): the GPU time per step of every production
+  run over the simulated time, a line in its solver's color (the paired one and the scene's others, e.g. VBD), in a
+  plot :data:`TIMELINE_COST_HEIGHT` tall. No phase bands (maintainer, 2026-11-15): the ``solvers`` figure shows the
+  phase shares. With ``--vbd-ratio`` (off by default: the
   maintainer found it too busy) and a VBD production run, a thin strip under it shows every other production run's
   step time over VBD's at the same step, the paired run's included (:func:`vbd_time_ratio`; VBD is the baseline, so
   the strip reads as each solver's overhead or saving per step; no VBD curve, a dashed line at 1, the same rolling
   median; log axis when the curves span more than :data:`VBD_RATIO_LOG_SPAN`, else linear; steps either run lacks
   are gaps, steps from either run's detected blow-up on are left out); the cost plot then keeps only the paired
-  run's step-time line and is shorter, keeping the row's height (without the strip, the cost plot has that height).
+  run's step-time line.
   Below them, on the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median over ``--smooth`` steps, a dashed
   line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
   sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
@@ -29,8 +29,7 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut at a
   detected blow-up). It has its own strip rather than sharing the residual's: penetration ratios span other decades
   (0 without contact, up to ~100 at impacts), so a shared log axis would flatten the residual curves, and eight
-  curves in one strip don't read. The strips take their height from the cost plot, so a row is as tall as with the
-  residual strip alone. ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above
+  curves in one strip don't read. Each strip adds its own height to the row. ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above
   (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times on the plots (first
   row only). Steps a result lacks, the warm-up steps at the seams of a run merged from legs (``profiling/legs.py``),
   are gaps in every curve (with ``--bin``, the bins that hold them), not interpolated.
@@ -173,17 +172,6 @@ def group_phases(phases: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     return {g: out[g] for g in order if g in out and np.any(out[g] > 0)}
 
 
-def fold_small_groups(groups: dict[str, np.ndarray], share: float) -> dict[str, np.ndarray]:
-    """``groups`` (:func:`group_phases`) with those under ``share`` of the total time summed into :data:`OTHER`,
-    drawn last (on top of the stack)."""
-    total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
-    out = {g: v for g, v in groups.items() if g != OTHER and v.sum() >= share * total}
-    rest = [v for g, v in groups.items() if g not in out]
-    if rest:
-        out[OTHER] = np.sum(rest, axis=0)
-    return out
-
-
 def scene_key(result: dict) -> str:
     """A result's scene as a short key: the scene file's name without extension and group,
     e.g. ``basket_of_fruit`` for ``path/to/basket_of_fruit.h5:fem``."""
@@ -270,9 +258,9 @@ def ratio_table(result: dict) -> dict:
 
 def _ratio_label(name: str, table: dict) -> str:
     return name + (DECISIVE_MARK if table["decisive_fallback"] else "")
-# timeline: phase groups under this share of a row's GPU time fold into Other, which gets a legend entry only if
-# it reaches it too (thinner bands are under ~1 pt at print size)
-TIMELINE_MIN_SHARE = 0.03
+# timeline: the height (in) of a row's cost plot, the production runs' step times (maintainer, 2026-11-15: no phase
+# bands, the solvers figure shows the phase shares, so the curves need less height)
+TIMELINE_COST_HEIGHT = 0.8
 SPEED = "rms_speed"  # timeline: the per-step speed behind the residual ratios (profiling/trajectory.py)
 SPEED_NAME = "RMS speed"
 SPEED_FILL = "#d9d9d9"  # timeline: the paired run's speed behind the residual ratios
@@ -496,12 +484,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
     heights = []
     for ratio, speed, baseline, feasibility in zip(has_ratio, has_speed, baselines, has_feasibility):
-        # The strips take their height from the cost plot, so a row is as tall as it was with the residual strip
-        # alone (1.5 + 0.9 in), down to a cost plot of 0.85 in
         strips = [0.45 if baseline is not None else 1e-4, 0.65 if ratio else 0.5 if speed else 1e-4,
                   0.45 if feasibility else 1e-4]  # 1e-4: an absent strip
-        before = 1.5 + (0.9 if ratio else 0.5 if speed else 0.0)
-        heights += [max(before - sum(h for h in strips if h > 0.01), 0.85)] + strips
+        heights += [TIMELINE_COST_HEIGHT] + strips
     fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
     outer = fig.add_gridspec(2, 1, height_ratios=[max(image_height, 1e-3), sum(heights) + 0.45 * rows], hspace=0.12)
     if images:
@@ -513,17 +498,11 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             ax.text(0.04, 0.96, str(i + 1), transform=ax.transAxes, ha="left", va="top", fontsize=8,
                     fontweight="bold", color=INK)
     grid = outer[1].subgridspec(4 * rows, 1, height_ratios=heights, hspace=0.15)
-    present: list[str] = []  # phase groups with a legend entry
     solvers: dict[str, str] = {}  # drawn production runs: solver name -> color
     speeds: dict[str, object] = {}  # speeds' legend handles by label
     for r, (result, table, runs, label) in enumerate(zip(kernels, tables, runs_per_row, labels)):
-        groups = fold_small_groups(group_phases(table["phases"]), TIMELINE_MIN_SHARE)
-        total = max(sum(float(v.sum()) for v in groups.values()), 1e-12)
-        present += [g for g in groups if g not in present and groups[g].sum() >= TIMELINE_MIN_SHARE * total]
         x = bin_steps(step_seconds(result, table["t"]), bin_n)
         area = fig.add_subplot(grid[4 * r])
-        area.stackplot(x, *[bin_steps(v, bin_n) for v in groups.values()],
-                       colors=[group_color(g) for g in groups], linewidth=0)
         for run in runs:
             solvers.setdefault(_ratio_label(solver_name(run), ratio_table(run)), solver_color(run))
             # With a baseline, the other runs' step times show only as ratios to it, in the strip below
@@ -570,8 +549,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                 for ax in axes:
                     ax.axvline(t, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
                 _marker(area, t, i + 1)
-    handles = [Patch(color=group_color(g), label=g) for g in [*PHASE_GROUPS, OTHER] if g in present]
-    handles += [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
+    handles = [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
     handles += list(speeds.values())
     _legend(fig, handles, ncol=min(len(handles), 6))
     return fig
@@ -1413,12 +1391,6 @@ class TestPaperFigures(unittest.TestCase):
         groups = group_phases(table["phases"])
         self.assertEqual(list(groups), ["Vertex sweeps", "Contact detection", "Contact update", "Residuals", OTHER])
         np.testing.assert_allclose(groups["Contact detection"][-1], 2.0)
-        small = {"Vertex sweeps": np.array([90.0, 90.0]), "Residuals": np.array([2.0, 2.0]),
-                 OTHER: np.array([1.0, 1.0]), "Contact update": np.array([0.5, 0.5])}
-        folded = fold_small_groups(small, 0.03)
-        self.assertEqual(list(folded), ["Vertex sweeps", OTHER])
-        np.testing.assert_allclose(folded[OTHER], [3.5, 3.5])
-        self.assertEqual(list(fold_small_groups(small, 0.01)), ["Vertex sweeps", "Residuals", OTHER])
 
     def test_pairing_and_bins(self):
         k = [self._kernels(), self._kernels("VBD"), self._kernels(scene="path/to/capsule_bowl.h5")]
@@ -1659,9 +1631,10 @@ class TestPaperFigures(unittest.TestCase):
             image = os.path.join(d, "snap.png")
             plt.imsave(image, np.ones((30, 40, 3)))
             timeline = plot_timeline(k, p, ["A", "B"], bin_n=2, others=[[vbd], []])
-            # Contact update and residuals fold into Other; the speed fill falls back to the kernels run's
+            # No phase bands, only the production runs' step times; the speed fill falls back to the kernels run's
             self.assertEqual([t.get_text() for t in timeline.legends[0].get_texts()],
-                             ["Vertex sweeps", "Contact detection", OTHER, "AAAVBD", "VBD", "AAAVBD RMS speed"])
+                             ["AAAVBD", "VBD", "AAAVBD RMS speed"])
+            self.assertEqual(len(timeline.axes[0].collections), 0)  # no stacked areas
             solvers = plot_solvers([self._kernels("VBD"), k[0]], [p[0]], step_times=True)
             # Contact update, residuals and Other left out; no early-exit panel
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
@@ -1750,12 +1723,12 @@ class TestPaperFigures(unittest.TestCase):
         with_strip = fig.get_size_inches()[1]
         plt.close(fig)
         # By default (the strip off, the maintainer's choice): no strip, every run's step time on the cost plot in its
-        # solver's color, and the freed height goes back to the cost plot
+        # solver's color; the cost plot keeps its height, so the figure is shorter by the strip
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[runs])
         self.assertNotIn("Step time /\nVBD's", [ax.get_ylabel() for ax in fig.axes])
         self.assertEqual([line.get_color() for line in fig.axes[0].lines],
                          [SOLVER_COLORS[s] for s in ("AAAVBD", "Chebyshev", "VBD")])
-        self.assertAlmostEqual(fig.get_size_inches()[1], with_strip, places=3)
+        self.assertLess(fig.get_size_inches()[1], with_strip)
         plt.close(fig)
         # With the strip asked for but no VBD run: no strip, every run's step time on the cost plot
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[cheb]], vbd_ratio=True)
@@ -1780,7 +1753,7 @@ class TestPaperFigures(unittest.TestCase):
         no_contact["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "feasibility_ratio": 0.0}]}}
                                for s in no_contact["steps"]]
         self.assertFalse(has_contact(no_contact))
-        # Its own thin strip, last, on a log axis; the row keeps the height of the residual strip alone
+        # Its own thin strip, last, on a log axis
         vbd = self._production(self._kernels("VBD"))
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
         labels = [ax.get_ylabel() for ax in fig.axes]
@@ -1795,7 +1768,7 @@ class TestPaperFigures(unittest.TestCase):
                             for s in without["steps"]]
         fig = plot_timeline([k], [without], ["A"])  # no VBD, no contact: the cost plot and the residual strip
         self.assertNotIn("Penetration\nratio", [ax.get_ylabel() for ax in fig.axes])
-        self.assertAlmostEqual(fig.get_size_inches()[1], height, places=3)
+        self.assertLess(fig.get_size_inches()[1], height)
         plt.close(fig)
 
     def test_timeline_rms_speed(self):
