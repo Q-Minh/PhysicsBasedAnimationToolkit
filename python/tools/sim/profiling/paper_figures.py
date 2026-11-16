@@ -23,7 +23,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   span more than :data:`VBD_RATIO_LOG_SPAN`, else linear; steps either run lacks are gaps, steps from either run's
   detected blow-up on are left out); the cost plot then keeps only the paired run's step-time line. Below them, on
   the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its
-  rolling median over ``--smooth`` steps, a dashed line at 1); runs without solve statuses have no such strip. Last,
+  rolling median over ``--smooth`` steps, a dashed line at 1; a step more than :data:`SPIKE_FACTOR` times its run's
+  median there gets a small marker in the run's color at its value, at the top edge with the value written beside
+  it where it's above the range, which stays the median curves'; maintainer, 2026-11-16); runs without solve
+  statuses have no such strip. Last,
   when any run recorded a penetration (a scene with contact), a thin strip of each production run's feasibility
   (penetration) ratio per step (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; the same rolling
   median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut at a
@@ -219,6 +222,10 @@ def bin_steps(values: np.ndarray, n: int) -> np.ndarray:
 
 
 SMOOTH_STEPS = 9  # timeline: the rolling median's window over the per-step residual ratios
+# timeline: a step whose stationarity ratio is more than this factor times its run's rolling median at that step gets
+# a marker on the residual strip (a one-solve spike the median hides: ArmadilloPull.60Hz AAAVBD's 2.6e4 at its
+# release, step 61; 16 markers over the 7ce4082b timelines, equal sweep and equal time)
+SPIKE_FACTOR = 10.0
 # The residual ratio the timeline and solvers figures plot: the stationarity test's decisive ratio, at most 1 iff
 # the test passed (status_ratio.stationarity_test_ratio, step_stats' test_ratio; the gradient ratio for runs
 # recorded before its other ratios existed, and for GPU Newton). The gradient ratio RMS_M(q) alone can be below 1
@@ -376,7 +383,8 @@ def _speed_axis(ax, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, run
 
 def _residual_strip(strip, runs: list[dict], smooth: int):
     """The timeline's residual strip: each production run's smoothed stationarity ratio per step
-    (:data:`STRIP_RATIO`, its rolling median of ``smooth`` steps, gaps kept) on a log axis, with a dashed line at 1."""
+    (:data:`STRIP_RATIO`, its rolling median of ``smooth`` steps, gaps kept) on a log axis, with a dashed line at 1,
+    and markers on the steps above :data:`SPIKE_FACTOR` times that median (:func:`_spike_markers`)."""
     # TODO: show every convergence metric over time, the feasibility (penetration) ratio beside the stationarity
     #  ratio (and the unsmoothed beside the smoothed one, both recorded since fd5eaa56). A per-step residual can't
     #  carry a trajectory's past error: on BasketOfFruit, Chebyshev's smoothed ratio is 2x AAAVBD's while its net
@@ -384,19 +392,50 @@ def _residual_strip(strip, runs: list[dict], smooth: int):
     #  (1.5-2 s, 19 vs 28), so the stationarity ratio alone misreads a late window (maintainer, 2026-11-09;
     #  data/profiling/investigations/BasketOfFruit-residual-misranking).
     medians = [np.array([1.0])]  # the y range covers the tolerance line
+    spikes = []  # (run, times, ratios) of the steps above SPIKE_FACTOR times their rolling median
     for run in runs:
         table = step_stats.on_step_grid(ratio_table(run))
         ratio = np.maximum(table[STRIP_RATIO], RATIO_FLOOR)
         medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
-        strip.plot(step_seconds(run, table["t"]), medians[-1], color=solver_color(run), linewidth=0.8)
+        x = step_seconds(run, table["t"])
+        strip.plot(x, medians[-1], color=solver_color(run), linewidth=0.8)
+        with np.errstate(invalid="ignore"):
+            spike = np.isfinite(ratio) & np.isfinite(medians[-1]) & (ratio > SPIKE_FACTOR * medians[-1])
+        if spike.any():
+            spikes.append((run, x[spike], ratio[spike]))
     strip.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
     strip.set_yscale("log")
     values = np.concatenate(medians)
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
+    _spike_markers(strip, spikes)
     _log_axis(strip, "y")
     strip.set_ylabel("Stationarity\nratio", fontsize=FONT_SIZE)
     _style(strip)
+
+
+def _spike_label(value: float) -> str:
+    """A clipped spike's value: three significant digits, a compact exponent beyond 1000 ("2.6e4")."""
+    if value < 1e3:
+        return f"{value:.3g}"
+    e = int(np.floor(np.log10(value)))
+    return f"{value / 10.0**e:.2g}e{e}"
+
+
+def _spike_markers(strip, spikes: list[tuple[dict, np.ndarray, np.ndarray]]):
+    """The residual strip's spikes (:data:`SPIKE_FACTOR`): a small marker in the run's color at each step's ratio,
+    within the y range the median curves set; above it, at the top edge, labeled with the value. The range stays the
+    curves'."""
+    lo, hi = strip.get_ylim()
+    for run, x, ratio in spikes:
+        inside = ratio <= hi
+        strip.plot(x[inside], ratio[inside], marker="o", markersize=2.0, color=solver_color(run), linestyle="none")
+        strip.plot(x[~inside], np.full((~inside).sum(), hi), marker="o", markersize=2.0, color=solver_color(run),
+                   linestyle="none", clip_on=False)
+        for xi, value in zip(x[~inside], ratio[~inside]):
+            strip.annotate(_spike_label(value), (xi, hi), xytext=(2.0, -0.5), textcoords="offset points", ha="left",
+                           va="top", fontsize=FONT_SIZE - 1, color=solver_color(run))
+    strip.set_ylim(lo, hi)
 
 
 BASELINE = "VBD"  # timeline: the production run every other run's step time is divided by
@@ -1746,6 +1785,30 @@ class TestPaperFigures(unittest.TestCase):
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
                 self.assertGreater(os.path.getsize(path), 1000)
+
+    def test_spike_markers(self):
+        self.assertEqual([_spike_label(v) for v in (14.6, 999.0, 25601.0, 1.2e6)], ["14.6", "999", "2.6e4", "1.2e6"])
+        k = self._kernels()  # steps 10-49 at 10 ms, smoothed ratios 0.2 and 1.5
+        aaavbd = self._production(k)
+        # One step far above the y range (ArmadilloPull's release), one inside it
+        for s in aaavbd["steps"]:
+            ratio = {20: 25601.0, 40: 18.0}.get(s["t"])
+            if ratio is not None:
+                s["status"] = {"vbd": [{**s["status"]["vbd"][0], "smoothed_ratio": ratio}]}
+        vbd = self._production(self._kernels("VBD"))  # no spike; 100x higher, so its curve sets the top of the range
+        for s in vbd["steps"]:
+            row = s["status"]["vbd"][0]
+            s["status"] = {"vbd": [{**row, "smoothed_ratio": 100.0 * row["smoothed_ratio"]}]}
+        fig = plot_timeline([k], [aaavbd], ["A"], others=[[vbd]])
+        strip = next(ax for ax in fig.axes if ax.get_ylabel() == "Stationarity\nratio")
+        lo, hi = strip.get_ylim()
+        self.assertAlmostEqual(hi, 150.0 * 1.25)  # the range is the median curves', not the spikes'
+        markers = [line for line in strip.lines if line.get_marker() == "o" and len(line.get_xdata())]
+        self.assertEqual(sorted((round(float(x), 2), float(y)) for m in markers
+                                for x, y in zip(m.get_xdata(), m.get_ydata())), [(0.2, hi), (0.4, 18.0)])
+        self.assertTrue(all(m.get_color() == solver_color(aaavbd) for m in markers))
+        self.assertEqual([t.get_text() for t in strip.texts], ["2.6e4"])  # only the clipped one is labeled
+        plt.close(fig)
 
     def test_divergence_cut(self):
         def run(ratio_of, speed_of, solver="AndersonSolver"):
