@@ -235,7 +235,7 @@ TEST_RATIO = "test_ratio"
 # The ratio the timeline strips and the solvers and budget boxes plot (ratio_table): the smoothed test's own, else
 # TEST_RATIO for runs without smoothed ratios
 STRIP_RATIO = "strip_ratio"
-STRIP_RATIO_LABEL = "Smoothed stationarity ratio"
+STRIP_RATIO_LABEL = "Stationarity ratio"
 FEASIBILITY_STRIP = "feasibility_strip"  # ratio_table: the timeline's per-step feasibility ratio, cut at a blow-up
 DECISIVE_MARK = " (decisive)"  # legend or row label suffix of runs plotted with the decisive ratio instead
 
@@ -384,7 +384,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
-    strip.set_ylabel("Smoothed\nstationarity ratio", fontsize=FONT_SIZE)
+    strip.set_ylabel("Stationarity\nratio", fontsize=FONT_SIZE)
     speed.set_ylim(bottom=0)
     speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
     # The ratios over the speed fill: the left axes in front, without their background
@@ -1062,7 +1062,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"paper's results and video (production runs: CUDA graph replay for the VBD family, eager for Newton), "
            r"with the 90th percentile in parentheses, and below, the median iterations per time step (VBD sweeps; "
            r"Newton steps) and the fraction of time steps that pass their convergence test within the budget; third, "
-           r"the median over the run's solves (substeps) of the smoothed stationarity ratio, the residual of the "
+           r"the median over the run's solves (substeps) of the stationarity ratio, the residual of the "
            r"stationarity test after smoothing over each node's neighbours over its tolerance, at most 1 where that "
            r"test passes, with its minimum and maximum in brackets; fourth, "
            r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
@@ -1075,7 +1075,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{lrrr ccccc}", r"\toprule",
            r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; } \\",
-           r"& & & & \multicolumn{5}{c}{smoothed stationarity ratio, median [min, max] \;/\; } \\",
+           r"& & & & \multicolumn{5}{c}{stationarity ratio, median [min, max] \;/\; } \\",
            r"& & & & \multicolumn{5}{c}{max.\ penetration ratio (solves $>1$)"
            + (r" \;/\; outcome" if any_outcome else "") + r"} \\",
            r"\cmidrule(lr){5-9}",
@@ -1176,8 +1176,8 @@ def lead_points(full: list[dict], windowed: list[dict] | None = None,
 
 def lead_text(points: list[dict], labels: dict[str, str]) -> str:
     """Markdown: the ``lead`` figure's points, for checking them against the text."""
-    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD smoothed ratio | Solver | "
-           "Lead (smoothed) |", "|---|---|---|---|---|---|---|---|"]
+    out = ["| Scene | Points | Window (s) | h (ms) | dt (ms) x substeps | AAAVBD stationarity ratio | Solver | "
+           "Lead |", "|---|---|---|---|---|---|---|---|"]
 
     def times(x):
         return "--" if x is None else f"{_num(x, 2)}x"
@@ -1709,7 +1709,7 @@ class TestPaperFigures(unittest.TestCase):
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
         self.assertIn(f"VBD{DECISIVE_MARK}", [t.get_text() for t in fig.legends[0].get_texts()])
         self.assertIn("AAAVBD", [t.get_text() for t in fig.legends[0].get_texts()])
-        self.assertIn("Smoothed\nstationarity ratio", [ax.get_ylabel() for ax in fig.axes])
+        self.assertIn("Stationarity\nratio", [ax.get_ylabel() for ax in fig.axes])
         plt.close(fig)
         fig = plot_budget([self._production(k), vbd], {})
         self.assertEqual([t.get_text() for t in fig.axes[0].get_yticklabels()], [f"VBD{DECISIVE_MARK}", "AAAVBD"])
