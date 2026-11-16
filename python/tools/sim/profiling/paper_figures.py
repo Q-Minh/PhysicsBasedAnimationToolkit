@@ -1617,7 +1617,7 @@ SETUP_GROUPS = (
     ("Equal time", "n", ("VBD", "Cheb.", "And.")),
     ("Newton", None, ("s", "m", "k")),
     ("CG", None, ("cg_cap", "cg_r")),
-    ("Convergence tolerances", None, ("rstol", "astol", "ftol")),
+    ("Convergence", None, ("rstol", "astol", "ftol")),
 )
 
 
@@ -1680,7 +1680,7 @@ def _setup_caption(t: dict, style: str) -> str:
             f"Newton, {sym('s', 'm', 'k')} with {sym('k')} Newton steps per subproblem, each solving its linear system "
             f"by conjugate gradients (CG) with at most {sym('cg_cap')} iterations and the relative tolerance "
             f"{sym('cg_r')} (CG stops at a residual norm of {norm}, {g} the gradient, the Newton step's right-hand "
-            f"side{atol}). Convergence tolerances: the stationarity test's relative and absolute tolerances "
+            f"side{atol}). Convergence: the stationarity test's relative and absolute tolerances "
             f"{sym('rstol')}, {sym('astol')} and the feasibility test's {sym('ftol')}, the same for every solver of a "
             "scene" + (" (" + ", ".join(t["common"]) + " in every scene)" if t["common"] else "") + ".")
 
@@ -1718,10 +1718,9 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
 
 def _setup_headers(with_k: bool) -> list[str]:
     """The ``setup`` table's plain-text column names (Markdown): a group's sub-column after the group's name."""
-    prefixes = {"Convergence tolerances": "Convergence"}
     return (["Scene"]
             + [_column_name(key, "markdown") if title is None else
-               f"{prefixes.get(title, _group_title(title, symbol, 'markdown'))}: {_column_name(key, 'markdown')}"
+               f"{_group_title(title, symbol, 'markdown')}: {_column_name(key, 'markdown')}"
                for title, symbol, keys in SETUP_GROUPS for key in keys] + (["passes"] if with_k else []))
 
 
@@ -2512,7 +2511,7 @@ class TestPaperFigures(unittest.TestCase):
         self.assertLess(text.index(r"\providecommand{\SimStep}{h}"), text.index(r"\begin{table*}"))
         self.assertIn(r" & \multicolumn{2}{c}{Mesh} & \multicolumn{3}{c}{Material} &  & "
                       r"\multicolumn{3}{c}{VBD family} & \multicolumn{3}{c}{Equal time, $\SimSweeps$} & "
-                      r"\multicolumn{3}{c}{Newton} & \multicolumn{2}{c}{CG} & \multicolumn{3}{c}{Convergence tolerances}",
+                      r"\multicolumn{3}{c}{Newton} & \multicolumn{2}{c}{CG} & \multicolumn{3}{c}{Convergence}",
                       text)
         self.assertIn(r"\cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(lr){8-10} \cmidrule(lr){11-13} "
                       r"\cmidrule(lr){14-16} \cmidrule(lr){17-18} \cmidrule(lr){19-21}", text)
@@ -2560,7 +2559,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertIn(symbol, caption)
         fig = plot_setup(rows, labels, notes)
         table = fig.axes[0].tables[0]
-        self.assertEqual(table[0, 19].get_text().get_text(), "Convergence\ntolerances")  # spanning, wrapped to the group
+        self.assertEqual(table[0, 19].get_text().get_text(), "Convergence")  # spanning the group
         self.assertEqual((table[0, 18].visible_edges, table[0, 19].visible_edges, table[0, 20].visible_edges),
                          ("TBL", "TB", "TBR"))
         self.assertEqual([table[0, c].get_text().get_text() for c in (1, 4, 8, 11, 14, 16)],
