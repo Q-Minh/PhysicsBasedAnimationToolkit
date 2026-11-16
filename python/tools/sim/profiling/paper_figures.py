@@ -1217,7 +1217,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
     :data:`SCENE_SOLVERS`. The scene's nodes, tetrahedra and time step h come from its runs' metadata; per solver,
     the first line is the mean step time (P90) in ms, the second the median iterations per step and the early exits,
     the third the median smoothed stationarity ratio [min, max] over the solves (:func:`residual_summary`), the
-    fourth the largest penetration ratio over the solves and the number of solves above 1
+    fourth the largest feasibility ratio over the solves and the number of solves above 1
     (:func:`contact_summary`), the fifth, written where any of the scene's cells has one, the outcome: the run's note
     in ``outcomes`` (:func:`outcome_note`), else its :func:`automatic_outcome` (against the scene's longest run)."""
     outcomes = outcomes or {}
@@ -1260,7 +1260,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
         first[0] = rf"\multirow[t]{{{len(lines)}}}{{{SCENE_LABEL_WIDTH}}}{{\raggedright {label}}}"
         body += ([r"\addlinespace"] if body else []) + [" & ".join(line) + r" \\" for line in lines]
     outcome_caption = (r" Last, the outcome of each run by eye, against AAAVBD's where it differs; ``blew up at $t$'' "
-                       r"marks a run that blew up, whose stationarity and penetration ratios stop there, and ``stopped "
+                       r"marks a run that blew up, whose stationarity and feasibility ratios stop there, and ``stopped "
                        r"at $t$'' a run stopped early, whose numbers cover the steps up to the stop." if any_outcome
                        else "")
     out = [r"\begin{table*}", r"\centering", r"\small",
@@ -1271,7 +1271,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"the median over the run's solves (substeps) of the stationarity ratio, the residual of the "
            r"stationarity test after smoothing over each node's neighbours over its tolerance, at most 1 where that "
            r"test passes, with its minimum and maximum in brackets; fourth, "
-           r"the largest penetration ratio over the run's solves (substeps), the deepest penetration into the contact "
+           r"the largest feasibility ratio over the run's solves (substeps), the deepest penetration into the contact "
            r"margin over its tolerance, at most 1 where every contact constraint is met at the end of the solve, with "
            r"the number of solves above 1 in parentheses. A run that blew up counts only its solves before the "
            r"blow-up in these two lines." + outcome_caption + r" Newton "
@@ -1282,7 +1282,7 @@ def latex_scenes(runs: list[dict], labels: dict[str, str], outcomes: dict[str, d
            r"\begin{tabular}{lrrr ccccc}", r"\toprule",
            r"& & & & \multicolumn{5}{c}{Time per step, ms (P90) \;/\; iterations per step, early exits \;/\; } \\",
            r"& & & & \multicolumn{5}{c}{stationarity ratio, median [min, max] \;/\; } \\",
-           r"& & & & \multicolumn{5}{c}{max.\ penetration ratio (solves $>1$)"
+           r"& & & & \multicolumn{5}{c}{max.\ feasibility ratio (solves $>1$)"
            + (r" \;/\; outcome" if any_outcome else "") + r"} \\",
            r"\cmidrule(lr){5-9}",
            r"Scene & Nodes & Tets & $h$ (ms) & " + " & ".join(SOLVER_NAMES.get(v, v) for v in SCENE_SOLVERS) + r" \\",
@@ -2221,7 +2221,7 @@ class TestPaperFigures(unittest.TestCase):
                       r"& -- & -- & 13.4 (15.6) \\", text)
         self.assertIn(r" &  &  &  & -- & 100, 25\% & -- & -- & 6, 50\% \\", text)
         self.assertIn(r" &  &  &  & -- & 2 [0.1, 3.9] & -- & -- & -- \\", text)  # smoothed ratio, median [min, max]
-        self.assertIn(r" &  &  &  & -- & 0.1 (0) & -- & -- & 0 (0) \\", text)  # max penetration ratio (solves > 1)
+        self.assertIn(r" &  &  &  & -- & 0.1 (0) & -- & -- & 0 (0) \\", text)  # max feasibility ratio (solves > 1)
         self.assertIn(r"\multirow[t]{4}{2.6cm}{\raggedright capsule\_bowl} & 54.5k & 231k & 10 & 13.4 (15.6) & -- & "
                       r"-- & -- & -- \\", text)
         # Lines in order: time, iterations, residual, contact
