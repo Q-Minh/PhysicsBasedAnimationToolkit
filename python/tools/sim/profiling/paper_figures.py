@@ -88,8 +88,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 - ``scene_setup`` and ``simulation``: the paper's two LaTeX ``table*`` of the scenes' setup (maintainer, 2026-11-16:
   one table was too wide), a line per scene, from production runs at equal sweeps (Newton's included) plus
   ``--equal-time`` runs, every value from the runs' own metadata (:func:`setup_rows`, which refuses a scene whose
-  runs disagree). ``scene_setup``: the mesh's nodes and tetrahedra (as the ``scenes`` table), Young's modulus and
-  density, ranges over the tetrahedra of the scene file the runs name (:func:`scene_material`). ``simulation``: the frame step h (each solve's is h / substeps), the budgets as
+  runs disagree). ``scene_setup``: the mesh's nodes and tetrahedra (as the ``scenes`` table), Young's modulus,
+  Poisson's ratio and density, ranges over the tetrahedra of the scene file the runs name (:func:`scene_material`),
+  E and nu checked against each run's simulated Lame parameters (:func:`run_material`, :func:`check_material`). ``simulation``: the frame step h (each solve's is h / substeps), the budgets as
   substeps x outer iterations x iterations per subproblem (VBD sweeps for the VBD family at equal sweeps, the
   equal-time runs' sweeps per subproblem, Newton steps with Newton's CG cap and relative tolerance from its output,
   :func:`newton_cg_params`; ``--newton-config`` reads a scene config's for a Newton run that hasn't finished,
@@ -1296,27 +1297,65 @@ SETUP_NOTE_COLUMNS = ("scene", "time_step", "material", "budget", "equal_time", 
 
 
 def scene_material(path: str) -> dict | None:
-    """Young's modulus and density ranges, ``{"E": (min, max), "rho": (min, max)}`` in Pa and kg/m^3, over every
-    tetrahedron of a CPU editor scene file (``state.load_scene``'s input: ``fem_tet_elastic_bodies/<i>/<body>/Ye``
-    and ``rhoe``), or None for any other file (a Dump, ``path:fem``). Colliders aren't tetrahedra, so they don't
-    count."""
+    """Young's modulus, Poisson's ratio and density ranges, ``{"E": (min, max), "nu": (min, max), "rho": (min,
+    max)}`` in Pa, 1 and kg/m^3, over every tetrahedron of a CPU editor scene file (``state.load_scene``'s input:
+    ``fem_tet_elastic_bodies/<i>/<body>/Ye``, ``nue`` and ``rhoe``; ``nu`` None in a file without ``nue``), or None
+    for any other file (a Dump, ``path:fem``). Colliders aren't tetrahedra, so they don't count."""
     import h5py
 
     try:
         with h5py.File(path, "r") as f:
             if "fem_tet_elastic_bodies" not in f:
                 return None
-            young, rho = [], []
+            young, nu, rho = [], [], []
             for body in f["fem_tet_elastic_bodies"].values():
                 for group in body.values():
                     young.append(np.asarray(group["Ye"], dtype=float))
                     rho.append(np.asarray(group["rhoe"], dtype=float))
+                    if "nue" in group:
+                        nu.append(np.asarray(group["nue"], dtype=float))
     except OSError:
         return None
     if not young:
         return None
+    nu = np.concatenate(nu) if len(nu) == len(young) else None  # every body's groups have nue
     young, rho = np.concatenate(young), np.concatenate(rho)
-    return {"E": (float(young.min()), float(young.max())), "rho": (float(rho.min()), float(rho.max()))}
+    return {"E": (float(young.min()), float(young.max())),
+            "nu": None if nu is None else (float(nu.min()), float(nu.max())),
+            "rho": (float(rho.min()), float(rho.max()))}
+
+
+def run_material(path: str) -> dict | None:
+    """Young's modulus and Poisson's ratio ranges, ``{"E": (min, max), "nu": (min, max)}``, that a run simulated:
+    from its output's (.h5) per-element Lame parameters ``FemElastoDynamics/lame_mu`` and ``lame_lambda``
+    (E = mu (3 lambda + 2 mu) / (lambda + mu), nu = lambda / (2 (lambda + mu))), or None without them."""
+    import h5py
+
+    try:
+        with h5py.File(path, "r") as f:
+            if "FemElastoDynamics/lame_mu" not in f or "FemElastoDynamics/lame_lambda" not in f:
+                return None
+            mu = np.asarray(f["FemElastoDynamics/lame_mu"], dtype=float)
+            lam = np.asarray(f["FemElastoDynamics/lame_lambda"], dtype=float)
+    except OSError:
+        return None
+    young, nu = mu * (3 * lam + 2 * mu) / (lam + mu), lam / (2 * (lam + mu))
+    return {"E": (float(young.min()), float(young.max())), "nu": (float(nu.min()), float(nu.max()))}
+
+
+MATERIAL_RTOL = 1e-4  # check_material: the runs' Lame parameters are float32
+
+
+def check_material(scene: str, material: dict, simulated: dict, rtol: float = MATERIAL_RTOL) -> None:
+    """Refuse (ValueError) a run whose simulated E or nu range (:func:`run_material`) differs from its scene file's
+    (:func:`scene_material`) by more than ``rtol`` relative to the scene's value (floored at 1e-12)."""
+    for key in ("E", "nu"):
+        if material.get(key) is None:
+            continue
+        for want, got in zip(material[key], simulated[key]):
+            if abs(got - want) > rtol * max(abs(want), 1e-12):
+                raise ValueError(f"{scene}: the run simulated {key} in {simulated[key]}, its scene file has "
+                                 f"{material[key]}")
 
 
 def newton_cg_params(path: str) -> dict | None:
@@ -1487,19 +1526,19 @@ def _note_marker(style: str, notes: dict[str, dict[str, str]] | None):
 def _scene_setup_table(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None,
                        style: str) -> dict:
     """The ``scene_setup`` table's cells in one of :data:`SETUP_STYLES`: ``body`` (per scene: its label, the mesh's
-    nodes and tetrahedra in the ``scenes`` table's format, E and rho) and the footnotes of its ``material`` notes as
-    (mark, text)."""
+    nodes and tetrahedra in the ``scenes`` table's format, E, nu and rho) and the footnotes of its ``material`` notes
+    as (mark, text)."""
     st = SETUP_STYLES[style]
     cell, marks = _note_marker(style, notes)
     body = []
     for r in rows:
         s, material = r["scene"], r["material"]
         young = st["none"] if material is None else _si(*material["E"], "Pa", st["dash"])
-        rho = st["none"] if material is None else (
-            _num(material["rho"][0]) if material["rho"][0] == material["rho"][1]
-            else f"{_num(material['rho'][0])}{st['dash']}{_num(material['rho'][1])}")
+        span = lambda v: (st["none"] if v is None else _num(v[0]) if v[0] == v[1]  # noqa: E731
+                          else f"{_num(v[0])}{st['dash']}{_num(v[1])}")
+        nu, rho = (st["none"], st["none"]) if material is None else (span(material.get("nu")), span(material["rho"]))
         size = [st["none"] if v is None else _compact(v) for v in (r["nodes"], r["tets"])]
-        body.append([st["label"](labels.get(s, s)), *size, cell(young, s, "material"), rho])
+        body.append([st["label"](labels.get(s, s)), *size, cell(young, s, "material"), nu, rho])
     return {"body": body, "notes": [(m, text) for text, m in marks.items()]}
 
 
@@ -1559,14 +1598,14 @@ SCENE_LABEL_WIDTH_SETUP = "2.4cm"  # scene_setup, simulation: the scene column, 
 def latex_scene_setup(rows: list[dict], labels: dict[str, str],
                       notes: dict[str, dict[str, str]] | None = None) -> str:
     """The ``scene_setup`` table (booktabs) of :func:`setup_rows`: per scene the mesh's size and its bodies' Young's
-    modulus and density."""
+    modulus, Poisson's ratio and density."""
     t = _scene_setup_table(rows, labels, notes, "latex")
     caption = (r"\caption{\textbf{Scene setup.} Per scene: its mesh's nodes and tetrahedra, and the Young's modulus "
-               r"$E$ and density $\rho$ of its bodies, a range where bodies or regions differ."
+               r"$E$, Poisson's ratio $\nu$ and density $\rho$ of its bodies, a range where bodies or regions differ."
                + "".join(rf" $^{{\mathrm{{{m}}}}}${_latex_text(text)}." for m, text in t["notes"]) + "}")
     out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:scene_setup}",
-           r"\setlength{\tabcolsep}{4pt}", r"\begin{tabular}{lrrcc}", r"\toprule",
-           r"Scene & Nodes & Tets & $E$ & $\rho$ (kg/m$^3$) \\", r"\midrule",
+           r"\setlength{\tabcolsep}{4pt}", r"\begin{tabular}{lrrccc}", r"\toprule",
+           r"Scene & Nodes & Tets & $E$ & $\nu$ & $\rho$ (kg/m$^3$) \\", r"\midrule",
            *[" & ".join(cells) + r" \\" for cells in t["body"]], r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
@@ -1629,7 +1668,7 @@ def latex_simulation(rows: list[dict], labels: dict[str, str], notes: dict[str, 
     return "\n".join(out) + "\n"
 
 
-SCENE_SETUP_HEADERS = ["Scene", "Nodes", "Tets", "E", "ρ (kg/m³)"]
+SCENE_SETUP_HEADERS = ["Scene", "Nodes", "Tets", "E", "ν", "ρ (kg/m³)"]  # Markdown; the PDF's in mathtext
 # simulation: the table's quantities as variables (maintainer, 2026-11-16: "easy for me to rename the variables
 # later"): key -> (LaTeX macro, its definition, plain text, Matplotlib mathtext). The .tex declares each macro once
 # at its top with \providecommand, so a rename is a one-line edit there, or in the paper's preamble.
@@ -1692,8 +1731,8 @@ def _markdown_table(title: str, headers: list[str], body: list[list[str]], capti
     return "\n".join(lines) + "\n"
 
 
-SCENE_SETUP_CAPTION = ("Per scene: its mesh's nodes and tetrahedra (tets), and the Young's modulus E and density ρ "
-                       "of its bodies, a range where bodies or regions differ.")
+SCENE_SETUP_CAPTION = ("Per scene: its mesh's nodes and tetrahedra (tets), and the Young's modulus E, Poisson's "
+                       "ratio ν and density ρ of its bodies, a range where bodies or regions differ.")
 
 
 def markdown_scene_setup(rows: list[dict], labels: dict[str, str],
@@ -1773,7 +1812,8 @@ def _plot_table(title: str, headers: list[str], body: list[list[str]], widths: l
 def plot_scene_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None):
     """The ``scene_setup`` table drawn by Matplotlib (a small page: five columns)."""
     t = _scene_setup_table(rows, labels, notes, "mpl")
-    return _plot_table("Scene setup", SCENE_SETUP_HEADERS, t["body"], [24, 8, 8, 14, 12], SCENE_SETUP_CAPTION,
+    headers = ["Scene", "Nodes", "Tets", "$E$", r"$\nu$", r"$\rho$ (kg/m³)"]
+    return _plot_table("Scene setup", headers, t["body"], [24, 8, 8, 14, 7, 12], SCENE_SETUP_CAPTION,
                        t["notes"], size=(8.27, 6.0))
 
 
@@ -2034,14 +2074,20 @@ def main():
     labels = _parse_labels(args.labels)
     os.makedirs(os.path.dirname(os.path.abspath(args.output)) or ".", exist_ok=True)
     if args.kind in ("scene_setup", "simulation"):
-        materials, cg_params = {}, {}
+        materials, cg_params, checked = {}, {}, {}
         for path, run in zip(args.kernels, kernels):
             key = scene_key(run)
             scene = str(run["metadata"].get("scene") or "")
             if key not in materials and scene.endswith(".h5"):  # a scene file, not a Dump's "path:group"
                 materials[key] = scene_material(scene)
+            simulated = run_material(os.path.splitext(path)[0] + ".h5")  # what the run simulated: its Lame params
+            if materials.get(key) is not None and simulated is not None:
+                check_material(key, materials[key], simulated)
+                checked[key] = checked.get(key, 0) + 1
             if run["metadata"].get("solver") == "Newton":
                 cg_params[key] = newton_cg_params(os.path.splitext(path)[0] + ".h5")
+        print("material checked against the runs' Lame parameters: " + ", ".join(
+            f"{k} {checked.get(k, 0)} runs" for k, v in materials.items() if v is not None))
         configs = {k: config_newton_budget(v) for k, v in _parse_labels(args.newton_config).items()}
         rows = setup_rows(kernels, [results.load(p) for p in args.equal_time], materials, cg_params, configs)
         notes = load_setup_notes(args.notes) if args.notes else None
@@ -2425,8 +2471,20 @@ class TestPaperFigures(unittest.TestCase):
             with h5py.File(scene, "w") as f:
                 for i, young in enumerate((1e6, 1e8)):
                     body = f.create_group(f"fem_tet_elastic_bodies/{i}/tools.vbd.ui.TetrahedralElastodynamicsBody")
-                    body["Ye"], body["rhoe"] = np.full(3, young), np.full(3, 1000.0)
-            self.assertEqual(scene_material(scene), {"E": (1e6, 1e8), "rho": (1000.0, 1000.0)})
+                    body["Ye"], body["nue"], body["rhoe"] = np.full(3, young), np.full(3, 0.45), np.full(3, 1000.0)
+            material = scene_material(scene)
+            self.assertEqual(material, {"E": (1e6, 1e8), "nu": (0.45, 0.45), "rho": (1000.0, 1000.0)})
+            # A run's output: per-element Lame parameters (float32) of 1 and 100 MPa, nu = 0.45, agree; 0.3 doesn't
+            run_h5 = os.path.join(d, "run.h5")
+            young, nu = np.array([1e6, 1e8]), 0.45
+            with h5py.File(run_h5, "w") as f:
+                f["FemElastoDynamics/lame_mu"] = (young / (2 * (1 + nu))).astype(np.float32)
+                f["FemElastoDynamics/lame_lambda"] = (young * nu / ((1 + nu) * (1 - 2 * nu))).astype(np.float32)
+            simulated = run_material(run_h5)
+            check_material("banner", material, simulated)
+            with self.assertRaises(ValueError):
+                check_material("banner", {**material, "nu": (0.3, 0.3)}, simulated)
+            self.assertIsNone(run_material(os.path.join(d, "missing.h5")))
             self.assertIsNone(scene_material(os.path.join(d, "missing.h5")))
             newton_h5 = os.path.join(d, "newton.h5")
             with h5py.File(newton_h5, "w") as f:
@@ -2456,12 +2514,13 @@ class TestPaperFigures(unittest.TestCase):
         self.assertTrue(rows[1]["newton"]["from_config"])
         labels = {"banner": "Birthday banner"}
         notes = {"mat": {"tolerances": "4x the shared ones"}, "banner": {"material": "two materials"}}
-        # Scene setup: the mesh's size (the scenes table's format), E and rho per scene, its own footnotes
+        # Scene setup: the mesh's size (the scenes table's format), E, nu and rho per scene, its own footnotes
         self.assertEqual((rows[0]["nodes"], rows[0]["tets"]), (54502, 231338))
         text = latex_scene_setup(rows, labels, notes)
-        self.assertIn(r"Scene & Nodes & Tets & $E$ & $\rho$ (kg/m$^3$) \\", text)
-        self.assertIn(r"Birthday banner & 54.5k & 231k & 1--100 MPa$^{\mathrm{a}}$ & 1000 \\", text)
-        self.assertIn(r"mat & 54.5k & 231k & -- & -- \\", text)
+        self.assertIn(r"Scene & Nodes & Tets & $E$ & $\nu$ & $\rho$ (kg/m$^3$) \\", text)
+        self.assertIn(r"Birthday banner & 54.5k & 231k & 1--100 MPa$^{\mathrm{a}}$ & 0.45 & 1000 \\", text)
+        self.assertIn(r"mat & 54.5k & 231k & -- & -- & -- \\", text)
+        self.assertIn(r"Poisson's ratio $\nu$", text)
         self.assertIn(r"$^{\mathrm{a}}$two materials.", text)
         self.assertNotIn("4x the shared ones", text)
         # Simulation: h alone, then every group's sub-columns under a spanning header (the budgets, the CG cap and its
@@ -2507,7 +2566,11 @@ class TestPaperFigures(unittest.TestCase):
         self.assertIn("a_CG = 10⁻¹⁰ in every scene", md)
         self.assertIn("- ᵃ from its scene config: the run hadn't finished", md)
         self.assertIn("- ᵇ 4x the shared ones", md)
-        self.assertIn("| Birthday banner | 54.5k | 231k | 1–100 MPaᵃ | 1000 |", markdown_scene_setup(rows, labels, notes))
+        self.assertIn("| Birthday banner | 54.5k | 231k | 1–100 MPaᵃ | 0.45 | 1000 |",
+                      markdown_scene_setup(rows, labels, notes))
+        setup = plot_scene_setup(rows, labels, notes).axes[0].tables[0]
+        self.assertEqual([setup[0, c].get_text().get_text() for c in (3, 4)], ["$E$", r"$\nu$"])
+        plt.close("all")
         fig = plot_simulation(rows, labels, notes)
         table = fig.axes[0].tables[0]
         self.assertEqual(table[0, 14].get_text().get_text(), "Convergence\ntolerances")  # spanning, wrapped to the group
