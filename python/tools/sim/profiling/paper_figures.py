@@ -43,7 +43,10 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   (feasibility) ratio to its tolerance (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below
   1e-3 drawn at 1e-3, a dashed line at 1, where each test passes; a wide log axis labels only every k-th decade,
   the smallest k at which its labels don't overlap, :func:`_fit_decade_labels`), the sweeps per step (linear axis)
-  and, with ``--step-times``, the step time.
+  and, with ``--step-times``, the step time. A run that blew up has its two ratio boxes cut where it began to
+  diverge (:func:`divergence_time`, :func:`diverged_table`), marked by a cross at the last value drawn and named in
+  the legend ("Anderson: diverged at 1.08 s"), so the other runs set those axes; its sweeps and step times keep
+  every step. One-solve spikes aren't cut: only a detected blow-up (:func:`blowup_time`) is.
   Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
   sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
   exits aren't shown: their fraction doesn't say how soon a solver exits.
@@ -634,8 +637,10 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
             continue
         if column == "gradient":
             _box(ax, yi, table[STRIP_RATIO], RATIO_FLOOR)
+            _cut_marker(ax, yi, table, STRIP_RATIO)
         elif column == "feasibility":
             _box(ax, yi, table["feasibility_ratio"], RATIO_FLOOR)
+            _cut_marker(ax, yi, table, "feasibility_ratio")
         elif column == "early":
             summary = step_stats.summarize_slice(table, np.ones(table["t"].size, dtype=bool))
             if summary["early_exit"] is not None:
@@ -700,7 +705,7 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     ratios = [2.4] + [1.5] * len(columns)
     fig, axes = plt.subplots(1, 1 + len(columns), figsize=(width, 0.3 * len(rows) + 0.85),
                              gridspec_kw={"width_ratios": ratios, "wspace": 0.28})
-    tables = [ratio_table(p) if p is not None else None for _, p in rows]
+    tables = [diverged_table(p) if p is not None else None for _, p in rows]
     names = [solver_name(k or p) if t is None else _ratio_label(solver_name(k or p), t)
              for (k, p), t in zip(rows, tables)]
     present = _sweeps_panel(axes[0], [k for k, _ in rows], y, SOLVERS_OMITTED)
@@ -708,7 +713,8 @@ def plot_solvers(kernels: list[dict], production: list[dict], width: float = 7.0
     for ax, column in zip(axes[1:], columns):
         _budget_panel(ax, column, tables, y)
         _row_axes(ax, y, None)
-    _legend(fig, [Patch(color=group_color(g), label=g) for g in present] + _box_handles())
+    _legend(fig, [Patch(color=group_color(g), label=g) for g in present] + _box_handles()
+            + _cut_handles([(p, t) for (_, p), t in zip(rows, tables)]))
     return fig
 
 
@@ -845,9 +851,11 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
     fig = plt.figure(figsize=(width, 0.3 * sum(n_rows) + 0.55 * len(scenes) + 0.3))
     grid = fig.add_gridspec(len(scenes), len(columns), height_ratios=n_rows, hspace=0.9, wspace=0.3,
                             width_ratios=[{"early": 1.0}.get(c, 1.6) for c in columns])
+    cut: list[tuple[dict, dict]] = []
     for s, (scene, rows) in enumerate(scenes.items()):
         y = np.arange(len(rows))[::-1]
-        tables = [ratio_table(r) for r in rows]
+        tables = [diverged_table(r) for r in rows]
+        cut += [(r, t) for r, t in zip(rows, tables)]
         axes = [fig.add_subplot(grid[s, c]) for c in range(len(columns))]
         for ax, column in zip(axes, columns):
             _budget_panel(ax, column, tables, y)
@@ -855,7 +863,7 @@ def plot_budget(runs: list[dict], labels: dict[str, str], width: float = 7.0, st
                       else None)
         axes[0].text(0, 1.06, labels.get(scene, scene), transform=axes[0].transAxes, ha="left", va="bottom",
                      fontsize=8, fontweight="bold", color=INK)
-    _legend(fig, _box_handles())
+    _legend(fig, _box_handles() + _cut_handles(cut))
     return fig
 
 
@@ -960,6 +968,78 @@ def before_blowup(result: dict) -> dict:
         return result
     dt = float(result["metadata"].get("dt", 1.0))
     return {**result, "steps": [s for s in result["steps"] if (s["t"] + 1) * dt < blowup - 0.5 * dt]}
+
+
+# solvers and budget figures: a run that blew up is cut where it began to diverge (:func:`divergence_time`): from
+# the last stretch before its blow-up in which its stationarity ratio's rolling median stays above this factor
+# times its median over the first half of its steps before the blow-up
+DIVERGENCE_FACTOR = 10.0
+CUT_MARKER = dict(marker="x", markersize=3.5, markeredgewidth=0.8, color=INK, linestyle="none")
+
+
+def divergence_time(result: dict) -> float | None:
+    """Simulated time (s) at the start of the step where a run that blew up (:func:`blowup_time`) began to diverge,
+    or None for a run that didn't blow up (a one-solve spike, e.g. ArmadilloPull.60Hz AAAVBD's 2.6e4 at its release,
+    or Celebration.60Hz Newton's two at steps 32-33, isn't a blow-up, and neither is a run that ended without one).
+    The start of the last stretch before the blow-up in which the rolling median (:data:`SMOOTH_STEPS`) of its
+    :data:`STRIP_RATIO` stays above :data:`DIVERGENCE_FACTOR` times its median over the first half of its steps
+    before the blow-up; the blow-up itself where the rolling median is below that just before it. A detected blow-up
+    trails the divergence: BirthdayBanner.60Hz Anderson's ratio rose from ~80 at 1.0 s to 1e3 at 1.12 s and 1e5-1e6
+    after, while its nodes passed :data:`BLOWUP_SPEED` only at 1.83 s (7ce4082b; equal sweep: diverged at 1.08 s,
+    equal time at 1.13 s)."""
+    blowup = blowup_time(result)
+    if blowup is None:
+        return None
+    table = ratio_table(result)  # NaN from the blow-up on
+    dt = float(result["metadata"].get("dt", 1.0))
+    ratio = np.asarray(table[STRIP_RATIO], dtype=float)
+    keep = np.isfinite(ratio) & ((table["t"] + 1) * dt < blowup - 0.5 * dt)
+    ratio, steps = ratio[keep], np.asarray(table["t"])[keep]
+    if ratio.size < 2:
+        return blowup
+    baseline = float(np.median(ratio[: ratio.size // 2]))
+    above = rolling_median(ratio, SMOOTH_STEPS) > DIVERGENCE_FACTOR * baseline
+    if not above[-1]:
+        return blowup
+    i = ratio.size - 1
+    while i > 0 and above[i - 1]:
+        i -= 1
+    return float(steps[i]) * dt
+
+
+def diverged_table(result: dict) -> dict:
+    """:func:`ratio_table` for the solvers and budget figures: a run that blew up has its stationarity and
+    penetration ratios (``feasibility_ratio`` and :data:`FEASIBILITY_STRIP`) NaN from where it began to diverge
+    (:func:`divergence_time`) on, so the other runs set the axes; ``diverged`` is that time (None: no cut), and
+    ``cut_at`` each cut column's last value drawn, where the figures mark the cut. Sweeps and step times keep every
+    step (the work the run did)."""
+    table = ratio_table(result)
+    start = divergence_time(result)
+    table = {**table, "diverged": start, "cut_at": {}}
+    if start is None:
+        return table
+    dt = float(result["metadata"].get("dt", 1.0))
+    after = table["t"] * dt >= start - 0.5 * dt
+    for key in (STRIP_RATIO, "feasibility_ratio", FEASIBILITY_STRIP):
+        values = np.where(after, np.nan, np.asarray(table[key], dtype=float))
+        table[key] = values
+        drawn = values[np.isfinite(values)]
+        table["cut_at"][key] = float(drawn[-1]) if drawn.size else None
+    return table
+
+
+def _cut_marker(ax, y: float, table: dict, key: str):
+    """The cut's mark on a row (:func:`diverged_table`): a cross at the last value drawn (at least
+    :data:`RATIO_FLOOR`)."""
+    value = (table.get("cut_at") or {}).get(key)
+    if value is not None:
+        ax.plot(max(value, RATIO_FLOOR), y, **CUT_MARKER)
+
+
+def _cut_handles(runs: list[tuple[dict | None, dict | None]]) -> list:
+    """Legend entries of the runs cut at their divergence (:func:`diverged_table`): "Anderson: diverged at 1.08 s"."""
+    return [Line2D([], [], label=f"{solver_name(r)}: diverged at {t['diverged']:.2f} s", **CUT_MARKER)
+            for r, t in runs if r is not None and t is not None and t.get("diverged") is not None]
 
 
 def automatic_outcome(result: dict, scene_end: float) -> str | None:
@@ -1666,6 +1746,48 @@ class TestPaperFigures(unittest.TestCase):
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
                 self.assertGreater(os.path.getsize(path), 1000)
+
+    def test_divergence_cut(self):
+        def run(ratio_of, speed_of, solver="AndersonSolver"):
+            r = self._production(self._kernels(solver))  # steps 10-49 at 10 ms
+            r["steps"] = [{**s, "peak_speed": speed_of(s["t"]), "status": {"vbd": [
+                {**s["status"]["vbd"][0], "smoothed_ratio": ratio_of(s["t"])}]}} for s in r["steps"]]
+            return r
+
+        # Diverging from step 31 (1e4, ~1e4 times its earlier ~1-2), blown up at step 40 (2 km/s)
+        diverging = run(lambda t: 1e4 * (t - 30) if t > 30 else 1.0 + t % 2, lambda t: 2e3 if t >= 40 else 5.0)
+        self.assertAlmostEqual(blowup_time(diverging), 0.41)
+        self.assertAlmostEqual(divergence_time(diverging), 0.31)
+        table = diverged_table(diverging)
+        self.assertAlmostEqual(table["diverged"], 0.31)
+        self.assertTrue(np.isfinite(table[STRIP_RATIO][table["t"] < 31]).all())
+        self.assertTrue(np.isnan(table[STRIP_RATIO][table["t"] >= 31]).all())
+        self.assertTrue(np.isnan(table["feasibility_ratio"][table["t"] >= 31]).all())
+        self.assertEqual(table["cut_at"][STRIP_RATIO], 1.0)  # step 30's
+        self.assertEqual(table["time_ms"].size, 40)  # step times aren't cut
+        # A one-solve spike isn't a blow-up: nothing is cut (ArmadilloPull.60Hz AAAVBD's release)
+        spike = run(lambda t: 2e3 if t == 20 else 0.2, lambda t: 50.0, "AAAVBD")
+        self.assertIsNone(divergence_time(spike))
+        table = diverged_table(spike)
+        self.assertIsNone(table["diverged"])
+        self.assertEqual(np.nanmax(table[STRIP_RATIO]), 2e3)
+        # A blow-up without a diverging ratio is cut at the blow-up
+        sudden = run(lambda t: 1.0, lambda t: 2e3 if t >= 40 else 5.0, "VBD")
+        self.assertAlmostEqual(divergence_time(sudden), blowup_time(sudden))
+        # The figures mark the cut and name it in the legend
+        k = self._kernels("AndersonSolver")
+        fig = plot_solvers([k, self._kernels("AAAVBD")], [diverging, spike], step_times=True)
+        texts = [t.get_text() for t in fig.legends[0].get_texts()]
+        self.assertIn("Anderson: diverged at 0.31 s", texts)
+        self.assertNotIn("AAAVBD: diverged", " ".join(texts))
+        crosses = [line for line in fig.axes[1].lines if line.get_marker() == "x"]
+        self.assertEqual(len(crosses), 1)
+        self.assertEqual(crosses[0].get_xdata()[0], 1.0)
+        self.assertLess(fig.axes[1].get_xlim()[1], 1e4)  # the axis comes from the other runs
+        plt.close(fig)
+        fig = plot_budget([diverging, spike], {})
+        self.assertIn("Anderson: diverged at 0.31 s", [t.get_text() for t in fig.legends[0].get_texts()])
+        plt.close(fig)
 
     def test_decade_labels_fit(self):
         self.assertEqual([_decade_label(v) for v in (1e-3, 1.0, 1e3, 1e4, 1e6, 1e-4)],
