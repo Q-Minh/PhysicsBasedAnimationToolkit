@@ -561,7 +561,7 @@ def _feasibility_strip(ax, runs: list[dict], smooth: int):
     ax.set_ylim(values.min() / 1.25, values.max() * 1.25)
     _cut_markers(ax, cuts, label=False)
     _log_axis(ax, "y")
-    ax.set_ylabel("Penetration\nratio", fontsize=FONT_SIZE)
+    ax.set_ylabel("Feasibility\nratio", fontsize=FONT_SIZE)
     _style(ax)
 
 
@@ -755,7 +755,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         # The tolerance line first, so the ticks are chosen for the final limits
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
         _log_axis(ax, dense=NARROW_LOG_RANGE, fit_labels=True)
-        ax.set_xlabel(STRIP_RATIO_LABEL if column == "gradient" else "Penetration ratio",
+        ax.set_xlabel(STRIP_RATIO_LABEL if column == "gradient" else "Feasibility ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
         ax.set_xlim(0, 100)
@@ -2728,7 +2728,7 @@ class TestPaperFigures(unittest.TestCase):
             self.assertEqual([t.get_text() for t in solvers.legends[0].get_texts()][:3],
                              ["Vertex sweeps", "Contact detection", "Quartiles"])
             self.assertEqual([ax.get_xlabel() for ax in solvers.axes[1:]],
-                             [STRIP_RATIO_LABEL, "Penetration ratio", "Sweeps", "Step time (ms)"])
+                             [STRIP_RATIO_LABEL, "Feasibility ratio", "Sweeps", "Step time (ms)"])
             for name, fig in (("timeline", timeline),
                               ("snapshots", plot_timeline(k[:1], p[:1], ["A"], snapshots=[(0.3, image), (0.2, image)])),
                               ("solvers", solvers)):
@@ -2846,7 +2846,7 @@ class TestPaperFigures(unittest.TestCase):
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
         labels = [ax.get_ylabel() for ax in fig.axes]
         # the cost plot, the residual and penetration strips, then the cost plot's RMS speed axis
-        self.assertEqual(labels, ["GPU time (ms)", "Stationarity\nratio", "Penetration\nratio", f"{SPEED_NAME}\n(m/s)"])
+        self.assertEqual(labels, ["GPU time (ms)", "Stationarity\nratio", "Feasibility\nratio", f"{SPEED_NAME}\n(m/s)"])
         penetration = fig.axes[2]
         self.assertEqual(penetration.get_yscale(), "log")
         self.assertEqual([line.get_color() for line in penetration.lines if line.get_linestyle() == "-"],
@@ -2858,7 +2858,7 @@ class TestPaperFigures(unittest.TestCase):
         without["steps"] = [{**s, "status": {"vbd": [{**s["status"]["vbd"][0], "feasibility_ratio": 0.0}]}}
                             for s in without["steps"]]
         fig = plot_timeline([k], [without], ["A"])  # no VBD, no contact: the cost plot and the residual strip
-        self.assertNotIn("Penetration\nratio", [ax.get_ylabel() for ax in fig.axes])
+        self.assertNotIn("Feasibility\nratio", [ax.get_ylabel() for ax in fig.axes])
         self.assertLess(fig.get_size_inches()[1], height)
         plt.close(fig)
 
