@@ -96,7 +96,7 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   family at equal sweeps, the equal-time runs' sweeps per subproblem, Newton steps with Newton's CG cap and
   relative tolerance from its output, :func:`newton_cg_params`; ``--newton-config`` reads a scene config's for a
   Newton run that hasn't finished, marked); and the convergence tolerances. Every quantity is a math-mode variable
-  through a macro declared once at the top of the .tex (:data:`SETUP_SYMBOLS`, ``\providecommand``: rename one in
+  through a macro declared once at the top of the .tex (:data:`SETUP_SYMBOLS`, ``\\providecommand``: rename one in
   a line), units in the sub-headers; wrapped scene labels and a 3 pt column separation keep it narrow. ``--notes``
   (:func:`load_setup_notes`) adds footnotes per cell, explained in the caption; BDF2 scenes are marked. Readable
   copies go next to the .tex, for reading without LaTeX: ``.md`` and a ``.pdf`` drawn by Matplotlib
