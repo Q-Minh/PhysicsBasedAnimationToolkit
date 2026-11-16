@@ -25,12 +25,14 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its
   rolling median over ``--smooth`` steps, a dashed line at 1; a step more than :data:`SPIKE_FACTOR` times its run's
   median there, and at least :data:`SPIKE_MIN_RATIO` (spikes far from convergence only), gets a small marker in the run's color at its value, at the top edge with the value written beside
-  it where it's above the range, which stays the median curves'; maintainer, 2026-11-16); runs without solve
-  statuses have no such strip. Last,
+  it where it's above the range, which stays the median curves'; maintainer, 2026-11-16; a run that blew up stops
+  where it began to diverge, :func:`divergence_time` as in the ``solvers`` figure, with a cross in its color and
+  "Anderson diverged (1.08 s)" beside it, so the other runs set the range); runs without solve statuses have no
+  such strip. Last,
   when any run recorded a penetration (a scene with contact), a thin strip of each production run's feasibility
   (penetration) ratio per step (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; the same rolling
-  median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut at a
-  detected blow-up). It has its own strip rather than sharing the residual's: penetration ratios span other decades
+  median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut where a
+  run that blew up began to diverge, with a cross there). It has its own strip rather than sharing the residual's: penetration ratios span other decades
   (0 without contact, up to ~100 at impacts), so a shared log axis would flatten the residual curves, and eight
   curves in one strip don't read. Each strip adds its own height to the row. ``--snapshots TIME=IMAGE ...`` adds a
   row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at
@@ -397,10 +399,12 @@ def _residual_strip(strip, runs: list[dict], smooth: int):
     #  data/profiling/investigations/BasketOfFruit-residual-misranking).
     medians = [np.array([1.0])]  # the y range covers the tolerance line
     spikes = []  # (run, times, ratios) of the steps above SPIKE_FACTOR times their rolling median
+    cuts = []  # (run, time, value) where a run's curve stops at its divergence
     for run in runs:
-        table = step_stats.on_step_grid(ratio_table(run))
+        table = step_stats.on_step_grid(diverged_table(run))
         ratio = np.maximum(table[STRIP_RATIO], RATIO_FLOOR)
-        medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
+        medians.append(_cut_curve(run, table, np.where(table["measured"], rolling_median(ratio, smooth), np.nan),
+                                  cuts))  # gaps stay gaps
         x = step_seconds(run, table["t"])
         strip.plot(x, medians[-1], color=solver_color(run), linewidth=0.8)
         with np.errstate(invalid="ignore"):
@@ -414,6 +418,7 @@ def _residual_strip(strip, runs: list[dict], smooth: int):
     values = values[np.isfinite(values) & (values > 0)]
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _spike_markers(strip, spikes)
+    _cut_markers(strip, cuts, label=True)
     _log_axis(strip, "y")
     strip.set_ylabel("Stationarity\nratio", fontsize=FONT_SIZE)
     _style(strip)
@@ -441,6 +446,35 @@ def _spike_markers(strip, spikes: list[tuple[dict, np.ndarray, np.ndarray]]):
             strip.annotate(_spike_label(value), (xi, hi), xytext=(2.0, -0.5), textcoords="offset points", ha="left",
                            va="top", fontsize=FONT_SIZE - 1, color=solver_color(run))
     strip.set_ylim(lo, hi)
+
+
+def _cut_curve(run: dict, table: dict, curve: np.ndarray, cuts: list) -> np.ndarray:
+    """A timeline strip's rolling-median ``curve`` of a run cut where it began to diverge (:func:`diverged_table`;
+    the median of the steps before would otherwise run half a window past it), with (run, time, last value) appended
+    to ``cuts``; unchanged for a run that didn't blow up."""
+    start = table.get("diverged")
+    if start is None:
+        return curve
+    x = step_seconds(run, table["t"])
+    curve = np.where(x >= start - 0.5 * float(run["metadata"].get("dt", 1.0)), np.nan, curve)
+    drawn = np.flatnonzero(np.isfinite(curve))
+    if drawn.size:
+        cuts.append((run, start, float(curve[drawn[-1]])))
+    return curve
+
+
+def _cut_markers(ax, cuts: list, label: bool):
+    """A cross in the run's color where its curve stops at its divergence (:func:`_cut_curve`), with "Anderson
+    diverged (1.08 s)" beside it if ``label``; the y range is left as the drawn curves set it."""
+    lo, hi = ax.get_ylim()
+    for run, start, value in cuts:
+        value = min(max(value, lo), hi)
+        ax.plot(start, value, **{**CUT_MARKER, "color": solver_color(run), "markersize": 4.0})
+        if label:
+            ax.annotate(f"{solver_name(run)} diverged ({start:.2f} s)", (start, value), xytext=(3.0, 0.0),
+                        textcoords="offset points", ha="left", va="center", fontsize=FONT_SIZE - 1,
+                        color=solver_color(run))
+    ax.set_ylim(lo, hi)
 
 
 BASELINE = "VBD"  # timeline: the production run every other run's step time is divided by
@@ -497,15 +531,18 @@ def _feasibility_strip(ax, runs: list[dict], smooth: int):
     (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; its rolling median of ``smooth`` steps, gaps kept;
     values below :data:`RATIO_FLOOR`, e.g. no penetration, drawn at it) on a log axis, with a dashed line at 1."""
     curves = [np.array([1.0])]
+    cuts = []
     for run in runs:
-        table = step_stats.on_step_grid(ratio_table(run))
+        table = step_stats.on_step_grid(diverged_table(run))
         ratio = np.maximum(table[FEASIBILITY_STRIP], RATIO_FLOOR)
-        curves.append(np.where(table["measured"] & np.isfinite(ratio), rolling_median(ratio, smooth), np.nan))
+        curves.append(_cut_curve(run, table, np.where(table["measured"] & np.isfinite(ratio),
+                                                      rolling_median(ratio, smooth), np.nan), cuts))
         ax.plot(step_seconds(run, table["t"]), curves[-1], color=solver_color(run), linewidth=0.8)
     ax.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
     values = np.concatenate(curves)
     values = values[np.isfinite(values) & (values > 0)]
     ax.set_ylim(values.min() / 1.25, values.max() * 1.25)
+    _cut_markers(ax, cuts, label=False)
     _log_axis(ax, "y")
     ax.set_ylabel("Penetration\nratio", fontsize=FONT_SIZE)
     _style(ax)
@@ -1860,6 +1897,20 @@ class TestPaperFigures(unittest.TestCase):
         plt.close(fig)
         fig = plot_budget([diverging, spike], {})
         self.assertIn("Anderson: diverged at 0.31 s", [t.get_text() for t in fig.legends[0].get_texts()])
+        plt.close(fig)
+        # The timeline's strip stops the diverging run's curve there, marks it and keeps the others' range
+        fig = plot_timeline([k], [diverging], ["A"], others=[[spike]])
+        strip = next(ax for ax in fig.axes if ax.get_ylabel() == "Stationarity\nratio")
+        self.assertLess(strip.get_ylim()[1], 10.0)  # its 1e4-9e4 left out: the others' curves set the range
+        curve = next(line for line in strip.lines if line.get_color() == solver_color(diverging)
+                     and line.get_linestyle() == "-")
+        x, y = np.asarray(curve.get_xdata()), np.asarray(curve.get_ydata())
+        self.assertTrue(np.isnan(y[x >= 0.31 - 1e-9]).all())
+        self.assertTrue(np.isfinite(y[(x > 0.15) & (x < 0.3)]).all())
+        crosses = [line for line in strip.lines if line.get_marker() == "x"]
+        self.assertEqual([(round(float(c.get_xdata()[0]), 2), c.get_color()) for c in crosses],
+                         [(0.31, solver_color(diverging))])
+        self.assertIn("Anderson diverged (0.31 s)", [t.get_text() for t in strip.texts])
         plt.close(fig)
 
     def test_decade_labels_fit(self):
