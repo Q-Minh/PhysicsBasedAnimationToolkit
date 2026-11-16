@@ -41,8 +41,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   100%. The other columns, from full production runs (``--production``), show what each solver's budget buys:
   the distribution per step of the smoothed stationarity ratio (:func:`ratio_table`) and of the penetration
   (feasibility) ratio to its tolerance (box: quartiles, whiskers: P10-P90, dot: maximum; log axes, ratios below
-  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes), the sweeps per step (linear axis) and, with
-  ``--step-times``, the step time.
+  1e-3 drawn at 1e-3, a dashed line at 1, where each test passes; a wide log axis labels only every k-th decade,
+  the smallest k at which its labels don't overlap, :func:`_fit_decade_labels`), the sweeps per step (linear axis)
+  and, with ``--step-times``, the step time.
   Sweep counts are quantized by the convergence test, which runs every ``Solver.Convergence.check_interval``
   sweeps and after each subproblem (20 sweeps on CapsulesIntoBowl, so every count is a multiple of 20). Early
   exits aren't shown: their fraction doesn't say how soon a solver exits.
@@ -118,7 +119,7 @@ import numpy as np  # noqa: E402
 from matplotlib import patheffects  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
-from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter, NullLocator  # noqa: E402
+from matplotlib.ticker import FixedLocator, FuncFormatter, LogLocator, MaxNLocator, NullFormatter, NullLocator  # noqa: E402
 from matplotlib.transforms import Bbox  # noqa: E402
 
 from . import results, step_stats  # noqa: E402
@@ -648,7 +649,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
     if column in ("gradient", "feasibility"):
         # The tolerance line first, so the ticks are chosen for the final limits
         ax.axvline(1.0, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
-        _log_axis(ax, dense=NARROW_LOG_RANGE)
+        _log_axis(ax, dense=NARROW_LOG_RANGE, fit_labels=True)
         ax.set_xlabel(STRIP_RATIO_LABEL if column == "gradient" else "Penetration ratio",
                       fontsize=FONT_SIZE)
     elif column == "early":
@@ -660,7 +661,7 @@ def _budget_panel(ax, column: str, tables: list[dict | None], y: np.ndarray):
         ax.xaxis.set_major_locator(MaxNLocator(nbins=4, steps=[1, 2, 2.5, 5, 10], integer=True))
         ax.set_xlabel("Sweeps", fontsize=FONT_SIZE)
     else:
-        _log_axis(ax, dense=NARROW_LOG_RANGE)
+        _log_axis(ax, dense=NARROW_LOG_RANGE, fit_labels=True)
         ax.set_xlabel("Step time (ms)", fontsize=FONT_SIZE)
 
 
@@ -759,10 +760,11 @@ def _box(ax, y: float, values: np.ndarray, floor: float | None = None, height: f
 NARROW_LOG_RANGE = 30.0
 
 
-def _log_axis(ax, which: str = "x", dense: float = 300.0):
+def _log_axis(ax, which: str = "x", dense: float = 300.0, fit_labels: bool = False):
     """Log x (or y) axis with plain-number ticks: 1-2-5 within a range under ``dense`` (hi / lo), decades over a
     wider one, and a few round linear ticks where fewer than two of those fall in range (call after drawing
-    everything, so the limits are final)."""
+    everything, so the limits are final). With ``fit_labels``, a decade axis labels only as many decades as fit
+    (:func:`_fit_decade_labels`)."""
     getattr(ax, f"set_{which}scale")("log")
     lo, hi = getattr(ax, f"get_{which}lim")()
     axis = getattr(ax, f"{which}axis")
@@ -775,6 +777,46 @@ def _log_axis(ax, which: str = "x", dense: float = 300.0):
         axis.set_major_locator(MaxNLocator(nbins=2, steps=[1, 2, 2.5, 5, 10]))
     axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
     axis.set_minor_formatter(NullFormatter())
+    if fit_labels and subs == (1.0,):
+        _fit_decade_labels(ax, which, [e for e in decades if lo <= 10.0**e <= hi])
+
+
+def _decade_label(v: float, _=None) -> str:
+    """A decade tick's label: plain from 0.001 to 1000, else a power of ten (10^4, not 10000 or 1e+04)."""
+    e = int(round(np.log10(v)))
+    return f"{v:g}" if -3 <= e <= 3 else f"$10^{{{e}}}$"
+
+
+# Minimum gap (points) between two tick labels of a decade axis (:func:`_fit_decade_labels`)
+TICK_LABEL_GAP = 1.5
+
+
+def _fit_decade_labels(ax, which: str, exponents: list[int]):
+    """Labels every k-th decade of a log axis (the exponents divisible by k, so 1 keeps its label where in range),
+    for the smallest k at which no two labels overlap or come closer than :data:`TICK_LABEL_GAP` at the figure's
+    size; the other decades keep unlabeled ticks. Wide stationarity spans crowded the narrow solvers panels
+    (BirthdayBanner.60Hz: 1 to 10^6 in under an inch, 2026-11-16)."""
+    axis = getattr(ax, f"{which}axis")
+    fig = ax.figure
+    gap = TICK_LABEL_GAP * fig.dpi / 72.0
+    k = 1
+    while True:
+        major = [10.0**e for e in exponents if e % k == 0]
+        axis.set_major_locator(FixedLocator(major))
+        axis.set_minor_locator(FixedLocator([10.0**e for e in exponents if e % k != 0]))
+        axis.set_major_formatter(FuncFormatter(_decade_label))
+        axis.set_minor_formatter(NullFormatter())
+        fig.canvas.draw()
+        boxes = sorted((t.get_window_extent() for t in axis.get_majorticklabels() if t.get_visible() and t.get_text()),
+                       key=lambda b: b.x0 if which == "x" else b.y0)
+        if which == "x":
+            crowded = any(b.x0 < a.x1 + gap for a, b in zip(boxes, boxes[1:]))
+        else:
+            crowded = any(b.y0 < a.y1 + gap for a, b in zip(boxes, boxes[1:]))
+        # Stop before a k that would leave fewer than two labels
+        if not crowded or sum(e % (k + 1) == 0 for e in exponents) < 2:
+            return
+        k += 1
 
 
 def plot_sweeps(runs: list[dict], labels: dict[str, str], width: float = 7.0):
@@ -1624,6 +1666,40 @@ class TestPaperFigures(unittest.TestCase):
                 fig.savefig(path, bbox_inches="tight", pad_inches=PAD)
                 plt.close(fig)
                 self.assertGreater(os.path.getsize(path), 1000)
+
+    def test_decade_labels_fit(self):
+        self.assertEqual([_decade_label(v) for v in (1e-3, 1.0, 1e3, 1e4, 1e6, 1e-4)],
+                         ["0.001", "1", "1000", "$10^{4}$", "$10^{6}$", "$10^{-4}$"])
+        # A solvers panel's width (about 0.9 in at 7 in): 1 to 10^6 can't label every decade
+        fig, ax = plt.subplots(figsize=(1.2, 0.6))
+        fig.subplots_adjust(left=0.1, right=0.9)
+        _box(ax, 0.0, np.array([0.3, 0.5, 1.0, 5.0, 30.0, 2e5, 1e6]))
+        _log_axis(ax, dense=NARROW_LOG_RANGE, fit_labels=True)
+        fig.canvas.draw()
+        labels = [t for t in ax.xaxis.get_majorticklabels() if t.get_visible() and t.get_text()]
+        boxes = sorted((t.get_window_extent() for t in labels), key=lambda b: b.x0)
+        gap = TICK_LABEL_GAP * fig.dpi / 72.0
+        self.assertGreaterEqual(len(boxes), 2)
+        self.assertTrue(all(b.x0 >= a.x1 + gap for a, b in zip(boxes, boxes[1:])))
+        exponents = [int(round(np.log10(v))) for v in ax.xaxis.get_majorticklocs()]
+        k = exponents[1] - exponents[0]
+        self.assertGreater(k, 1)  # thinned
+        self.assertIn(0, exponents)  # 1 keeps its label
+        self.assertTrue(all(e % k == 0 for e in exponents))
+        # The unlabeled decades keep their ticks
+        self.assertEqual(sorted(exponents + [int(round(np.log10(v))) for v in ax.xaxis.get_minorticklocs()]),
+                         list(range(0, 7)))
+        plt.close(fig)
+        # A narrow span keeps every decade labeled; without fit_labels nothing changes (timelines, lead)
+        for fit in (True, False):
+            fig, ax = plt.subplots(figsize=(3.0, 0.6))
+            _box(ax, 0.0, np.array([0.5, 1.0, 50.0, 200.0]))
+            _log_axis(ax, dense=NARROW_LOG_RANGE, fit_labels=fit)
+            fig.canvas.draw()
+            self.assertEqual([t.get_text() for t in ax.xaxis.get_majorticklabels() if t.get_text()
+                              and ax.get_xlim()[0] <= t.get_position()[0] <= ax.get_xlim()[1]],
+                             ["1", "10", "100"])
+            plt.close(fig)
 
     def test_figures_render(self):
         import tempfile
