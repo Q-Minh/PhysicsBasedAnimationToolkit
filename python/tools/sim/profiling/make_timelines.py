@@ -145,6 +145,10 @@ class TestMakeTimelines(unittest.TestCase):
             self.assertEqual(len(entry["frames"]), 5, scene)
             self.assertEqual(entry["frames"], sorted(entry["frames"]), scene)
             self.assertIn(entry["rate"], (30, 60), scene)
+            # The recorded times are the frames', to the millisecond printed
+            self.assertEqual(len(entry["times"]), len(entry["frames"]), scene)
+            for frame, time in zip(entry["frames"], entry["times"]):
+                self.assertLess(abs(time - frame / entry["rate"]), 5e-4, (scene, frame))
 
     def test_kit(self):
         import tempfile

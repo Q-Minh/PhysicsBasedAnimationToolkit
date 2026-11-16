@@ -1,17 +1,20 @@
 # Snapshot frames of the paper's timelines (2026-11-16): per scene (the names of data/share and data/results), the
-# 0-based frame indices N of its production trajectories, at t = N / rate seconds, and what each frame shows.
+# 0-based frame indices N of its production trajectories (data/share/<Scene>/EqualSweep/<Scene>.<Solver>.h5, the
+# same frames in every solver's), at t = N / rate seconds (times), and what each frame shows (notes).
 # The single source of truth for the snapshots: make_timelines.py reads it, and the placeholder snapshots are
 # rendered at these frames. Renders are named <Scene>.Frame<N>.png.
 
 [BasketOfFruit]
 rate = 60
 frames = [24, 60, 108, 240, 468]
+times = [0.400, 1.000, 1.800, 4.000, 7.800]  # seconds, frames / rate
 notes = ["fruit falling onto the strands", "strands at their deepest", "rebound", "settling",
          "at rest in the basket"]
 
 [DragonImpact]
 rate = 60
 frames = [240, 276, 288, 324, 720]
+times = [4.000, 4.600, 4.800, 5.400, 12.000]  # seconds, frames / rate
 notes = ["pillars twisted around the armadillo, before the launch", "dragons flying at the cage",
          "impact: both dragons pressing into the pillars", "deflected: one dragon falling to the floor, one thrown back",
          "settled: armadillo caged, dragons at rest"]
@@ -19,40 +22,48 @@ notes = ["pillars twisted around the armadillo, before the launch", "dragons fly
 [CapsulesIntoBowl]
 rate = 30
 frames = [27, 46, 75, 150, 357]
+times = [0.900, 1.533, 2.500, 5.000, 11.900]  # seconds, frames / rate
 notes = ["capsules falling to the tubes", "jammed in the tubes", "most through, a few still in the tubes",
          "all in the bowl", "at rest"]
 
 [Celebration]
 rate = 60
 frames = [6, 24, 48, 72, 240]
+times = [0.100, 0.400, 0.800, 1.200, 4.000]  # seconds, frames / rate
 notes = ["confetti falling", "landing", "landing", "settling", "at rest"]
 
 [BirthdayBanner]
 rate = 60
 frames = [18, 48, 84, 144, 360]
+times = [0.300, 0.800, 1.400, 2.400, 6.000]  # seconds, frames / rate
 notes = ["sag and first swings", "sag and first swings", "sag and first swings", "large swing", "late swing"]
 
 [ArmadilloPull]
 rate = 60
 frames = [54, 66, 84, 120, 204]
+times = [0.900, 1.100, 1.400, 2.000, 3.400]  # seconds, frames / rate
 notes = ["pulled", "just released", "snap-back swing", "snap-back swing", "second swing"]
 
 ["Trampoline.StiffSphere"]
 rate = 60
 frames = [90, 156, 174, 222, 270]
+times = [1.500, 2.600, 2.900, 3.700, 4.500]  # seconds, frames / rate
 notes = ["before the drop", "impact", "deepest", "apex", "second bottom"]
 
 ["Trampoline.SoftStiff"]
 rate = 60
 frames = [90, 156, 174, 216, 264]
+times = [1.500, 2.600, 2.900, 3.600, 4.400]  # seconds, frames / rate
 notes = ["before the drop", "impact", "deepest", "apex", "second bottom"]
 
 [MatOnStilts]
 rate = 60
 frames = [30, 138, 156, 186, 216]
+times = [0.500, 2.300, 2.600, 3.100, 3.600]  # seconds, frames / rate
 notes = ["mat on the stilt", "cow falling", "cow lands", "tipping", "falling off"]
 
 [FourBunnies]
 rate = 60
 frames = [54, 96, 123, 156, 480]
+times = [0.900, 1.600, 2.050, 2.600, 8.000]  # seconds, frames / rate
 notes = ["held above", "first impact", "apex", "second impact", "settled"]
