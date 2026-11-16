@@ -94,7 +94,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   equal-time runs' sweeps per subproblem, Newton steps with Newton's CG cap and relative tolerance from its output,
   :func:`newton_cg_params`; ``--newton-config`` reads a scene config's for a Newton run that hasn't finished,
   marked) and the convergence tolerances, each group's quantities as sub-columns under one spanning header
-  (:data:`SIMULATION_GROUPS`); wrapped scene labels and a 3 pt column separation keep it narrow. ``--notes`` (:func:`load_setup_notes`) adds footnotes per cell,
+  (:data:`SIMULATION_GROUPS`), every quantity a math-mode variable through a macro declared once at the top of the
+  .tex (:data:`SIMULATION_SYMBOLS`, ``\providecommand``: rename one in a line); wrapped scene labels and a 3 pt
+  column separation keep it narrow. ``--notes`` (:func:`load_setup_notes`) adds footnotes per cell,
   explained in the caption; BDF2 scenes are marked. Readable copies go next to each .tex, for reading without
   LaTeX: ``.md`` and a ``.pdf`` drawn by Matplotlib (:func:`markdown_simulation`, :func:`plot_simulation`, and the
   scene setup's counterparts), with the same cells, caption and footnotes.
@@ -1570,31 +1572,33 @@ def latex_scene_setup(rows: list[dict], labels: dict[str, str],
 
 
 def _simulation_caption(t: dict, style: str) -> str:
-    """The ``simulation`` table's caption without its footnotes, in LaTeX or plain text."""
+    """The ``simulation`` table's caption without its footnotes, its quantities written as :data:`SIMULATION_SYMBOLS`
+    (LaTeX: their macros; Markdown: plain; Matplotlib: plain, mathtext for powers of ten)."""
     if style == "latex":
-        m = lambda expr: f"${expr}$"  # noqa: E731
-        x, norm = r" \times ", r"$\max(a, r \lVert g \rVert)$"
-        tols = (r"$r_\mathrm{tol}$, $a_\mathrm{tol}$", r"$f_\mathrm{tol}$")
+        sym = lambda *keys: "$" + r" \times ".join("\\" + SIMULATION_SYMBOLS[k][0] for k in keys) + "$"  # noqa: E731
+        step = r"$\SimStep/\SimSubsteps$"
+        norm = r"$\max(\SimCGAtol, \SimCGRtol \lVert g \rVert)$"
     else:
-        m = lambda expr: expr  # noqa: E731
-        x, norm = " × ", "max(a, r|g|)" if style == "mpl" else "max(a, r‖g‖)"
-        tols = ("rstol, astol", "ftol")
+        sym = lambda *keys: " × ".join(SIMULATION_SYMBOLS[k][2] for k in keys)  # noqa: E731
+        step = "h/s"
+        norm = "max(a_CG, r_CG‖g‖)" if style == "markdown" else "max(a_CG, r_CG|g|)"
+    g = "$g$" if style == "latex" else "g"
     if t["atol"] is not None:
         value = _power(t["atol"], style)
-        # LaTeX: inside the caption's math; Matplotlib: its own mathtext ($10^{e}$); Markdown: Unicode
-        atol = (f", and {m('a = ' + value[1:-1])} in every scene" if style == "latex"
-                else f", and a = {value} in every scene")
+        atol = (rf", and $\SimCGAtol = {value[1:-1]}$ in every scene" if style == "latex"
+                else f", and a_CG = {value} in every scene")
     else:
-        atol = f", with the absolute tolerance {m('a')} after {m('r')}"
-    return (f"Per scene: the frame time step {m('h')}, split into {m('s')} substeps, so that each solve's time step "
-            f"is {m('h/s')}. The budget per frame, {m('s' + x + 'o' + x + 'n')}: substeps {m('s')}, outer "
-            f"iterations (subproblems) {m('o')} and VBD sweeps per subproblem {m('n')} of the VBD-family solvers at "
-            f"equal sweeps (VBD, AAAVBD, Chebyshev, Anderson); at equal time, the sweeps per subproblem {m('n')} of "
-            f"VBD, Chebyshev and Anderson (AAAVBD's time per step, {m('s')} and {m('o')} unchanged); Newton's "
-            f"{m('s' + x + 'o' + x + 'k')}, {m('k')} Newton steps per subproblem, with its cap on conjugate-gradient "
-            f"(CG) iterations per Newton step and their relative tolerance {m('r')} (CG stops at a residual norm of {norm}, {m('g')} the gradient, "
-            f"the Newton step's right-hand side{atol}). Convergence tolerances: the stationarity test's relative and "
-            f"absolute tolerances {tols[0]} and the feasibility test's {tols[1]}, the same for every solver of a "
+        atol = f", with the absolute tolerance {sym('cg_a')} after {sym('cg_r')}"
+    return (f"Per scene: the frame time step {sym('h')}, split into {sym('s')} substeps, so that each solve's time "
+            f"step is {step}. The budget per frame, {sym('s', 'm', 'n')}: {sym('s')} substeps, {sym('m')} outer "
+            f"iterations (subproblems) per substep and {sym('n')} VBD sweeps per subproblem for the VBD-family solvers "
+            f"at equal sweeps (VBD, AAAVBD, Chebyshev, Anderson); at equal time, the sweeps per subproblem {sym('n')} "
+            f"of VBD, Chebyshev and Anderson (AAAVBD's time per step, {sym('s')} and {sym('m')} unchanged); for "
+            f"Newton, {sym('s', 'm', 'k')} with {sym('k')} Newton steps per subproblem, each solving its linear system "
+            f"by conjugate gradients (CG) with at most {sym('cg_cap')} iterations and the relative tolerance "
+            f"{sym('cg_r')} (CG stops at a residual norm of {norm}, {g} the gradient, the Newton step's right-hand "
+            f"side{atol}). Convergence tolerances: the stationarity test's relative and absolute tolerances "
+            f"{sym('rstol')}, {sym('astol')} and the feasibility test's {sym('ftol')}, the same for every solver of a "
             "scene" + (" (" + ", ".join(t["common"]) + " in every scene)" if t["common"] else "") + ".")
 
 
@@ -1610,38 +1614,74 @@ def latex_simulation(rows: list[dict], labels: dict[str, str], notes: dict[str, 
     body = [rf"\parbox[t]{{{SCENE_LABEL_WIDTH_SETUP}}}{{\raggedright {cells[0]}}} & " + " & ".join(cells[1:]) + r" \\"
             for cells in t["body"]]
     spans, rules, names, column = [], [], [], 3  # LaTeX columns are 1-based: Scene, h, then the groups
-    for title, latex_names, _ in SIMULATION_GROUPS:
-        spans.append(rf"\multicolumn{{{len(latex_names)}}}{{c}}{{{title}}}")
-        rules.append(rf"\cmidrule(lr){{{column}-{column + len(latex_names) - 1}}}")
-        names += latex_names
-        column += len(latex_names)
-    k = " & $k$" if with_k else ""
-    columns = "l c " + " ".join("c" * len(g[1]) for g in SIMULATION_GROUPS) + (" c" if with_k else "")
-    out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:simulation}",
+    for title, symbol, keys in SIMULATION_GROUPS:
+        spans.append(rf"\multicolumn{{{len(keys)}}}{{c}}{{{_group_title(title, symbol, 'latex')}}}")
+        rules.append(rf"\cmidrule(lr){{{column}-{column + len(keys) - 1}}}")
+        names += [_symbol(key, "latex") for key in keys]
+        column += len(keys)
+    k = " & passes" if with_k else ""
+    columns = "l c " + " ".join("c" * len(g[2]) for g in SIMULATION_GROUPS) + (" c" if with_k else "")
+    out = [*_simulation_macros(), r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:simulation}",
            r"\setlength{\tabcolsep}{3pt}", rf"\begin{{tabular}}{{{columns}}}", r"\toprule",
            " & & " + " & ".join(spans) + (" &" if with_k else "") + r" \\", " ".join(rules),
-           r"Scene & $h$ (s) & " + " & ".join(names) + k + r" \\",
+           r"Scene & $\SimStep$ (s) & " + " & ".join(names) + k + r" \\",
            r"\midrule", *body, r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     return "\n".join(out) + "\n"
 
 
 SCENE_SETUP_HEADERS = ["Scene", "Nodes", "Tets", "E", "ρ (kg/m³)"]
-# simulation: the column groups (title, sub-column names in LaTeX and in plain text), after Scene and h
+# simulation: the table's quantities as variables (maintainer, 2026-11-16: "easy for me to rename the variables
+# later"): key -> (LaTeX macro, its definition, plain text, Matplotlib mathtext). The .tex declares each macro once
+# at its top with \providecommand, so a rename is a one-line edit there, or in the paper's preamble.
+SIMULATION_SYMBOLS = {
+    "h": ("SimStep", "h", "h", "$h$"),
+    "s": ("SimSubsteps", "s", "s", "$s$"),
+    "m": ("SimSubproblems", "m", "m", "$m$"),
+    "n": ("SimSweeps", "n", "n", "$n$"),
+    "k": ("SimNewtonSteps", "k", "k", "$k$"),
+    "cg_cap": ("SimCGCap", r"n_\mathrm{CG}", "n_CG", r"$n_\mathrm{CG}$"),
+    "cg_r": ("SimCGRtol", r"r_\mathrm{CG}", "r_CG", r"$r_\mathrm{CG}$"),
+    "cg_a": ("SimCGAtol", r"a_\mathrm{CG}", "a_CG", r"$a_\mathrm{CG}$"),
+    "rstol": ("SimRstol", r"\epsilon_r", "ε_r", r"$\epsilon_r$"),
+    "astol": ("SimAstol", r"\epsilon_a", "ε_a", r"$\epsilon_a$"),
+    "ftol": ("SimFtol", r"\epsilon_f", "ε_f", r"$\epsilon_f$"),
+}
+# simulation: the column groups after Scene and h: (title, title symbol or None, sub-columns: symbols or labels)
 SIMULATION_GROUPS = (
-    ("VBD family", ("$s$", "$o$", "$n$"), ("s", "o", "n")),
-    ("Equal time, $n$", ("VBD", "Cheb.", "And."), ("VBD", "Cheb.", "And.")),
-    ("Newton", ("$s$", "$o$", "$k$"), ("s", "o", "k")),
-    ("CG", ("cap", "$r$"), ("cap", "r")),
-    ("Convergence tolerances", (r"$r_\mathrm{tol}$", r"$a_\mathrm{tol}$", r"$f_\mathrm{tol}$"),
-     ("rstol", "astol", "ftol")),
+    ("VBD family", None, ("s", "m", "n")),
+    ("Equal time", "n", ("VBD", "Cheb.", "And.")),
+    ("Newton", None, ("s", "m", "k")),
+    ("CG", None, ("cg_cap", "cg_r")),
+    ("Convergence tolerances", None, ("rstol", "astol", "ftol")),
 )
+
+
+def _symbol(key: str, style: str) -> str:
+    """A table quantity in a rendering's notation: LaTeX its macro in math mode, Markdown plain, Matplotlib mathtext;
+    a label that isn't a symbol (VBD, Cheb.) as it is."""
+    if key not in SIMULATION_SYMBOLS:
+        return key
+    macro, _, plain, mathtext = SIMULATION_SYMBOLS[key]
+    return {"latex": "$\\" + macro + "$", "markdown": plain, "mpl": mathtext}[style]
+
+
+def _group_title(title: str, symbol: str | None, style: str) -> str:
+    return title if symbol is None else f"{title}, {_symbol(symbol, style)}"
+
+
+def _simulation_macros() -> list[str]:
+    """The LaTeX lines declaring :data:`SIMULATION_SYMBOLS`, for the top of the table's file."""
+    return (["% The table's symbols, declared once: rename one here (or define it in the paper's preamble, which wins:",
+             "% \\providecommand keeps an existing definition)"]
+            + [rf"\providecommand{{\{macro}}}{{{body}}}" for macro, body, _, _ in SIMULATION_SYMBOLS.values()] + [""])
 
 
 def _simulation_headers(with_k: bool) -> list[str]:
     """The ``simulation`` table's plain-text column names (Markdown)."""
-    prefixes = {"Equal time, $n$": "Equal time n", "Convergence tolerances": "Convergence"}
-    return (["Scene", "h (s)"] + [f"{prefixes.get(title, title)}: {name}" for title, _, names in SIMULATION_GROUPS
-                                  for name in names] + (["k"] if with_k else []))
+    prefixes = {"Convergence tolerances": "Convergence"}
+    return (["Scene", "h (s)"]
+            + [f"{prefixes.get(title, _group_title(title, symbol, 'markdown'))}: {_symbol(key, 'markdown')}"
+               for title, symbol, keys in SIMULATION_GROUPS for key in keys] + (["passes"] if with_k else []))
 
 
 def _markdown_table(title: str, headers: list[str], body: list[list[str]], caption: str,
@@ -1741,12 +1781,12 @@ def plot_simulation(rows: list[dict], labels: dict[str, str], notes: dict[str, d
     """The ``simulation`` table drawn by Matplotlib on a landscape page, each group's sub-columns under one
     spanning header (:data:`SIMULATION_GROUPS`)."""
     t = _simulation_table(rows, labels, notes, "mpl")
-    headers, groups, column = ["Scene", "h (s)"], [], 2
-    for title, _, names in SIMULATION_GROUPS:
-        headers += list(names)
-        groups.append((column, column + len(names) - 1, title.replace("$n$", "n")))
-        column += len(names)
-    headers += ["k"] if t["with_k"] else []
+    headers, groups, column = ["Scene", "$h$ (s)"], [], 2
+    for title, symbol, keys in SIMULATION_GROUPS:
+        headers += [_symbol(key, "mpl") for key in keys]
+        groups.append((column, column + len(keys) - 1, _group_title(title, symbol, "mpl")))
+        column += len(keys)
+    headers += ["passes"] if t["with_k"] else []
     widths = [20, 7] + [5, 5, 6] + [6, 6, 6] + [5, 5, 5] + [6, 7] + [6, 6, 6] + ([4] if t["with_k"] else [])
     return _plot_table("Simulation parameters", headers, t["body"], widths, _simulation_caption(t, "mpl"),
                        t["notes"], groups=groups)
@@ -2428,21 +2468,28 @@ class TestPaperFigures(unittest.TestCase):
         # relative tolerance, the absolute one, the same in every scene, in the caption; the convergence tolerances)
         text = latex_simulation(rows, labels, notes)
         self.assertIn(r"\begin{tabular}{l c ccc ccc ccc cc ccc}", text)
-        self.assertIn(r" & & \multicolumn{3}{c}{VBD family} & \multicolumn{3}{c}{Equal time, $n$} & "
+        # Every quantity a macro declared once on top, so the paper renames it in one line
+        self.assertIn(r"\providecommand{\SimSubproblems}{m}", text)
+        self.assertIn(r"\providecommand{\SimCGCap}{n_\mathrm{CG}}", text)
+        self.assertIn(r"\providecommand{\SimRstol}{\epsilon_r}", text)
+        self.assertLess(text.index(r"\providecommand{\SimStep}{h}"), text.index(r"\begin{table*}"))
+        self.assertIn(r" & & \multicolumn{3}{c}{VBD family} & \multicolumn{3}{c}{Equal time, $\SimSweeps$} & "
                       r"\multicolumn{3}{c}{Newton} & \multicolumn{2}{c}{CG} & \multicolumn{3}{c}{Convergence tolerances}",
                       text)
         self.assertIn(r"\cmidrule(lr){3-5} \cmidrule(lr){6-8} \cmidrule(lr){9-11} \cmidrule(lr){12-13} "
                       r"\cmidrule(lr){14-16}", text)
-        self.assertIn(r"Scene & $h$ (s) & $s$ & $o$ & $n$ & VBD & Cheb. & And. & $s$ & $o$ & $k$ & cap & $r$ & "
-                      r"$r_\mathrm{tol}$ & $a_\mathrm{tol}$ & $f_\mathrm{tol}$ \\", text)
+        self.assertIn(r"Scene & $\SimStep$ (s) & $\SimSubsteps$ & $\SimSubproblems$ & $\SimSweeps$ & VBD & Cheb. & "
+                      r"And. & $\SimSubsteps$ & $\SimSubproblems$ & $\SimNewtonSteps$ & $\SimCGCap$ & $\SimCGRtol$ & "
+                      r"$\SimRstol$ & $\SimAstol$ & $\SimFtol$ \\", text)
         self.assertIn(r"\parbox[t]{2.4cm}{\raggedright Birthday banner} & 1/60 & 2 & 1 & 100 & 120 & 110 & 105 & 2 & 10 "
                       r"& 2 & 3000 & $10^{-6}$ & 0.02 & 0.1 & 0.5 \\", text)
-        # A note on the cell it qualifies: Newton's config mark on its outer iterations o
+        # A note on the cell it qualifies: Newton's config mark on its outer iterations m
         self.assertIn(r"\parbox[t]{2.4cm}{\raggedright mat} & 1/60 & 1 & 5 & 80 & -- & -- & -- & 1 & 5$^{\mathrm{a}}$ "
                       r"& 1 & 4000 & $10^{-9}$ & 0.08$^{\mathrm{b}}$ & 0.4 & 0.5 \\", text)
-        self.assertIn("each solve's time step is $h/s$", text)
-        self.assertIn(r"$\max(a, r \lVert g \rVert)$", text)
-        self.assertIn(r"and $a = 10^{-10}$ in every scene", text)
+        self.assertIn(r"each solve's time step is $\SimStep/\SimSubsteps$", text)
+        self.assertIn(r"The budget per frame, $\SimSubsteps \times \SimSubproblems \times \SimSweeps$", text)
+        self.assertIn(r"$\max(\SimCGAtol, \SimCGRtol \lVert g \rVert)$", text)
+        self.assertIn(r"and $\SimCGAtol = 10^{-10}$ in every scene", text)
         self.assertIn(r"$^{\mathrm{a}}$from its scene config: the run hadn't finished.", text)
         self.assertIn(r"$^{\mathrm{b}}$4x the shared ones.", text)
         self.assertNotIn("two materials", text)
@@ -2450,13 +2497,14 @@ class TestPaperFigures(unittest.TestCase):
         # The readable copies: the same cells in Markdown (group-prefixed names, Unicode marks and powers) and drawn by
         # Matplotlib (spanning headers)
         md = markdown_simulation(rows, labels, notes)
-        self.assertIn("| Scene | h (s) | VBD family: s | VBD family: o | VBD family: n | Equal time n: VBD | Equal time "
-                      "n: Cheb. | Equal time n: And. | Newton: s | Newton: o | Newton: k | CG: cap | CG: r | "
-                      "Convergence: rstol | Convergence: astol | Convergence: ftol |", md)
+        self.assertIn("| Scene | h (s) | VBD family: s | VBD family: m | VBD family: n | Equal time, n: VBD | Equal "
+                      "time, n: Cheb. | Equal time, n: And. | Newton: s | Newton: m | Newton: k | CG: n_CG | CG: r_CG | "
+                      "Convergence: ε_r | Convergence: ε_a | Convergence: ε_f |", md)
+        self.assertIn("budget per frame, s × m × n:", md)
         self.assertIn("| Birthday banner | 1/60 | 2 | 1 | 100 | 120 | 110 | 105 | 2 | 10 | 2 | 3000 | 10⁻⁶ | 0.02 | 0.1 "
                       "| 0.5 |", md)
         self.assertIn("| mat | 1/60 | 1 | 5 | 80 | – | – | – | 1 | 5ᵃ | 1 | 4000 | 10⁻⁹ | 0.08ᵇ | 0.4 | 0.5 |", md)
-        self.assertIn("a = 10⁻¹⁰ in every scene", md)
+        self.assertIn("a_CG = 10⁻¹⁰ in every scene", md)
         self.assertIn("- ᵃ from its scene config: the run hadn't finished", md)
         self.assertIn("- ᵇ 4x the shared ones", md)
         self.assertIn("| Birthday banner | 54.5k | 231k | 1–100 MPaᵃ | 1000 |", markdown_scene_setup(rows, labels, notes))
@@ -2466,9 +2514,9 @@ class TestPaperFigures(unittest.TestCase):
         self.assertEqual((table[0, 13].visible_edges, table[0, 14].visible_edges, table[0, 15].visible_edges),
                          ("TBL", "TB", "TBR"))
         self.assertEqual([table[0, c].get_text().get_text() for c in (3, 6, 9, 11)],
-                         ["VBD family", "Equal time, n", "Newton", "CG"])
+                         ["VBD family", "Equal time, $n$", "Newton", "CG"])
         self.assertEqual(table[0, 1].visible_edges, "")
-        self.assertEqual([table[1, c].get_text().get_text() for c in range(2, 5)], ["s", "o", "n"])
+        self.assertEqual([table[1, c].get_text().get_text() for c in range(2, 5)], ["$s$", "$m$", "$n$"])
         self.assertEqual(table[2, 0].get_text().get_text(), "Birthday banner")
         self.assertEqual(table[3, 9].get_text().get_text(), r"5$^{\mathrm{a}}$")
         self.assertEqual(table[3, 12].get_text().get_text(), "$10^{-9}$")
@@ -2484,7 +2532,7 @@ class TestPaperFigures(unittest.TestCase):
         rows[1]["newton"]["cg_atol"] = 1e-8
         text = latex_simulation(rows, {})
         self.assertIn(r"& 4000 & $10^{-9}$, $10^{-8}$ &", text)
-        self.assertIn(r"with the absolute tolerance $a$ after $r$", text)
+        self.assertIn(r"with the absolute tolerance $\SimCGAtol$ after $\SimCGRtol$", text)
         # Runs of the VBD family with different budgets aren't one equal-sweep budget
         with self.assertRaisesRegex(ValueError, "equal-sweep budgets"):
             setup_rows(runs[:3] + [run("AndersonSolver", banner, sweeps=90)])
