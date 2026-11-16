@@ -12,27 +12,28 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
 - ``timeline``: one row per kernels result (e.g. AAAVBD on one scene): the GPU time per step of every production
   run over the simulated time, a line in its solver's color (the paired one and the scene's others, e.g. VBD), in a
   plot :data:`TIMELINE_COST_HEIGHT` tall. No phase bands (maintainer, 2026-11-15): the ``solvers`` figure shows the
-  phase shares. With ``--vbd-ratio`` (off by default: the
-  maintainer found it too busy) and a VBD production run, a thin strip under it shows every other production run's
-  step time over VBD's at the same step, the paired run's included (:func:`vbd_time_ratio`; VBD is the baseline, so
-  the strip reads as each solver's overhead or saving per step; no VBD curve, a dashed line at 1, the same rolling
-  median; log axis when the curves span more than :data:`VBD_RATIO_LOG_SPAN`, else linear; steps either run lacks
-  are gaps, steps from either run's detected blow-up on are left out); the cost plot then keeps only the paired
-  run's step-time line.
-  Below them, on the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its rolling median over ``--smooth`` steps, a dashed
-  line at 1), over the overall motion, the free nodes' mass-weighted RMS speed
-  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), on a right axis: the paired run's as a light fill
-  (else the kernels run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend
-  entry (default ``paired``: the paired run's only). Without solve statuses the strip shows the speed only. Last,
+  phase shares. Behind the curves, on a right axis, the overall motion as an indicator of what happens in the scene
+  (maintainer, 2026-11-15; until then behind the residual strip): the free nodes' mass-weighted RMS speed
+  sqrt(2 K / M) (``profiling/trajectory.py``'s ``rms_speed``), the paired run's as a light fill (else the kernels
+  run's), with ``--rms-speed all`` also the other runs' as dotted lines, each with its own legend entry (default
+  ``paired``: the paired run's only). With ``--vbd-ratio`` (off by default: the maintainer found it too busy) and a
+  VBD production run, a thin strip under it shows every other production run's step time over VBD's at the same
+  step, the paired run's included (:func:`vbd_time_ratio`; VBD is the baseline, so the strip reads as each solver's
+  overhead or saving per step; no VBD curve, a dashed line at 1, the same rolling median; log axis when the curves
+  span more than :data:`VBD_RATIO_LOG_SPAN`, else linear; steps either run lacks are gaps, steps from either run's
+  detected blow-up on are left out); the cost plot then keeps only the paired run's step-time line. Below them, on
+  the same time axis, the production runs' smoothed stationarity ratio per step (:func:`ratio_table`; log axis, its
+  rolling median over ``--smooth`` steps, a dashed line at 1); runs without solve statuses have no such strip. Last,
   when any run recorded a penetration (a scene with contact), a thin strip of each production run's feasibility
   (penetration) ratio per step (:data:`FEASIBILITY_STRIP`, the worst over the step's substeps; the same rolling
   median, solver colors, log axis and dashed line at 1, values below :data:`RATIO_FLOOR` drawn at it, cut at a
   detected blow-up). It has its own strip rather than sharing the residual's: penetration ratios span other decades
   (0 without contact, up to ~100 at impacts), so a shared log axis would flatten the residual curves, and eight
-  curves in one strip don't read. Each strip adds its own height to the row. ``--snapshots TIME=IMAGE ...`` adds a row of simulation snapshots above
-  (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at their times on the plots (first
-  row only). Steps a result lacks, the warm-up steps at the seams of a run merged from legs (``profiling/legs.py``),
-  are gaps in every curve (with ``--bin``, the bins that hold them), not interpolated.
+  curves in one strip don't read. Each strip adds its own height to the row. ``--snapshots TIME=IMAGE ...`` adds a
+  row of simulation snapshots above (``profiling/snapshots.py`` renders them), numbered, with the numbers marked at
+  their times on the plots (first row only). Steps a result lacks, the warm-up steps at the seams of a run merged
+  from legs (``profiling/legs.py``), are gaps in every curve (with ``--bin``, the bins that hold them), not
+  interpolated.
 - ``solvers``: one row per solver of one scene, in the benchmark figures' solver order. First column, from
   short fixed-budget kernels runs (no early exit, e.g. every solver resumed from the same checkpoint): each
   phase group's share of the GPU time, with the GPU time per sweep at the bar's end. Groups shared by every
@@ -334,38 +335,56 @@ SPEED_DOTS = (0, (1, 1.5))  # timeline: the other production runs' speeds (``--r
 RMS_SPEED_MODES = ("paired", "all")  # timeline: whose RMS speed the strip draws (the paired run's, or every run's)
 
 
-def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
-                    smooth: int, rms_speed: str = "paired") -> list:
-    """The timeline's lower strip: each production run's smoothed stationarity ratio per step
-    (:data:`STRIP_RATIO`, its rolling median) on a log axis, over the :data:`SPEED` on a right axis (see the module
-    docstring): the paired run's (``runs[0]``), and with ``rms_speed`` ``"all"`` the other runs' too; ``x`` and
-    ``kernels_speed`` are the ``kernels`` run's step times (s) and speeds, drawn if the paired run has none. Returns
-    the speeds' legend handles."""
+def _speed_axis(ax, x: np.ndarray, kernels: dict, kernels_speed: np.ndarray, runs: list[dict],
+                rms_speed: str = "paired") -> list:
+    """The :data:`SPEED` behind the timeline's cost plot ``ax``, on a right axis, an indicator of the scene's motion
+    over time (maintainer, 2026-11-15; see the module docstring): the paired run's (``runs[0]``) as a light fill, and
+    with ``rms_speed`` ``"all"`` the other runs' as dotted lines; ``x`` and ``kernels_speed`` are the ``kernels`` run's
+    step times (s) and speeds, drawn if the paired run has none. Returns the speeds' legend handles."""
+    speed = ax.twinx()
+    handles = []
+    for i, run in enumerate(runs):
+        table = step_stats.on_step_grid(step_stats.per_step(run))
+        if not np.isfinite(table[SPEED]).any():
+            continue
+        xr = step_seconds(run, table["t"])
+        if i == 0:
+            speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
+            handles.append(Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(run)} {SPEED_NAME}"))
+        elif rms_speed == "all":
+            speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
+            handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
+                                  label=f"{solver_name(run)} {SPEED_NAME}"))
+    if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
+        speed.fill_between(x, kernels_speed, color=SPEED_FILL, alpha=0.6, linewidth=0)
+        handles.insert(0, Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(kernels)} {SPEED_NAME}"))
+    speed.set_ylim(bottom=0)
+    speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
+    # The step times over the speed fill: the left axes in front, without their background
+    ax.set_zorder(speed.get_zorder() + 1)
+    ax.patch.set_visible(False)
+    for side in ("top", "left", "bottom"):
+        speed.spines[side].set_visible(False)
+    speed.spines["right"].set_linewidth(0.5)
+    speed.tick_params(labelsize=FONT_SIZE, length=2, width=0.5, pad=1.5, colors="#7f7f7f")
+    return handles
+
+
+def _residual_strip(strip, runs: list[dict], smooth: int):
+    """The timeline's residual strip: each production run's smoothed stationarity ratio per step
+    (:data:`STRIP_RATIO`, its rolling median of ``smooth`` steps, gaps kept) on a log axis, with a dashed line at 1."""
     # TODO: show every convergence metric over time, the feasibility (penetration) ratio beside the stationarity
     #  ratio (and the unsmoothed beside the smoothed one, both recorded since fd5eaa56). A per-step residual can't
     #  carry a trajectory's past error: on BasketOfFruit, Chebyshev's smoothed ratio is 2x AAAVBD's while its net
     #  overstretches (0.5-1.25 s, 133 infeasible steps, a fruit falls through) but lower after its net recovers
     #  (1.5-2 s, 19 vs 28), so the stationarity ratio alone misreads a late window (maintainer, 2026-11-09;
     #  data/profiling/investigations/BasketOfFruit-residual-misranking).
-    speed = strip.twinx()
-    handles = []
     medians = [np.array([1.0])]  # the y range covers the tolerance line
-    for i, run in enumerate(runs):
+    for run in runs:
         table = step_stats.on_step_grid(ratio_table(run))
-        xr = step_seconds(run, table["t"])
-        if i == 0 and np.isfinite(table[SPEED]).any():
-            speed.fill_between(xr, table[SPEED], color=SPEED_FILL, alpha=0.6, linewidth=0)
-            handles.append(Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(run)} {SPEED_NAME}"))
-        elif i > 0 and rms_speed == "all" and np.isfinite(table[SPEED]).any():
-            speed.plot(xr, table[SPEED], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS)
-            handles.append(Line2D([], [], color=solver_color(run), linewidth=0.5, linestyle=SPEED_DOTS,
-                                  label=f"{solver_name(run)} {SPEED_NAME}"))
         ratio = np.maximum(table[STRIP_RATIO], RATIO_FLOOR)
         medians.append(np.where(table["measured"], rolling_median(ratio, smooth), np.nan))  # gaps stay gaps
-        strip.plot(xr, medians[-1], color=solver_color(run), linewidth=0.8)
-    if not any(isinstance(h, Patch) for h in handles) and np.isfinite(kernels_speed).any():
-        speed.fill_between(x, kernels_speed, color=SPEED_FILL, alpha=0.6, linewidth=0)
-        handles.insert(0, Patch(color=SPEED_FILL, alpha=0.6, label=f"{solver_name(kernels)} {SPEED_NAME}"))
+        strip.plot(step_seconds(run, table["t"]), medians[-1], color=solver_color(run), linewidth=0.8)
     strip.axhline(1.0, color=INK, linewidth=0.5, linestyle=(0, (3, 2)))
     strip.set_yscale("log")
     values = np.concatenate(medians)
@@ -373,17 +392,7 @@ def _residual_strip(strip, x: np.ndarray, kernels: dict, kernels_speed: np.ndarr
     strip.set_ylim(values.min() / 1.25, values.max() * 1.25)  # the curves with a margin, not clipped at the edges
     _log_axis(strip, "y")
     strip.set_ylabel("Stationarity\nratio", fontsize=FONT_SIZE)
-    speed.set_ylim(bottom=0)
-    speed.set_ylabel(f"{SPEED_NAME}\n(m/s)", fontsize=FONT_SIZE, color="#7f7f7f")
-    # The ratios over the speed fill: the left axes in front, without their background
-    strip.set_zorder(speed.get_zorder() + 1)
-    strip.patch.set_visible(False)
     _style(strip)
-    for side in ("top", "left", "bottom"):
-        speed.spines[side].set_visible(False)
-    speed.spines["right"].set_linewidth(0.5)
-    speed.tick_params(labelsize=FONT_SIZE, length=2, width=0.5, pad=1.5, colors="#7f7f7f")
-    return handles
 
 
 BASELINE = "VBD"  # timeline: the production run every other run's step time is divided by
@@ -467,7 +476,7 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     """The ``timeline`` figure (see the module docstring): one row per kernels result, the first one under its
     ``snapshots`` (simulated time, image path), numbered at their times on the plots. ``others`` are each row's
     production runs of other solvers (:func:`other_production`), drawn over the paired ``production`` run;
-    ``rms_speed`` (:data:`RMS_SPEED_MODES`) says whose RMS speed the lower strip draws; ``vbd_ratio`` adds the
+    ``rms_speed`` (:data:`RMS_SPEED_MODES`) says whose RMS speed the cost plot draws; ``vbd_ratio`` adds the
     step-time-over-VBD strip (``--vbd-ratio``; off by default, the maintainer found it too busy), which then replaces
     the other runs' step-time lines on the cost plot."""
     tables = [step_stats.on_step_grid(step_stats.per_step(k)) for k in kernels]
@@ -475,7 +484,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     others = others or [[] for _ in kernels]
     runs_per_row = [([prod] if prod is not None else []) + list(more) for prod, more in zip(production, others)]
     has_ratio = [any(np.isfinite(ratio_table(run)[STRIP_RATIO]).any() for run in runs) for runs in runs_per_row]
-    has_speed = [bool(np.isfinite(t[SPEED]).any()) for t in tables]
+    has_speed = [bool(np.isfinite(t[SPEED]).any()) or any(np.isfinite(step_stats.per_step(run)[SPEED]).any()
+                                                         for run in runs)
+                 for t, runs in zip(tables, runs_per_row)]
     baselines = [next((run for run in runs if run["metadata"].get("solver") == BASELINE), None) if vbd_ratio
                  else None for runs in runs_per_row]
     has_feasibility = [any(has_contact(run) for run in runs) for runs in runs_per_row]
@@ -483,8 +494,8 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
     images = [plt.imread(path) for _, path in snapshots]
     image_height = width / len(images) * images[0].shape[0] / images[0].shape[1] if images else 0.0
     heights = []
-    for ratio, speed, baseline, feasibility in zip(has_ratio, has_speed, baselines, has_feasibility):
-        strips = [0.45 if baseline is not None else 1e-4, 0.65 if ratio else 0.5 if speed else 1e-4,
+    for ratio, baseline, feasibility in zip(has_ratio, baselines, has_feasibility):
+        strips = [0.45 if baseline is not None else 1e-4, 0.65 if ratio else 1e-4,
                   0.45 if feasibility else 1e-4]  # 1e-4: an absent strip
         heights += [TIMELINE_COST_HEIGHT] + strips
     fig = plt.figure(figsize=(width, image_height + sum(heights) + 0.45 * rows))
@@ -524,18 +535,10 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
             relative = fig.add_subplot(grid[4 * r + 1], sharex=area)
             _vbd_ratio_strip(relative, [run for run in runs if run is not baselines[r]], baselines[r], smooth)
             axes.append(relative)
-        if has_ratio[r] or has_speed[r]:
+        if has_ratio[r]:
             axes[-1].tick_params(labelbottom=False)
             strip = fig.add_subplot(grid[4 * r + 2], sharex=area)
-            if has_ratio[r]:
-                for h in _residual_strip(strip, step_seconds(result, table["t"]), result, table[SPEED], runs,
-                                         smooth, rms_speed):
-                    speeds.setdefault(h.get_label(), h)
-            else:
-                strip.plot(x, bin_steps(table[SPEED], bin_n), color=INK, linewidth=0.6)
-                strip.set_ylim(bottom=0)
-                strip.set_ylabel("Speed\n(m/s)", fontsize=FONT_SIZE)
-                _style(strip)
+            _residual_strip(strip, runs, smooth)
             axes.append(strip)
         if has_feasibility[r]:
             axes[-1].tick_params(labelbottom=False)
@@ -549,6 +552,9 @@ def plot_timeline(kernels: list[dict], production: list[dict | None], labels: li
                 for ax in axes:
                     ax.axvline(t, color=INK, linewidth=0.5, linestyle=(0, (2, 2)))
                 _marker(area, t, i + 1)
+        if has_speed[r]:  # last, so the row's other axes keep their order in fig.axes
+            for h in _speed_axis(area, step_seconds(result, table["t"]), result, table[SPEED], runs, rms_speed):
+                speeds.setdefault(h.get_label(), h)
     handles = [Line2D([], [], color=color, linewidth=0.8, label=name) for name, color in solvers.items()]
     handles += list(speeds.values())
     _legend(fig, handles, ncol=min(len(handles), 6))
@@ -1757,10 +1763,13 @@ class TestPaperFigures(unittest.TestCase):
         vbd = self._production(self._kernels("VBD"))
         fig = plot_timeline([k], [self._production(k)], ["A"], others=[[vbd]])
         labels = [ax.get_ylabel() for ax in fig.axes]
-        self.assertEqual(labels[-1], "Penetration\nratio")
-        self.assertEqual(fig.axes[-1].get_yscale(), "log")
-        self.assertEqual([line.get_color() for line in fig.axes[-1].lines if line.get_linestyle() == "-"],
+        # the cost plot, the residual and penetration strips, then the cost plot's RMS speed axis
+        self.assertEqual(labels, ["GPU time (ms)", "Stationarity\nratio", "Penetration\nratio", f"{SPEED_NAME}\n(m/s)"])
+        penetration = fig.axes[2]
+        self.assertEqual(penetration.get_yscale(), "log")
+        self.assertEqual([line.get_color() for line in penetration.lines if line.get_linestyle() == "-"],
                          [SOLVER_COLORS["AAAVBD"], SOLVER_COLORS["VBD"]])
+        self.assertEqual(len(fig.axes[1].collections), 0)  # no speed fill behind the residual strip
         height = fig.get_size_inches()[1]
         plt.close(fig)
         without = self._production(k)
