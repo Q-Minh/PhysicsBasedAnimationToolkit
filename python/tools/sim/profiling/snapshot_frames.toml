@@ -1,0 +1,58 @@
+# Snapshot frames of the paper's timelines (2026-11-16): per scene (the names of data/share and data/results), the
+# 0-based frame indices N of its production trajectories, at t = N / rate seconds, and what each frame shows.
+# The single source of truth for the snapshots: make_timelines.py reads it, and the placeholder snapshots are
+# rendered at these frames. Renders are named <Scene>.Frame<N>.png.
+
+[BasketOfFruit]
+rate = 60
+frames = [24, 60, 108, 240, 468]
+notes = ["fruit falling onto the strands", "strands at their deepest", "rebound", "settling",
+         "at rest in the basket"]
+
+[DragonImpact]
+rate = 60
+frames = [240, 276, 288, 324, 720]
+notes = ["pillars twisted around the armadillo, before the launch", "dragons flying at the cage",
+         "impact: both dragons pressing into the pillars", "deflected: one dragon falling to the floor, one thrown back",
+         "settled: armadillo caged, dragons at rest"]
+
+[CapsulesIntoBowl]
+rate = 30
+frames = [27, 46, 75, 150, 357]
+notes = ["capsules falling to the tubes", "jammed in the tubes", "most through, a few still in the tubes",
+         "all in the bowl", "at rest"]
+
+[Celebration]
+rate = 60
+frames = [6, 24, 48, 72, 240]
+notes = ["confetti falling", "landing", "landing", "settling", "at rest"]
+
+[BirthdayBanner]
+rate = 60
+frames = [18, 48, 84, 144, 360]
+notes = ["sag and first swings", "sag and first swings", "sag and first swings", "large swing", "late swing"]
+
+[ArmadilloPull]
+rate = 60
+frames = [54, 66, 84, 120, 204]
+notes = ["pulled", "just released", "snap-back swing", "snap-back swing", "second swing"]
+
+["Trampoline.StiffSphere"]
+rate = 60
+frames = [90, 156, 174, 222, 270]
+notes = ["before the drop", "impact", "deepest", "apex", "second bottom"]
+
+["Trampoline.SoftStiff"]
+rate = 60
+frames = [90, 156, 174, 216, 264]
+notes = ["before the drop", "impact", "deepest", "apex", "second bottom"]
+
+[MatOnStilts]
+rate = 60
+frames = [30, 138, 156, 186, 216]
+notes = ["mat on the stilt", "cow falling", "cow lands", "tipping", "falling off"]
+
+[FourBunnies]
+rate = 60
+frames = [54, 96, 123, 156, 480]
+notes = ["held above", "first impact", "apex", "second impact", "settled"]
