@@ -93,7 +93,9 @@ GPU arithmetic order isn't deterministic), so they are compared as distributions
   ``--newton-config`` reads
   a scene config's for a Newton run that hasn't finished, marked) and the convergence tolerances, all from the runs'
   own metadata (:func:`setup_rows`, which refuses a scene whose runs disagree). ``--notes`` (:func:`load_setup_notes`)
-  adds footnotes per cell, explained in the caption; BDF2 scenes are marked.
+  adds footnotes per cell, explained in the caption; BDF2 scenes are marked. Readable copies go next to the .tex,
+  for reading without LaTeX: ``.md`` (:func:`markdown_setup`) and a landscape ``.pdf`` drawn by Matplotlib
+  (:func:`plot_setup`), with the same cells, caption and footnotes.
 - ``lead``: AAAVBD's lead over the other VBD-family solvers against the time step, one panel per scene: each
   solver's median smoothed stationarity ratio over its solves (``status_ratio.smoothed_test_ratio`` only, as the
   other figures; runs without smoothed ratios give no point), one line per solver, divided by AAAVBD's at the same
@@ -1424,26 +1426,44 @@ def _step_fraction(h: float) -> str:
     return f"1/{round(n)}" if abs(n - round(n)) < 1e-3 * n else f"{_num(1e3 * h)} ms"
 
 
-def _si(lo: float, hi: float, unit: str) -> str:
+_SUPERSCRIPT = dict(zip("0123456789-,abcdefghijklmnoprstuvwxyz",
+                        "⁰¹²³⁴⁵⁶⁷⁸⁹⁻,ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖʳˢᵗᵘᵛʷˣʸᶻ"))
+# setup: how the table's three renderings (LaTeX, Markdown, the PDF drawn by Matplotlib) write a product, a range,
+# a power of ten, a footnote mark, a note's text and a scene label
+SETUP_STYLES = {
+    "latex": {"times": r" $\times$ ", "dash": "--", "power": lambda e: f"$10^{{{e}}}$",
+              "mark": lambda m: rf"$^{{\mathrm{{{m}}}}}$", "text": lambda t: _latex_text(t),
+              "label": lambda s: s.replace("_", r"\_"), "none": "--"},
+    "markdown": {"times": " × ", "dash": "–", "power": lambda e: "10" + "".join(_SUPERSCRIPT[c] for c in str(e)),
+                 "mark": lambda m: "".join(_SUPERSCRIPT.get(c, c) for c in m), "text": str, "label": str,
+                 "none": "–"},
+    "mpl": {"times": " × ", "dash": "–", "power": lambda e: f"$10^{{{e}}}$", "mark": lambda m: rf"$^{{\mathrm{{{m}}}}}$",
+            "text": lambda t: t.replace("$", r"\$"), "label": lambda s: s.replace("$", r"\$"), "none": "–"},
+}
+
+
+def _si(lo: float, hi: float, unit: str, dash: str = "--") -> str:
     """A value or range with the SI prefix of its larger end (0.1--100 MPa)."""
     for scale, prefix in ((1e9, "G"), (1e6, "M"), (1e3, "k"), (1.0, "")):
         if hi >= scale:
             break
     a, b = _num(lo / scale), _num(hi / scale)
-    return f"{a} {prefix}{unit}" if a == b else f"{a}--{b} {prefix}{unit}"
+    return f"{a} {prefix}{unit}" if a == b else f"{a}{dash}{b} {prefix}{unit}"
 
 
-def _power(v: float) -> str:
-    """A tolerance: a power of ten as $10^{e}$, else three significant digits."""
+def _power(v: float, style: str = "latex") -> str:
+    """A tolerance: a power of ten as 10^e in the style's notation, else three significant digits."""
     e = np.log10(v) if v > 0 else np.nan
-    return f"$10^{{{int(round(e))}}}$" if np.isfinite(e) and abs(e - round(e)) < 1e-6 else _num(v)
+    return SETUP_STYLES[style]["power"](int(round(e))) if np.isfinite(e) and abs(e - round(e)) < 1e-6 else _num(v)
 
 
-def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None) -> str:
-    """The ``setup`` table (booktabs) of :func:`setup_rows`: a line per scene with its time steps, material, budgets
-    and tolerances; ``notes`` (:func:`load_setup_notes`) become footnote marks explained in the caption, plus
-    automatic ones for BDF2 scenes and for Newton budgets read from a config."""
-    notes = notes or {}
+def _setup_table(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None,
+                 style: str) -> dict:
+    """The ``setup`` table's cells in one of :data:`SETUP_STYLES`: ``body`` (a list of cells per scene), the
+    footnotes as (mark, text) in reading order, ``atol`` (Newton's CG absolute tolerance where every scene shares
+    it, else None: each cell lists it), ``common`` (settings every scene shares, for the caption) and ``with_k``
+    (a smoothing-passes column where they differ)."""
+    st, notes = SETUP_STYLES[style], notes or {}
     marks: dict[str, str] = {}  # note text -> letter, in reading order
 
     def cell(value: str, scene: str, column: str, automatic: str | None = None) -> str:
@@ -1453,7 +1473,7 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
                 if text not in marks:
                     marks[text] = "abcdefghijklmnopqrstuvwxyz"[len(marks)]
                 letters.append(marks[text])
-        return value + (rf"$^{{\mathrm{{{','.join(letters)}}}}}$" if letters else "")
+        return value + (st["mark"](",".join(letters)) if letters else "")
 
     atols = {r["newton"]["cg_atol"] for r in rows if r["newton"] and r["newton"].get("cg_atol") is not None}
     one_atol = len(atols) <= 1
@@ -1463,37 +1483,48 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
     body = []
     for r in rows:
         s = r["scene"]
-        label = cell(labels.get(s, s.replace("_", r"\_")), s, "scene")
+        label = cell(st["label"](labels.get(s, s)), s, "scene")
         h = cell(_step_fraction(r["dt"]), s, "time_step", "BDF2 (the others BDF1)" if r["bdf"] == 2 else None)
         h_solve = _step_fraction(r["dt"] / r["substeps"])
         material = r["material"]
-        young = "--" if material is None else _si(*material["E"], "Pa")
-        rho = "--" if material is None else (_num(material["rho"][0]) if material["rho"][0] == material["rho"][1]
-                                             else f"{_num(material['rho'][0])}--{_num(material['rho'][1])}")
+        young = st["none"] if material is None else _si(*material["E"], "Pa", st["dash"])
+        rho = st["none"] if material is None else (
+            _num(material["rho"][0]) if material["rho"][0] == material["rho"][1]
+            else f"{_num(material['rho'][0])}{st['dash']}{_num(material['rho'][1])}")
         young = cell(young, s, "material")
-        budget = "--" if r["budget"] is None else r" $\times$ ".join(str(v) for v in r["budget"])
+        budget = st["none"] if r["budget"] is None else st["times"].join(str(v) for v in r["budget"])
         budget = cell(budget, s, "budget")
         sweeps = r["equal_time"]
-        equal = " / ".join(str(sweeps[v]) if v in sweeps else "--" for v in EQUAL_TIME_SOLVERS) if sweeps else "--"
+        equal = (" / ".join(str(sweeps[v]) if v in sweeps else st["none"] for v in EQUAL_TIME_SOLVERS) if sweeps
+                 else st["none"])
         equal = cell(equal, s, "equal_time")
         n = r["newton"]
-        newton = "--" if n is None else r" $\times$ ".join(str(n[k]) for k in ("substeps", "outer", "inner"))
+        newton = st["none"] if n is None else st["times"].join(str(n[k]) for k in ("substeps", "outer", "inner"))
         if n is not None:
             newton = cell(newton, s, "newton", "from its scene config: the run hadn't finished" if n["from_config"]
                           else None)
-        cg = "--" if n is None or n.get("cg") is None else str(n["cg"])
+        cg = st["none"] if n is None or n.get("cg") is None else str(n["cg"])
         if n is not None and n.get("cg_rtol") is not None:
-            cg += ", " + _power(n["cg_rtol"]) + ("" if one_atol else ", " + _power(n["cg_atol"]))
+            cg += ", " + _power(n["cg_rtol"], style) + ("" if one_atol else ", " + _power(n["cg_atol"], style))
         t = r["tolerances"]
         tol = [_num(t["rstol"]), _num(t["astol"]), _num(t["ftol"])]
         tol[0] = cell(tol[0], s, "tolerances")
-        body.append(" & ".join([label, h, h_solve, young, rho, budget, equal, newton, cg, *tol]
-                               + ([str(t["smoothing"])] if with_k else [])) + r" \\")
+        body.append([label, h, h_solve, young, rho, budget, equal, newton, cg, *tol]
+                    + ([str(t["smoothing"])] if with_k else []))
     common = []
     if not with_k and smoothing:
         common.append(f"{smoothing.pop()} smoothing passes")
     if len(intervals) == 1:
         common.append(f"a convergence check every {intervals.pop()} sweeps")
+    return {"body": body, "notes": [(m, text) for text, m in marks.items()], "common": common, "with_k": with_k,
+            "atol": next(iter(atols)) if one_atol and atols else None}
+
+
+def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None) -> str:
+    """The ``setup`` table (booktabs) of :func:`setup_rows`: a line per scene with its time steps, material, budgets
+    and tolerances; ``notes`` (:func:`load_setup_notes`) become footnote marks explained in the caption, plus
+    automatic ones for BDF2 scenes and for Newton budgets read from a config."""
+    t = _setup_table(rows, labels, notes, "latex")
     caption = (r"\caption{\textbf{Scene setup.} Per scene: the frame time step $h$ and the time step of each solve "
                r"(frames split into substeps), the Young's modulus $E$ and density $\rho$ of its bodies (a range where "
                r"bodies or regions differ), the budget per frame as substeps $\times$ outer iterations (subproblems) "
@@ -1502,19 +1533,102 @@ def latex_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[
                r"(AAAVBD's time per step, the other factors unchanged), Newton steps for Newton, with the cap on its "
                r"conjugate-gradient (CG) iterations per Newton step and its relative tolerance $r$ (CG stops at a "
                r"residual norm of $\max(a, r \lVert g \rVert)$, $g$ the gradient, the Newton step's right-hand side"
-               + (rf", and $a = {_power(next(iter(atols)))[1:-1]}$ in every scene" if one_atol and atols else
-                  r", with the absolute tolerance $a$ after $r$") + r"); and the tolerances of the stationarity test (relative "
-               r"$r_\mathrm{tol}$, absolute $a_\mathrm{tol}$) and of the feasibility test ($f_\mathrm{tol}$), the same "
-               r"for every solver of a scene" + (" (" + ", ".join(common) + " in every scene)" if common else "") + "."
-               + "".join(rf" $^{{\mathrm{{{m}}}}}${_latex_text(text)}." for text, m in marks.items()) + "}")
+               + (rf", and $a = {_power(t['atol'])[1:-1]}$ in every scene" if t["atol"] is not None else
+                  r", with the absolute tolerance $a$ after $r$") + r"); and the tolerances of the stationarity test "
+               r"(relative $r_\mathrm{tol}$, absolute $a_\mathrm{tol}$) and of the feasibility test ($f_\mathrm{tol}$), "
+               r"the same for every solver of a scene"
+               + (" (" + ", ".join(t["common"]) + " in every scene)" if t["common"] else "") + "."
+               + "".join(rf" $^{{\mathrm{{{m}}}}}${_latex_text(text)}." for m, text in t["notes"]) + "}")
+    with_k = t["with_k"]
     header = (r"Scene & \multicolumn{2}{c}{$h$ (s)} & $E$ & $\rho$ (kg/m$^3$) & VBD family & Equal time & Newton & CG & "
               r"$r_\mathrm{tol}$ & $a_\mathrm{tol}$ & $f_\mathrm{tol}$" + (" & $k$" if with_k else "") + r" \\")
     sub = (r" & frame & solve & & & sweeps & sweeps (VBD / Cheb. / And.) & Newton steps & cap, $r$ & & &"
            + (" &" if with_k else "") + r" \\")
     out = [r"\begin{table*}", r"\centering", r"\small", caption, r"\label{tab:setup}", r"\setlength{\tabcolsep}{4pt}",
            r"\begin{tabular}{l cc cc ccc r ccc" + (" c" if with_k else "") + "}", r"\toprule", header, sub,
-           r"\midrule", *body, r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
+           r"\midrule", *[" & ".join(cells) + r" \\" for cells in t["body"]], r"\bottomrule", r"\end{tabular}",
+           r"\end{table*}"]
     return "\n".join(out) + "\n"
+
+
+def _setup_headers(with_k: bool) -> list[str]:
+    """The plain-text column headers of the ``setup`` table (Markdown and PDF)."""
+    return (["Scene", "h frame (s)", "h solve (s)", "E", "ρ (kg/m³)", "VBD family: substeps × outer × sweeps",
+             "Equal time: sweeps, VBD / Cheb. / And.", "Newton: substeps × outer × Newton steps", "CG cap, r",
+             "rstol", "astol", "ftol"] + (["k"] if with_k else []))
+
+
+def _setup_caption(t: dict, style: str) -> str:
+    """The plain-text caption of the ``setup`` table (Markdown and PDF), without the footnotes."""
+    a = (f"a = {_power(t['atol'], style)} in every scene" if t["atol"] is not None
+         else "the absolute tolerance a after r")
+    return ("Per scene: the frame time step h and the time step of each solve (frames split into substeps); the "
+            "Young's modulus E and density ρ of its bodies (a range where bodies or regions differ); the budget per "
+            "frame as substeps × outer iterations (subproblems) × iterations per subproblem: VBD sweeps for the "
+            "VBD-family solvers at equal sweeps (VBD, AAAVBD, Chebyshev, Anderson), the sweeps per subproblem of VBD, "
+            "Chebyshev and Anderson at equal time (AAAVBD's time per step, the other factors unchanged), Newton steps "
+            "for Newton, with the cap on its conjugate-gradient (CG) iterations per Newton step and its relative "
+            f"tolerance r (CG stops at a residual norm of max(a, r‖g‖), g the gradient, the Newton step's right-hand "
+            f"side; {a}); the tolerances of the stationarity test (relative rstol, absolute astol) and of the "
+            "feasibility test (ftol), the same for every solver of a scene"
+            + (" (" + ", ".join(t["common"]) + " in every scene)" if t["common"] else "") + ".")
+
+
+def markdown_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None) -> str:
+    """The ``setup`` table as Markdown (a pipe table, then the caption and the footnotes), for reading without
+    LaTeX."""
+    t = _setup_table(rows, labels, notes, "markdown")
+    headers = _setup_headers(t["with_k"])
+    lines = ["# Scene setup", "", "| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
+    lines += ["| " + " | ".join(cells) + " |" for cells in t["body"]]
+    lines += ["", _setup_caption(t, "markdown"), ""]
+    lines += [f"- {SETUP_STYLES['markdown']['mark'](m)} {text}" for m, text in t["notes"]]
+    return "\n".join(lines) + "\n"
+
+
+def plot_setup(rows: list[dict], labels: dict[str, str], notes: dict[str, dict[str, str]] | None = None,
+               size: tuple[float, float] = (11.69, 8.27)):
+    """The ``setup`` table drawn by Matplotlib on a landscape page (A4 by default; readable without LaTeX, e.g.
+    on a phone): the same cells, caption and footnotes as :func:`latex_setup`, long cells wrapped."""
+    import textwrap
+
+    t = _setup_table(rows, labels, notes, "mpl")
+    headers = _setup_headers(t["with_k"])
+    widths = [20] + [7] * 2 + [12, 9, 12, 16, 13, 11] + [6] * (3 + t["with_k"])  # characters per line, per column
+
+    def fill(text: str, width: int) -> str:
+        """Wrapped to ``width`` characters, a trailing footnote mark ($...$) kept whole after the last line."""
+        plain, sep, mark = text.partition("$")
+        return textwrap.fill(plain, width) + (" " if plain.endswith(" ") else "") + sep + mark
+
+    wrap = [[fill(text, width) for text, width in zip(cells, widths)] for cells in [headers] + t["body"]]
+    lines = [max(cell.count("\n") + 1 for cell in cells) for cells in wrap]  # per table row
+    fig = plt.figure(figsize=size)
+    fig.text(0.04, 0.96, "Scene setup", fontsize=14, fontweight="bold", va="top", color=INK)
+    ax = fig.add_axes((0.04, 0.10, 0.92, 0.82))
+    ax.set_axis_off()
+    table = ax.table(cellText=wrap[1:], colLabels=wrap[0], colWidths=[w / sum(widths) for w in widths],
+                     loc="upper center", cellLoc="center")
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    line = 0.017  # axes height per text line
+    for (row, col), c in table.get_celld().items():
+        c.set_height(line * lines[row] + 0.012)  # one height per table row, so the cells line up
+        c.set_edgecolor("#bbbbbb")
+        c.set_linewidth(0.5)
+        if row == 0:
+            c.set_facecolor("#eeeeee")
+            c.get_text().set_fontweight("bold")
+        if col == 0 and row > 0:
+            c.get_text().set_ha("left")
+            c.PAD = 0.03
+    # The caption and footnotes right under the table as drawn
+    fig.canvas.draw()
+    bottom = table.get_window_extent(fig.canvas.get_renderer()).transformed(fig.transFigure.inverted()).y0
+    notes_text = "\n".join(textwrap.fill(SETUP_STYLES["mpl"]["mark"](m) + " " + text, 180) for m, text in t["notes"])
+    fig.text(0.04, bottom - 0.03, textwrap.fill(_setup_caption(t, "mpl").replace("‖g‖", "|g|"), 180) + "\n\n"
+             + notes_text, fontsize=9, va="top", color=INK, linespacing=1.4)
+    return fig
 
 
 LEAD_REFERENCE = "AAAVBD"  # lead: the solver every other one is divided by
@@ -1772,6 +1886,15 @@ def main():
         with open(args.output, "w", encoding="utf-8") as f:
             f.write("% Needs \\usepackage{booktabs}\n\n" + latex_setup(rows, labels, notes))
         print(f"Wrote {args.output}")
+        # Readable copies next to it, without LaTeX: Markdown and a PDF drawn by Matplotlib
+        stem = os.path.splitext(args.output)[0]
+        with open(stem + ".md", "w", encoding="utf-8") as f:
+            f.write(markdown_setup(rows, labels, notes))
+        use_paper_fonts(args.font_dir)
+        fig = plot_setup(rows, labels, notes)
+        fig.savefig(stem + ".pdf")
+        plt.close(fig)
+        print(f"Wrote {stem}.md, {stem}.pdf")
         return
     if args.kind in ("scenes", "slices"):
         if args.kind == "scenes":
@@ -2157,6 +2280,25 @@ class TestPaperFigures(unittest.TestCase):
         self.assertIn(r"$^{\mathrm{a}}$from its scene config: the run hadn't finished.", text)
         self.assertIn(r"$^{\mathrm{b}}$4x the shared ones.", text)
         self.assertIn("4 smoothing passes, a convergence check every 20 sweeps in every scene", text)
+        # The readable copies: the same cells in Markdown (Unicode marks and powers) and drawn by Matplotlib
+        md = markdown_setup(rows, {"banner": "Birthday banner"}, {"mat": {"tolerances": "4x the shared ones"}})
+        self.assertIn("| Birthday banner | 1/60 | 1/120 | 1–100 MPa | 1000 | 2 × 1 × 100 | 120 / 110 / 105 | "
+                      "2 × 10 × 2 | 3000, 10⁻⁶ | 0.02 | 0.1 | 0.5 |", md)
+        self.assertIn("| mat | 1/60 | 1/60 | – | – | 1 × 5 × 80 | – | 1 × 5 × 1ᵃ | 4000, 10⁻⁹ | 0.08ᵇ | 0.4 | 0.5 |", md)
+        self.assertIn("a = 10⁻¹⁰ in every scene", md)
+        self.assertIn("- ᵃ from its scene config: the run hadn't finished", md)
+        self.assertIn("- ᵇ 4x the shared ones", md)
+        fig = plot_setup(rows, {"banner": "Birthday banner"}, {"mat": {"tolerances": "4x the shared ones"}})
+        table = fig.axes[0].tables[0]
+        self.assertEqual(table[1, 0].get_text().get_text(), "Birthday banner")
+        self.assertEqual(table[2, 8].get_text().get_text(), "4000, $10^{-9}$")
+        self.assertEqual(table[2, 9].get_text().get_text(), r"0.08$^{\mathrm{b}}$")
+        heights = {(r, round(c.get_height(), 6)) for (r, _), c in table.get_celld().items()}
+        self.assertEqual(len(heights), len({r for r, _ in heights}))  # one height per row: the cells line up
+        with tempfile.TemporaryDirectory() as d:
+            fig.savefig(os.path.join(d, "setup.pdf"))
+            self.assertGreater(os.path.getsize(os.path.join(d, "setup.pdf")), 1000)
+        plt.close(fig)
         # Different absolute tolerances go into the cells, after the relative one
         rows[1]["newton"]["cg_atol"] = 1e-8
         text = latex_setup(rows, {})
